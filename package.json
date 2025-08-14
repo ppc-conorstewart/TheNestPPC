@@ -28,6 +28,7 @@
     "react-parallax-tilt": "^1.7.299",
     "swiper": "^11.2.10",
     "tailwindcss": "^4.1.11",
+    "uuid": "^9.0.1",
     "xlsx": "^0.18.5"
   }
 }
