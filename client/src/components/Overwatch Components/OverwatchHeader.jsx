@@ -1,6 +1,7 @@
 
 // Adjust the import path for WhiteLogo as needed
-import WhiteLogo from 'C:/Users/WelshWonder/FLY-IQ/The NEST App/client/src/assets/whitelogo.png';
+import whiteLogo from '../../assets/whitelogo.png';
+
 
 // Path to your .mov file
 const overwatchVideo = "C:/Users/WelshWonder/FLY-IQ/The NEST App/client/src/assets/overwatchanimation.mp4";
