@@ -123,7 +123,7 @@ export default function LandingPage() {
   const BASE_URL = process.env.REACT_APP_API_URL;
 
   const handleDiscordLogin = () => {
-    window.location.href = `${BASE_URL}/auth/discord`;
+    window.location.href = `https://thenestppc.onrender.com/auth/discord`;
   };
 
   // Card configs (label, logo, bullets, onClick, color index)
