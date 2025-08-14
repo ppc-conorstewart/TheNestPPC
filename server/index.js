@@ -13,7 +13,7 @@ const {
   FRONTEND_URL,
   SESSION_SECRET
 } = require('./config/config');
-const passport = require('./config/passport'); // <-- FIXED to initialized passport
+const passport = require('./config/passport'); 
 
 const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads');
 const db = require('./db');
@@ -275,19 +275,30 @@ app.post('/api/workorder/generate', async (req, res) => {
 // ==============================
 // Discord Auth
 // ==============================
-app.get(
-  '/auth/discord',
-  passport.authenticate('discord')
-);
+app.get('/auth/discord', passport.authenticate('discord'));
 
-app.get(
-  '/auth/discord/callback',
-  passport.authenticate('discord', { failureRedirect: '/' }),
-  (req, res) => {
-    res.redirect(
-      `${require('./config/config').FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(req.user))}`
-    );
-  }
-);
+app.get('/auth/discord/callback', (req, res, next) => {
+  passport.authenticate('discord', (err, user, info) => {
+    if (err) {
+      console.error('Discord OAuth error:', err, info || '');
+      return res
+        .status(500)
+        .send('OAuth error. Check server logs for details.');
+    }
+    if (!user) {
+      console.warn('Discord OAuth failed. Info:', info || '');
+      return res.redirect('/');
+    }
+    req.logIn(user, (loginErr) => {
+      if (loginErr) {
+        console.error('Passport login error:', loginErr);
+        return res.status(500).send('Login error.');
+      }
+      return res.redirect(
+        `${FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(user))}`
+      );
+    });
+  })(req, res, next);
+});
 
 module.exports = app;

@@ -1,37 +1,34 @@
 // ==============================
 // server/config/config.js
-// Centralized configuration for The NEST App
+// Centralized configuration (no hard‑coded secrets)
 // ==============================
 
 require('dotenv').config();
 
 const isRender = !!process.env.RENDER;
-const renderHost =
-  process.env.RENDER_EXTERNAL_URL || 'thenestppc-1.onrender.com';
+const renderHost = process.env.RENDER_EXTERNAL_URL || 'thenestppc-1.onrender.com';
 
-// Build sensible defaults for each environment
-const DEFAULT_API_BASE = isRender
-  ? `https://${renderHost}`
-  : 'http://localhost:3001';
-
-const DEFAULT_FRONTEND = isRender
+const FRONTEND_DEFAULT = isRender
   ? `https://${renderHost}`
   : 'http://localhost:3000';
+
+const API_BASE_DEFAULT = isRender
+  ? `https://${renderHost}`
+  : 'http://localhost:3001';
 
 module.exports = {
   PORT: Number(process.env.PORT) || 3001,
 
-  // Frontend (where we redirect the user after auth)
-  FRONTEND_URL: process.env.FRONTEND_URL || DEFAULT_FRONTEND,
+  FRONTEND_URL: process.env.FRONTEND_URL || FRONTEND_DEFAULT,
 
-  // Discord OAuth callback must exactly match the Redirect URI in the Discord Developer Portal
+  // MUST match the Discord Developer Portal Redirect URI
   DISCORD_CALLBACK_URL:
-    process.env.DISCORD_CALLBACK_URL || `${DEFAULT_API_BASE}/auth/discord/callback`,
+    process.env.DISCORD_CALLBACK_URL ||
+    `${API_BASE_DEFAULT}/auth/discord/callback`,
 
-  // Session secret for express-session
   SESSION_SECRET: process.env.SESSION_SECRET || 'super_secret_key',
 
-  // Discord app credentials – must be set in env on Render
+  // Required in environment (no hardcoded fallbacks)
   DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
   DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET,
 };

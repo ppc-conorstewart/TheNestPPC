@@ -17,7 +17,7 @@ module.exports = function configureDiscordStrategy(passport) {
         clientID: DISCORD_CLIENT_ID,
         clientSecret: DISCORD_CLIENT_SECRET,
         callbackURL: DISCORD_CALLBACK_URL,
-        scope: ['identify', 'email'],
+        scope: ['identify'], // add 'email' later if needed
       },
       (accessToken, refreshToken, profile, done) => done(null, profile)
     )

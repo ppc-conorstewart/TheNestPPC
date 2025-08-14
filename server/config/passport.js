@@ -1,6 +1,6 @@
 // ==============================
 // server/config/passport.js
-// Initialized Passport instance (exported object)
+// Exports an initialized Passport instance
 // ==============================
 
 const passport = require('passport');
