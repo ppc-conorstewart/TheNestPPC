@@ -1,0 +1,39 @@
+{
+  "name": "the-nest-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node server/index.js",
+    "client": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test"
+  },
+  "dependencies": {
+    "@fullcalendar/core": "5.11.4",
+    "@fullcalendar/daygrid": "5.11.4",
+    "@fullcalendar/interaction": "5.11.4",
+    "@fullcalendar/react": "5.11.4",
+    "better-sqlite3": "^11.10.0",
+    "cors": "^2.8.5",
+    "discord.js": "^14.21.0",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "express-session": "^1.18.1",
+    "form-data": "^4.0.4",
+    "multer": "^2.0.1",
+    "node-fetch": "^2.7.0",
+    "papaparse": "^5.5.3",
+    "passport": "^0.7.0",
+    "passport-discord": "^0.1.4",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.16.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "react-tippy": "^1.4.0",
+    "tippy.js": "^6.3.7"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^11.0.7"
+  }
+}

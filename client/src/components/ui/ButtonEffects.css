@@ -1,0 +1,113 @@
+/* src/components/ui/ButtonEffects.css */
+
+/* Shared core for both btn-5 and btn-6 */
+.btn-5,
+.btn-6 {
+  position: relative;
+  display: inline-flex;           /* switch to flex for true centering */
+  align-items: center;            /* vertical centering */
+  justify-content: center;        /* horizontal centering */
+  height: 30px;
+  padding: 0 16px;
+  text-transform: uppercase;      /* uppercase text */
+  font-weight: 1000;               /* bold text */
+  color: #ffffff;
+  /* subtle white glow + thin white outline for contrast */
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+  -webkit-text-stroke: 0.0px rgba(255,255,255,0.9);
+  overflow: hidden;               /* clip the animated lines */
+  border: 2px solid #6a7257;      /* paloma-green border */
+  border-radius: 20px;
+  cursor: pointer;
+  transition: color 200ms ease,
+              background 200ms ease,
+              border-color 200ms ease;
+  background-clip: padding-box;   /* keep border visible */
+}
+
+/* btn-5 gradient background */
+.btn-5 {
+  background: linear-gradient(
+    0deg,
+    rgba(50,55,40,1)   0%,
+    rgba(106,114,87,1) 100%
+  );
+}
+.btn-5:hover {
+  color: #6a7257;
+  background: transparent;
+}
+
+/* btn-6 gradient background */
+.btn-6 {
+  background: radial-gradient(
+    circle,
+    rgba(106,114,87,1) 0%,
+    rgba(25,25,25,1)    100%
+  );
+}
+.btn-6:hover {
+  opacity: 0.8;
+}
+
+/* Animated top & bottom lines (white) */
+.btn-5::before,
+.btn-5::after,
+.btn-6::before,
+.btn-6::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  background: #fff;               /* white lines */
+  transition: width 400ms ease;
+}
+.btn-5::before,
+.btn-6::before {
+  top: 0;
+  left: 0;
+}
+.btn-5::after,
+.btn-6::after {
+  bottom: 0;
+  right: 0;
+}
+.btn-5:hover::before,
+.btn-5:hover::after,
+.btn-6:hover::before,
+.btn-6:hover::after {
+  width: 100%;
+  transition-duration: 800ms;
+}
+
+/* Lottie icon wrapper */
+.btn-icon {
+  display: inline-flex;
+  vertical-align: middle;
+  width: 16px;
+  height: 16px;
+  margin: 0 4px;
+}
+
+.workorder-tooltip-simple {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  bottom: 115%;
+  transform: translateX(-50%);
+  background: #222;
+  color: #ffe066;
+  font-size: 0.98rem;
+  white-space: nowrap;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #ffe066;
+  box-shadow: 0 2px 8px 2px #181f12aa;
+  z-index: 40;
+  transition: opacity 0.18s cubic-bezier(.4,0,.2,1);
+}
+.group:hover .workorder-tooltip-simple {
+  opacity: 1;
+  pointer-events: auto;
+}

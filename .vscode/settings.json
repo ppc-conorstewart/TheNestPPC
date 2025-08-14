@@ -1,0 +1,14 @@
+{
+  "filesTreeGenerator.excludePatterns": [
+    "node_modules/**",
+    "data/**",
+    "docs/**"
+  ],
+  "filesTreeGenerator.includePatterns": [
+    "**/*.js",
+    "**/*.jsx",
+    "**/*.html",
+    "**/*.css"
+  ],
+  "git.ignoreLimitWarning": true
+}
