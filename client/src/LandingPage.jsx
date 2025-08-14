@@ -29,17 +29,51 @@ const CREST_COLORS = [
   }
 ];
 
+// ------------------------------------------------------------------
+// Small helpers so we never build bad URLs (which caused the error).
+// ------------------------------------------------------------------
+function isValidHttpUrl(str) {
+  try {
+    const u = new URL(str);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+function trimTrailingSlash(s = '') {
+  return s.replace(/\/+$/, '');
+}
+
 // Checkmark SVG
 function Check({ color }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ marginRight: 6, display: 'inline-block', verticalAlign: 'middle' }}>
-      <path d="M5 10.6L8.2 14L15 7" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 20 20"
+      fill="none"
+      style={{ marginRight: 6, display: 'inline-block', verticalAlign: 'middle' }}
+    >
+      <path
+        d="M5 10.6L8.2 14L15 7"
+        stroke={color}
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 // Rotating segment (rectangular) — perfectly centered on the logo
-function RotatingSegment({ color, idx, boxSize = 350, rectPad = 15, rectRx = 65, strokeW = 7 }) {
+function RotatingSegment({
+  color,
+  idx,
+  boxSize = 350,
+  rectPad = 15,
+  rectRx = 65,
+  strokeW = 7
+}) {
   const svgSize = boxSize + rectPad * 2;
   const rectSize = boxSize;
   const rectOffset = rectPad;
@@ -54,8 +88,8 @@ function RotatingSegment({ color, idx, boxSize = 350, rectPad = 15, rectRx = 65,
         zIndex: 3,
         width: svgSize,
         height: svgSize,
-        pointerEvents: "none",
-        transform: "translate(-50%, -50%)"
+        pointerEvents: 'none',
+        transform: 'translate(-50%, -50%)'
       }}
     >
       <rect
@@ -120,10 +154,33 @@ export default function LandingPage() {
     }
   }, []);
 
-  const BASE_URL = process.env.REACT_APP_API_URL;
+  // -------------------------------------------------------------
+  // Compute the API base URL safely.
+  // Order of preference:
+  // 1) REACT_APP_API_URL (Render: set this to your API service URL)
+  // 2) window.__API_URL__  (optional global escape hatch)
+  // 3) If on same domain setup, fall back to origin
+  // -------------------------------------------------------------
+  const rawEnvUrl =
+    (process.env.REACT_APP_API_URL || window.__API_URL__ || '').trim();
+
+  const BASE_URL = trimTrailingSlash(
+    rawEnvUrl || `${window.location.origin}` // final fallback (works for same-origin proxy)
+  );
 
   const handleDiscordLogin = () => {
-    window.location.href = `https://thenestppc.onrender.com/auth/discord`;
+    const loginUrl = `${BASE_URL}/auth/discord`;
+    if (!isValidHttpUrl(loginUrl)) {
+      console.error('Invalid Discord login URL generated:', loginUrl, {
+        BASE_URL,
+        rawEnvUrl
+      });
+      alert(
+        'Login is not configured correctly yet. Please set REACT_APP_API_URL to your API URL and redeploy.'
+      );
+      return;
+    }
+    window.location.href = loginUrl;
   };
 
   // Card configs (label, logo, bullets, onClick, color index)
@@ -132,11 +189,7 @@ export default function LandingPage() {
       title: 'FIELD',
       logo: flyIqLogo,
       accent: CREST_COLORS[0],
-      bullets: [
-        'Interactive Field Training',
-        'Paloma Points',
-        'Paloma Shop Access'
-      ],
+      bullets: ['Interactive Field Training', 'Paloma Points', 'Paloma Shop Access'],
       onClick: () => (window.location.href = '/fly-iq')
     },
     {
@@ -158,11 +211,7 @@ export default function LandingPage() {
       title: 'BASE',
       logo: FLYBASELogo,
       accent: CREST_COLORS[2],
-      bullets: [
-        'Valve Reports',
-        'Valve Documentation',
-        'Shop guides'
-      ],
+      bullets: ['Valve Reports', 'Valve Documentation', 'Shop guides'],
       onClick: () => (window.location.href = '/fly-mfv')
     }
   ];
@@ -242,24 +291,38 @@ export default function LandingPage() {
               >
                 <img
                   src={card.logo}
-                  alt={card.title + " Logo"}
+                  alt={card.title + ' Logo'}
                   style={{
                     width: 260,
                     height: 260,
-                    objectFit: "contain",
+                    objectFit: 'contain',
                     margin: 0,
                     transition: 'transform .19s cubic-bezier(.25,.8,.36,1.04)'
                   }}
                   className="crest-img"
                 />
                 {/* Rotating glowing segment on hover only, perfectly centered */}
-                <div className="rotating-rect-segment" style={{
-                  position: 'absolute',
-                  top: 0, left: 0, width: 380, height: 380,
-                  pointerEvents: 'none', zIndex: 3,
-                  opacity: 0
-                }}>
-                  <RotatingSegment color={card.accent.accent} idx={idx} boxSize={350} rectPad={15} rectRx={65} strokeW={7} />
+                <div
+                  className="rotating-rect-segment"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: 380,
+                    height: 380,
+                    pointerEvents: 'none',
+                    zIndex: 3,
+                    opacity: 0
+                  }}
+                >
+                  <RotatingSegment
+                    color={card.accent.accent}
+                    idx={idx}
+                    boxSize={350}
+                    rectPad={15}
+                    rectRx={65}
+                    strokeW={7}
+                  />
                 </div>
               </div>
               {/* Description text floating underneath */}
@@ -278,9 +341,9 @@ export default function LandingPage() {
                       className="flex items-center justify-center text-[1.1rem] font-bold font-erbaum tracking-wide"
                       style={{
                         color: 'white',
-                        padding: "1.5px 0",
+                        padding: '1.5px 0',
                         fontSize: 18,
-                        textShadow: "0 1px 6px #23241c55"
+                        textShadow: '0 1px 6px #23241c55'
                       }}
                     >
                       <Check color={card.accent.check} /> {item}
