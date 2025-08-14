@@ -279,7 +279,7 @@ export default function FlyHQTools() {
   // ===========================
   return (
     <div
-      className="flex flex-col min-h-0 h-full w-full text-white overflow-hidden"
+      className="flex flex-col min-h-0 h-full w-full text-white overflow-auto"
       style={{
         background: 'transparent',
         minHeight: 0,
@@ -287,7 +287,7 @@ export default function FlyHQTools() {
         width: '98%',
         marginLeft: 20,
         position: '',
-        overflow: 'hidden',
+        overflow: 'auto',
       }}
     >
       {/* === Page-scoped Glass Backdrop — uses /public/assets/dark-bg.png === */}
