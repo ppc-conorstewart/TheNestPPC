@@ -41,11 +41,16 @@ function basicAuth(req, res, next) {
 // -------------- APP SETUP ----------------------
 const app = express();
 app.disable('x-powered-by');
+
+// protect everything
 app.use(basicAuth);
+
+// serve static build
 app.use(express.static(STATIC_DIR, { maxAge: '1h', index: 'index.html' }));
 
 // -------------- SPA FALLBACK -------------------
-app.get('*', (_req, res) => {
+// Express v5 uses path-to-regexp v6+; use '/*' or '(.*)' instead of '*'
+app.get('/*', (_req, res) => {
   res.sendFile(path.join(STATIC_DIR, 'index.html'));
 });
 
