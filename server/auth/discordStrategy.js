@@ -1,25 +1,28 @@
-const passport = require('passport');
-const DiscordStrategy = require('passport-discord').Strategy;
+// ==============================
+// server/auth/discordStrategy.js
+// Passport Discord strategy configuration
+// ==============================
+
+const { Strategy: DiscordStrategy } = require('passport-discord');
 const {
-  DISCORD_CALLBACK_URL,
   DISCORD_CLIENT_ID,
-  DISCORD_CLIENT_SECRET
+  DISCORD_CLIENT_SECRET,
+  DISCORD_CALLBACK_URL,
 } = require('../config/config');
 
-passport.use(new DiscordStrategy(
-  {
-    clientID: DISCORD_CLIENT_ID,
-    clientSecret: DISCORD_CLIENT_SECRET,
-    callbackURL: DISCORD_CALLBACK_URL,
-    scope: ['identify'],
-  },
-  (accessToken, refreshToken, profile, done) => {
-    return done(null, profile);
-  }
-));
-
-// Serialize / Deserialize
-passport.serializeUser((user, done) => done(null, user));
-passport.deserializeUser((obj, done) => done(null, obj));
-
-module.exports = passport;
+module.exports = function configureDiscordStrategy(passport) {
+  passport.use(
+    new DiscordStrategy(
+      {
+        clientID: DISCORD_CLIENT_ID,
+        clientSecret: DISCORD_CLIENT_SECRET,
+        callbackURL: DISCORD_CALLBACK_URL,
+        scope: ['identify', 'email'], // add 'guilds' later if needed
+      },
+      (accessToken, refreshToken, profile, done) => {
+        // Pass the Discord profile through; attach tokens if you plan to store/use them later
+        return done(null, profile);
+      }
+    )
+  );
+};
