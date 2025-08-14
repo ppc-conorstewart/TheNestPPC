@@ -279,12 +279,13 @@ export default function FlyHQTools() {
   // ===========================
   return (
     <div
-      className="flex flex-col max-w-8xl min-h-0 h-full w-full text-white overflow-hidden"
+      className="flex flex-col min-h-0 h-full w-full text-white overflow-hidden"
       style={{
         background: 'transparent',
         minHeight: 0,
         height: '100%',
-        width: '100%',
+        width: '98%',
+        marginLeft: 20,
         position: '',
         overflow: 'hidden',
       }}
@@ -332,7 +333,7 @@ export default function FlyHQTools() {
               gridTemplateRows: '1fr 1fr',
               
               gap: '20px',
-              width: '90%',
+              width: '100%',
               height: '100%',
               minHeight: 0,
             }}
