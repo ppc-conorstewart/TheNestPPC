@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Update the import path as needed for your environment:
-import ZonesCompletedImg from 'C:/Users/WelshWonder/FLY-IQ/The NEST App/client/src/assets/24hourchart.png';
+import ZonesCompletedImg from '../../assets/whitelogo.png';
 
 const cardStyle = {
   background: '#10110f',
