@@ -1,9 +1,13 @@
 // ==============================
 // server/config/config.js
-// Centralized configuration (no hard‑coded secrets)
+// Safe env loader (doesn't crash if dotenv missing on Render)
 // ==============================
 
-require('dotenv').config();
+// Make dotenv optional so production doesn't crash if it's not installed
+try {
+  // eslint-disable-next-line global-require
+  require('dotenv').config();
+} catch (_) { /* no-op */ }
 
 const isRender = !!process.env.RENDER;
 const renderHost = process.env.RENDER_EXTERNAL_URL || 'thenestppc-1.onrender.com';
@@ -18,17 +22,16 @@ const API_BASE_DEFAULT = isRender
 
 module.exports = {
   PORT: Number(process.env.PORT) || 3001,
-
   FRONTEND_URL: process.env.FRONTEND_URL || FRONTEND_DEFAULT,
 
-  // MUST match the Discord Developer Portal Redirect URI
+  // MUST match Discord Developer Portal Redirect URI
   DISCORD_CALLBACK_URL:
     process.env.DISCORD_CALLBACK_URL ||
     `${API_BASE_DEFAULT}/auth/discord/callback`,
 
   SESSION_SECRET: process.env.SESSION_SECRET || 'super_secret_key',
 
-  // Required in environment (no hardcoded fallbacks)
+  // These must be set in environment (no hardcoded fallbacks)
   DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
   DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET,
 };
