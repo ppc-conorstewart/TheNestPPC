@@ -50,7 +50,12 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/auth/discord')) {
     return res.status(404).send('Not Found');
   }
-  res.sendFile(path.resolve(STATIC_DIR, 'index.html'));
+  res.sendFile(path.join(STATIC_DIR, 'index.html'), err => {
+    if (err) {
+      console.error('Error sending index.html:', err);
+      res.status(500).send('Error loading application.');
+    }
+  });
 });
 
 // ---------- Start ----------
