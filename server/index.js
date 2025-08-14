@@ -13,7 +13,7 @@ const {
   FRONTEND_URL,
   SESSION_SECRET
 } = require('./config/config');
-const passport = require('./auth/discordStrategy');
+const passport = require('./config/passport'); // <-- FIXED to initialized passport
 
 const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads');
 const db = require('./db');

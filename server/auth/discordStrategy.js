@@ -1,6 +1,6 @@
 // ==============================
 // server/auth/discordStrategy.js
-// Passport Discord strategy configuration
+// Wires Discord strategy into a provided Passport instance
 // ==============================
 
 const { Strategy: DiscordStrategy } = require('passport-discord');
@@ -17,12 +17,12 @@ module.exports = function configureDiscordStrategy(passport) {
         clientID: DISCORD_CLIENT_ID,
         clientSecret: DISCORD_CLIENT_SECRET,
         callbackURL: DISCORD_CALLBACK_URL,
-        scope: ['identify', 'email'], // add 'guilds' later if needed
+        scope: ['identify', 'email'],
       },
-      (accessToken, refreshToken, profile, done) => {
-        // Pass the Discord profile through; attach tokens if you plan to store/use them later
-        return done(null, profile);
-      }
+      (accessToken, refreshToken, profile, done) => done(null, profile)
     )
   );
+
+  passport.serializeUser((user, done) => done(null, user));
+  passport.deserializeUser((obj, done) => done(null, obj));
 };
