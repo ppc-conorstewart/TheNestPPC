@@ -10,7 +10,6 @@ const express = require('express');
 const USER = process.env.BASIC_USER || 'Paloma';
 const PASS = process.env.BASIC_PASS || 'Paloma2025*';
 const PORT = process.env.PORT || 3000;
-// where your built React app lives
 const STATIC_DIR = process.env.STATIC_DIR || path.join(__dirname, 'client', 'build');
 
 // Optional: simple IP allowlist (comma‑separated, e.g. "1.2.3.4,5.6.7.8")
@@ -21,19 +20,14 @@ const IP_ALLOWLIST = (process.env.IP_ALLOWLIST || '')
 
 // -------------- BASIC AUTH ---------------------
 function basicAuth(req, res, next) {
-  // IP allowlist (if set)
   if (IP_ALLOWLIST.length) {
     const remote = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
-    if (!IP_ALLOWLIST.includes(remote)) {
-      return res.status(403).send('Forbidden');
-    }
+    if (!IP_ALLOWLIST.includes(remote)) return res.status(403).send('Forbidden');
   }
-
   const auth = req.headers.authorization || '';
   const token = auth.split(' ')[1] || '';
   const [u, p] = Buffer.from(token || '', 'base64').toString().split(':');
   if (u === USER && p === PASS) return next();
-
   res.set('WWW-Authenticate', 'Basic realm="TheNestPPC"');
   return res.status(401).send('Authentication required');
 }
@@ -41,15 +35,10 @@ function basicAuth(req, res, next) {
 // -------------- APP SETUP ----------------------
 const app = express();
 app.disable('x-powered-by');
-
-// protect everything
 app.use(basicAuth);
-
-// serve static build
 app.use(express.static(STATIC_DIR, { maxAge: '1h', index: 'index.html' }));
 
-// -------------- SPA FALLBACK -------------------
-// Express v5 uses path-to-regexp v6+; use '/*' or '(.*)' instead of '*'
+// -------------- SPA FALLBACK (Express v5-safe) --
 app.get('/*', (_req, res) => {
   res.sendFile(path.join(STATIC_DIR, 'index.html'));
 });
