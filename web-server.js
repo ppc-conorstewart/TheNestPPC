@@ -27,7 +27,7 @@ function basicAuth(req, res, next) {
     if (!IP_ALLOWLIST.includes(remote)) return res.status(403).send('Forbidden');
   }
   const auth = req.headers.authorization || '';
-  const token = auth.split(' ')[1] || '';
+  const token = (auth.split(' ')[1] || '');
   const [u, p] = Buffer.from(token || '', 'base64').toString().split(':');
   if (u === USER && p === PASS) return next();
   res.set('WWW-Authenticate', 'Basic realm="TheNestPPC"');
@@ -50,7 +50,8 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/auth/discord')) {
     return res.status(404).send('Not Found');
   }
-  res.sendFile(path.join(STATIC_DIR, 'index.html'), err => {
+  const indexPath = path.join(STATIC_DIR, 'index.html');
+  res.sendFile(indexPath, err => {
     if (err) {
       console.error('Error sending index.html:', err);
       res.status(500).send('Error loading application.');
