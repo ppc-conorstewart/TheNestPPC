@@ -11,17 +11,13 @@ const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 
 const {
   FRONTEND_URL,
-  SESSION_SECRET,
-  HAS_DISCORD_OAUTH
+  SESSION_SECRET
 } = require('./config/config');
-const passport = require('./config/passport');
 
 const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads');
 const db = require('./db');
 
 const app = express();
-
-// Render/Proxy awareness for cookies
 const isRender = !!process.env.RENDER;
 
 // ==============================
@@ -40,7 +36,6 @@ app.use(cors({
 // Static Uploads and Logos
 // ==============================
 app.use('/uploads', express.static(uploadDir));
-// ✅ cross‑platform logo path (works on Render/Linux and Windows)
 const LOGOS_DIR = path.join(__dirname, 'public', 'assets', 'logos');
 console.log('Serving customer logos from:', LOGOS_DIR);
 app.use('/assets/logos', express.static(LOGOS_DIR));
@@ -60,7 +55,7 @@ app.use((req, res, next) => {
 });
 
 // ==============================
-// Trust proxy (Render) + Session and Passport
+// Session
 // ==============================
 app.set('trust proxy', 1);
 app.use(session({
@@ -74,14 +69,6 @@ app.use(session({
     maxAge: 7 * 24 * 60 * 60 * 1000
   }
 }));
-app.use(passport.initialize());
-app.use(passport.session());
-app.use((req, res, next) => {
-  if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.id) {
-    req.user_id = req.user.id;
-  }
-  next();
-});
 
 // ==============================
 // Routers and Logic Modules
@@ -98,8 +85,8 @@ const customersRouter = require('./routes/customers');
 const fieldDocsRouter = require('./routes/FieldDocumentationHub');
 const torqueManualsRouter = require('./routes/TorqueandServiceHub');
 const instructionalVideosHubRouter = require('./routes/InstructionalVideosHub');
-const flyIQJobsScheduleRouter = require('./routes/FlyIQJobsSchedule'); // <--- ADDED
-const projectsRouter = require('./routes/projects'); // <--- NEW
+const flyIQJobsScheduleRouter = require('./routes/FlyIQJobsSchedule');
+const projectsRouter = require('./routes/projects');
 
 // ==============================
 // Router Mounts
@@ -116,8 +103,8 @@ app.use('/api/customers', customersRouter);
 app.use('/api/field-docs', fieldDocsRouter);
 app.use('/api/torque-manuals', torqueManualsRouter);
 app.use('/api/instructional-videos-hub', instructionalVideosHubRouter);
-app.use('/api/jobs-schedule', flyIQJobsScheduleRouter); // <--- ADDED
-app.use('/api/projects', projectsRouter); // <--- NEW
+app.use('/api/jobs-schedule', flyIQJobsScheduleRouter);
+app.use('/api/projects', projectsRouter);
 
 // ==============================
 // Universal Upload (GLB & Images)
@@ -145,20 +132,10 @@ app.get('/api/module2', (req, res) => {
   res.json(module2);
 });
 app.get('/api/user', (req, res) => {
-  if (req.isAuthenticated && req.isAuthenticated()) {
-    res.json({ user: req.user });
-  } else {
-    res.status(401).json({ error: 'Not authenticated' });
-  }
+  res.status(200).json({ user: null });
 });
-
-// Mirror helper
 app.get('/api/me', (req, res) => {
-  if (req.isAuthenticated && req.isAuthenticated()) {
-    res.json({ user: req.user });
-  } else {
-    res.status(401).json({ user: null });
-  }
+  res.status(200).json({ user: null });
 });
 
 // ==============================
@@ -293,42 +270,5 @@ app.post('/api/workorder/generate', async (req, res) => {
     return res.status(500).json({ error: 'Failed to generate workorder PDF' });
   }
 });
-
-// ==============================
-// Discord Auth (guarded to avoid "Unknown strategy")
-// ==============================
-if (HAS_DISCORD_OAUTH) {
-  app.get('/auth/discord', passport.authenticate('discord'));
-
-  app.get('/auth/discord/callback', (req, res, next) => {
-    passport.authenticate('discord', (err, user, info) => {
-      if (err) {
-        console.error('Discord OAuth error:', err, info || '');
-        return res.status(500).send('OAuth error. Check server logs for details.');
-      }
-      if (!user) {
-        console.warn('Discord OAuth failed. Info:', info || '');
-        return res.redirect('/');
-      }
-      req.logIn(user, (loginErr) => {
-        if (loginErr) {
-          console.error('Passport login error:', loginErr);
-          return res.status(500).send('Login error.');
-        }
-        req.session.save(() => {
-          return res.redirect(FRONTEND_URL || '/');
-        });
-      });
-    })(req, res, next);
-  });
-} else {
-  // Fallback endpoints so we never hit unknown strategy
-  app.get('/auth/discord', (_req, res) => {
-    res.status(503).send('Discord OAuth is not configured on this deployment.');
-  });
-  app.get('/auth/discord/callback', (_req, res) => {
-    res.status(503).send('Discord OAuth is not configured on this deployment.');
-  });
-}
 
 module.exports = app;
