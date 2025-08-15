@@ -1,21 +1,15 @@
 // ==============================
 // server/auth/discordStrategy.js
-// Configure Discord strategy with strict env validation
+// Always register a 'discord' strategy.
+// - If env vars are set -> real Discord OAuth.
+// - If missing -> safe stub so routes never throw "Unknown strategy".
 // ==============================
 
 const { Strategy: DiscordStrategy } = require('passport-discord');
 const cfg = require('../config/config');
 
-// ==============================
-// Helpers
-// ==============================
-function isNonEmpty(v) {
-  return typeof v === 'string' && v.trim().length > 0;
-}
+const nonEmpty = (v) => typeof v === 'string' && v.trim().length > 0;
 
-// ==============================
-// Exported configurator
-// ==============================
 module.exports = function configureDiscordStrategy(passport) {
   const {
     DISCORD_CLIENT_ID,
@@ -24,35 +18,42 @@ module.exports = function configureDiscordStrategy(passport) {
   } = cfg;
 
   const hasAll =
-    isNonEmpty(DISCORD_CLIENT_ID) &&
-    isNonEmpty(DISCORD_CLIENT_SECRET) &&
-    isNonEmpty(DISCORD_CALLBACK_URL);
+    nonEmpty(DISCORD_CLIENT_ID) &&
+    nonEmpty(DISCORD_CLIENT_SECRET) &&
+    nonEmpty(DISCORD_CALLBACK_URL);
 
-  if (!hasAll) {
-    console.warn('[Auth] Skipping Discord strategy: missing/empty env vars.', {
-      hasId: isNonEmpty(DISCORD_CLIENT_ID),
-      hasSecret: isNonEmpty(DISCORD_CLIENT_SECRET),
-      hasCallback: isNonEmpty(DISCORD_CALLBACK_URL)
+  if (hasAll) {
+    // Real Discord OAuth
+    passport.use(
+      new DiscordStrategy(
+        {
+          clientID: DISCORD_CLIENT_ID.trim(),
+          clientSecret: DISCORD_CLIENT_SECRET.trim(),
+          callbackURL: DISCORD_CALLBACK_URL.trim(),
+          scope: ['identify']
+        },
+        (accessToken, refreshToken, profile, done) => done(null, profile)
+      )
+    );
+    console.log('[Auth] Discord strategy registered (real).');
+  } else {
+    // Stub strategy to prevent "Unknown strategy 'discord'"
+    passport.use({
+      name: 'discord',
+      authenticate() {
+        const detail = {
+          hasId: nonEmpty(DISCORD_CLIENT_ID),
+          hasSecret: nonEmpty(DISCORD_CLIENT_SECRET),
+          hasCallback: nonEmpty(DISCORD_CALLBACK_URL)
+        };
+        console.warn('[Auth] Discord OAuth not configured. Using stub strategy.', detail);
+        this.fail({ message: 'Discord OAuth not configured', detail }, 503);
+      }
     });
-
-    // Still wire serializer/deserializer so req.login works without the strategy.
-    passport.serializeUser((user, done) => done(null, user));
-    passport.deserializeUser((obj, done) => done(null, obj));
-    return;
+    console.warn('[Auth] Discord strategy registered (stub).');
   }
 
-  passport.use(
-    new DiscordStrategy(
-      {
-        clientID: DISCORD_CLIENT_ID.trim(),
-        clientSecret: DISCORD_CLIENT_SECRET.trim(),
-        callbackURL: DISCORD_CALLBACK_URL.trim(),
-        scope: ['identify']
-      },
-      (accessToken, refreshToken, profile, done) => done(null, profile)
-    )
-  );
-
+  // Session (works in both cases)
   passport.serializeUser((user, done) => done(null, user));
   passport.deserializeUser((obj, done) => done(null, obj));
 };
