@@ -11,14 +11,18 @@ const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 
 const {
   FRONTEND_URL,
-  SESSION_SECRET
+  SESSION_SECRET,
+  HAS_DISCORD_OAUTH
 } = require('./config/config');
-const passport = require('./config/passport'); 
+const passport = require('./config/passport');
 
 const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads');
 const db = require('./db');
 
 const app = express();
+
+// Render/Proxy awareness for cookies
+const isRender = !!process.env.RENDER;
 
 // ==============================
 // CORS
@@ -36,7 +40,8 @@ app.use(cors({
 // Static Uploads and Logos
 // ==============================
 app.use('/uploads', express.static(uploadDir));
-const LOGOS_DIR = 'C:/Users/WelshWonder/FLY-IQ/The NEST App/server/public/assets/logos';
+// ✅ cross‑platform logo path (works on Render/Linux and Windows)
+const LOGOS_DIR = path.join(__dirname, 'public', 'assets', 'logos');
 console.log('Serving customer logos from:', LOGOS_DIR);
 app.use('/assets/logos', express.static(LOGOS_DIR));
 
@@ -54,12 +59,17 @@ app.use((req, res, next) => {
 });
 
 // ==============================
-// Session and Passport
+// Trust proxy (Render) + Session and Passport
 // ==============================
+app.set('trust proxy', 1);
 app.use(session({
   secret: SESSION_SECRET,
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  cookie: {
+    sameSite: 'lax',
+    secure: isRender ? true : false
+  }
 }));
 app.use(passport.initialize());
 app.use(passport.session());
@@ -273,32 +283,42 @@ app.post('/api/workorder/generate', async (req, res) => {
 });
 
 // ==============================
-// Discord Auth
+// Discord Auth (guarded to avoid "Unknown strategy")
 // ==============================
-app.get('/auth/discord', passport.authenticate('discord'));
+if (HAS_DISCORD_OAUTH) {
+  app.get('/auth/discord', passport.authenticate('discord'));
 
-app.get('/auth/discord/callback', (req, res, next) => {
-  passport.authenticate('discord', (err, user, info) => {
-    if (err) {
-      console.error('Discord OAuth error:', err, info || '');
-      return res
-        .status(500)
-        .send('OAuth error. Check server logs for details.');
-    }
-    if (!user) {
-      console.warn('Discord OAuth failed. Info:', info || '');
-      return res.redirect('/');
-    }
-    req.logIn(user, (loginErr) => {
-      if (loginErr) {
-        console.error('Passport login error:', loginErr);
-        return res.status(500).send('Login error.');
+  app.get('/auth/discord/callback', (req, res, next) => {
+    passport.authenticate('discord', (err, user, info) => {
+      if (err) {
+        console.error('Discord OAuth error:', err, info || '');
+        return res
+          .status(500)
+          .send('OAuth error. Check server logs for details.');
       }
-      return res.redirect(
-        `${FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(user))}`
-      );
-    });
-  })(req, res, next);
-});
+      if (!user) {
+        console.warn('Discord OAuth failed. Info:', info || '');
+        return res.redirect('/');
+      }
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          console.error('Passport login error:', loginErr);
+          return res.status(500).send('Login error.');
+        }
+        return res.redirect(
+          `${FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(user))}`
+        );
+      });
+    })(req, res, next);
+  });
+} else {
+  // Fallback endpoints so we never hit unknown strategy
+  app.get('/auth/discord', (_req, res) => {
+    res.status(503).send('Discord OAuth is not configured on this deployment.');
+  });
+  app.get('/auth/discord/callback', (_req, res) => {
+    res.status(503).send('Discord OAuth is not configured on this deployment.');
+  });
+}
 
 module.exports = app;
