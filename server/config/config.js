@@ -1,9 +1,12 @@
 // ==============================
 // server/config/config.js
-// Safe env loader + shared flags
+// Safe env loader + shared flags (trim-aware)
 // ==============================
 
 try { require('dotenv').config(); } catch (_) { /* Render may not have .env */ }
+
+const trim = (v) => (typeof v === 'string' ? v.trim() : v);
+const nonEmpty = (v) => typeof v === 'string' && v.trim().length > 0;
 
 const isRender = !!process.env.RENDER;
 
@@ -21,32 +24,34 @@ const cfg = {
   // Ports & URLs
   // ==============================
   PORT: Number(process.env.PORT) || 3001,
-  FRONTEND_URL: process.env.FRONTEND_URL || FRONTEND_DEFAULT,
+  FRONTEND_URL: trim(process.env.FRONTEND_URL) || FRONTEND_DEFAULT,
 
   // MUST match the Redirect URI in Discord Dev Portal
   DISCORD_CALLBACK_URL:
-    process.env.DISCORD_CALLBACK_URL || `${API_BASE_DEFAULT}/auth/discord/callback`,
+    trim(process.env.DISCORD_CALLBACK_URL) || `${API_BASE_DEFAULT}/auth/discord/callback`,
 
   // ==============================
   // Secrets
   // ==============================
-  SESSION_SECRET: process.env.SESSION_SECRET || 'super_secret_key',
+  SESSION_SECRET: trim(process.env.SESSION_SECRET) || 'super_secret_key',
 
   // ==============================
   // Discord OAuth
   // ==============================
-  DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
-  DISCORD_CLIENT_SECRET: process.env.DISCORD_CLIENT_SECRET
+  DISCORD_CLIENT_ID: trim(process.env.DISCORD_CLIENT_ID || ''),
+  DISCORD_CLIENT_SECRET: trim(process.env.DISCORD_CLIENT_SECRET || '')
 };
 
 // ==============================
-// Flags (not relied on for safety anymore)
+// Flags (trim-aware to avoid false positives)
 // ==============================
 cfg.HAS_DISCORD_OAUTH =
-  !!(cfg.DISCORD_CLIENT_ID && cfg.DISCORD_CLIENT_SECRET && cfg.DISCORD_CALLBACK_URL);
+  nonEmpty(cfg.DISCORD_CLIENT_ID) &&
+  nonEmpty(cfg.DISCORD_CLIENT_SECRET) &&
+  nonEmpty(cfg.DISCORD_CALLBACK_URL);
 
 if (!cfg.HAS_DISCORD_OAUTH) {
-  console.warn('[Auth] Discord OAuth env missing. Set DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_CALLBACK_URL.');
+  console.warn('[Auth] Discord OAuth env missing/empty. Set DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_CALLBACK_URL.');
 }
 
 module.exports = cfg;
