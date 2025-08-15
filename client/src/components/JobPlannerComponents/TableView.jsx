@@ -427,7 +427,7 @@ export default function TableView({
                       </tr>
                     );
                   })}
-                  <tr className="bg-[#1a1b1f] border-t-2 border-b-2 border-[#232429] text-green-400 text-[0.65rem] font-bold shadow-lg">
+                  <tr className="bg-[#1a1b1f] border-t-2 border-b-2 border-[#232429] text-white text-[0.65rem] font-erbaum font-bold shadow-lg">
                     <td className="px-0 py-0">Monthly Totals</td>
                     <td colSpan="5" />
                     <td className="px-2 py-1 text-center">{totals.num_wells.toFixed(0)}</td>
