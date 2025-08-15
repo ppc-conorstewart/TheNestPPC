@@ -49,6 +49,7 @@ app.use('/assets/logos', express.static(LOGOS_DIR));
 // JSON Parsing
 // ==============================
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // ==============================
 // API Logger
@@ -68,7 +69,9 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     sameSite: 'lax',
-    secure: isRender ? true : false
+    secure: isRender ? true : false,
+    httpOnly: true,
+    maxAge: 7 * 24 * 60 * 60 * 1000
   }
 }));
 app.use(passport.initialize());
@@ -146,6 +149,15 @@ app.get('/api/user', (req, res) => {
     res.json({ user: req.user });
   } else {
     res.status(401).json({ error: 'Not authenticated' });
+  }
+});
+
+// Mirror helper
+app.get('/api/me', (req, res) => {
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    res.json({ user: req.user });
+  } else {
+    res.status(401).json({ user: null });
   }
 });
 
@@ -292,9 +304,7 @@ if (HAS_DISCORD_OAUTH) {
     passport.authenticate('discord', (err, user, info) => {
       if (err) {
         console.error('Discord OAuth error:', err, info || '');
-        return res
-          .status(500)
-          .send('OAuth error. Check server logs for details.');
+        return res.status(500).send('OAuth error. Check server logs for details.');
       }
       if (!user) {
         console.warn('Discord OAuth failed. Info:', info || '');
@@ -305,9 +315,9 @@ if (HAS_DISCORD_OAUTH) {
           console.error('Passport login error:', loginErr);
           return res.status(500).send('Login error.');
         }
-        return res.redirect(
-          `${FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(user))}`
-        );
+        req.session.save(() => {
+          return res.redirect(FRONTEND_URL || '/');
+        });
       });
     })(req, res, next);
   });
