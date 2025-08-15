@@ -39,7 +39,7 @@ const cfg = {
   // Discord OAuth
   // ==============================
   DISCORD_CLIENT_ID: trim(process.env.DISCORD_CLIENT_ID || ''),
-  DISCORD_CLIENT_SECRET: trim(process.env.DISCORD_CLIENT_SECRET || '')
+  DISCORD_CLIENT_SECRET: trim(process.env.DISCORD_CLIENT_SECRET || ''),
 };
 
 // ==============================

@@ -29,7 +29,7 @@ const colWidths = {
   category: 92,
   location: 92,
   status: 108,
-  actions: 118,
+  actions: 98,
 };
 
 // =================== Asset Table Component ===================
