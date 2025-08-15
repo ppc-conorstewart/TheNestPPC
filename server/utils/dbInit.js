@@ -3,15 +3,7 @@
 // PostgreSQL pool + startup DDL (auto-creates `drafts` table)
 // ==============================
 
-const { Pool } = require('pg');
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl:
-    process.env.PGSSLMODE === 'disable'
-      ? false
-      : { rejectUnauthorized: false }
-});
+const pool = require('../db'); // Use the shared db.js pool (Render-safe)
 
 // Simple query helper
 async function query(text, params) {
