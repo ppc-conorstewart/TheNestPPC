@@ -206,7 +206,7 @@ export default function AssetFilters({
             onFocus={() => { setSearchFocused(true); searchRef.current?.play(); }}
             onBlur={() => { setSearchFocused(false); searchRef.current?.stop(); }}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="text-center uppercase rounded  border border-white/80 bg-black text-white focus:outline-none focus:ring"
+            className="text-center uppercase rounded  border  border-[#6a7257] bg-black text-white focus:outline-none focus:ring"
             style={{
               width: '100%',
               height: '100%',
@@ -232,7 +232,7 @@ function SelectBox({ value, onChange, options = [], placeholder }) {
         height: '100%',
         padding: '0 8px',
         fontSize: '0.98em',
-        fontWeight: 700,
+        fontWeight: 400,
         letterSpacing: '0.02em',
         boxSizing: 'border-box'
       }}
@@ -259,7 +259,7 @@ function ButtonToggle({ showMAAssets, onClick, onLoad, toggleRef, rowHeight }) {
         height: '100%',
         padding: '0 10px',
         fontSize: '1em',
-        fontWeight: 800,
+        fontWeight: 400,
         background: showMAAssets ? '#000000ac' : '#000000b5',
         color: 'white',
         border: `1px solid ${showMAAssets ? '#2ecc40a6' : '#b94c4ccd'}`,
@@ -293,7 +293,7 @@ function ButtonBOL({ onClick, shopRef, rowHeight }) {
         height: '100%',
         padding: '0 10px',
         fontSize: '1em',
-        fontWeight: 800,
+        fontWeight: 400,
         boxSizing: 'border-box'
       }}
     >
@@ -315,7 +315,7 @@ function ButtonAdmin({ onClick, adminRef, rowHeight }) {
         height: '100%',
         padding: '0 10px',
         fontSize: '1em',
-        fontWeight: 800,
+        fontWeight: 400,
         boxSizing: 'border-box'
       }}
     >
@@ -337,7 +337,7 @@ function ButtonAdd({ onClick, addRef, rowHeight }) {
         height: '100%',
         padding: '0 10px',
         fontSize: '1em',
-        fontWeight: 800,
+        fontWeight: 400,
         boxSizing: 'border-box'
       }}
     >

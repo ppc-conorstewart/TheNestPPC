@@ -8,7 +8,7 @@ import { API } from '../../../api';
 // Colors & Constants
 // ==============================
 export const palomaGreen = '#6a7257';
-export const goldAccent = '#b0b79f';
+export const goldAccent = '#ebeee3ff';
 export const cardBg = 'rgba(14,15,14,0.98)';
 export const glassBorder = '2.5px solid #35392E';
 export const NEUTRAL_LABEL = '#8e9481';
@@ -61,17 +61,29 @@ export function normalizeSlotFromDB(selectedChild, rawSlot) {
 
 // ==============================
 // API Helpers
+// NOTE: Some environments expose `/api/master/assignments?assembly=...&child=...`,
+// others use `/api/master/assignments/:assembly/:child`.
+// The function below tries both, returning whichever works first.
 // ==============================
 export async function apiFetchAssignments(assemblyTitle, selectedChild) {
-  const res = await fetch(
+  const tryPaths = [
     `${API}/api/master/assignments/${encodeURIComponent(assemblyTitle)}/${encodeURIComponent(selectedChild)}`,
-    { credentials: 'include' }
-  );
-  if (!res.ok) return [];
-  return res.json();
+    `${API}/api/master/assignments?assembly=${encodeURIComponent(assemblyTitle)}&child=${encodeURIComponent(selectedChild)}`
+  ];
+  for (const url of tryPaths) {
+    try {
+      const res = await fetch(url, { credentials: 'include' });
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json) && json.length >= 0) return json;
+      }
+    } catch (_) {}
+  }
+  return [];
 }
 
 export async function apiUpsertAssignment({ assembly, child, slot, asset_id }) {
+  // PUT route is consistent across both styles
   await fetch(`${API}/api/master/assignments`, {
     method: 'PUT',
     credentials: 'include',

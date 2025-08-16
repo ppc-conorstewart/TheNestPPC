@@ -38,10 +38,11 @@ export default function GasketUsagePanel({ gasketState, setGasketState, hoverGas
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={styles.groupHeader}>Gasket Usage</div>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      {/* tighter top/bottom spacing for header */}
+      <div style={{ ...styles.groupHeader, margin: '4px 0', paddingLeft: 8 }}>Gasket Usage</div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 4 }}>
         {gasketLocations.map((loc) => {
           const val = gasketState[loc] || '';
           const assigned = !!val;
@@ -68,13 +69,13 @@ export default function GasketUsagePanel({ gasketState, setGasketState, hoverGas
                   justifyContent: 'space-between',
                   gap: 2,
                   flexWrap: 'nowrap',
-                  minHeight: 34,
+                  minHeight: 20,
                 }}
               >
                 {/* left: number + label */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 200 }}>
                   <div style={numberBadge(n)}>{n}</div>
-                  <div style={{ ...styles.selectorLabel(assigned), fontSize: 14 }}>{loc}</div>
+                  <div style={{ ...styles.selectorLabel(assigned), fontSize: 10 }}>{loc}</div>
                 </div>
 
                 {/* middle: selector */}
@@ -86,15 +87,15 @@ export default function GasketUsagePanel({ gasketState, setGasketState, hoverGas
                     }
                     style={{
                       width: '100%',
-                      padding: '8px 10px',
+                      padding: '4px 4px',
                       background: '#0f100e',
                       color: '#ffffffbe',
                       border: isHot ? '1px solid #70c12aff' : '1px solid #3b3f33',
                       boxShadow: isHot ? '0 0 12px #70c12a55' : 'none',
                       borderRadius: 6,
                       fontWeight: 700,
-                      fontSize: 14,
-                      lineHeight: 1.,
+                      fontSize: 10,
+                      lineHeight: 1,
                     }}
                   >
                     <option value="">Select…</option>
@@ -116,14 +117,14 @@ export default function GasketUsagePanel({ gasketState, setGasketState, hoverGas
                     }
                     style={{
                       width: '100%',
-                      padding: '8px 10px',
+                      padding: '6px 10px',
                       background: '#0f100e',
                       color: '#ffffffcc',
                       border: isHot ? '1px solid #70c12aff' : '1px solid #3b3f33',
                       boxShadow: isHot ? '0 0 12px #70c12a55' : 'none',
                       borderRadius: 6,
                       fontWeight: 700,
-                      fontSize: 14,
+                      fontSize: 10,
                       lineHeight: 1,
                     }}
                   />

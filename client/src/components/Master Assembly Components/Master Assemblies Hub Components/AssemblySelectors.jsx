@@ -22,7 +22,7 @@ export default function AssemblySelectors({
 }) {
   if (isDogBones) {
     return (
-      <div style={{ display:'grid', gridTemplateColumns:'0.6fr 1.4fr', gap:16, padding:'12px' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1.4fr 0.6fr', gap:4, padding:'12px' }}>
         <div>
           <SelectorGrid
             groupings={groupings}

@@ -61,7 +61,7 @@ export function normalizeSlotFromDB(selectedChild, rawSlot) {
     const re = new RegExp('^' + letter + '\\s*[-:_]\\s*', 'i');
     s = s.replace(re, '').trim();
   }
-  return s;
+  return s.toLowerCase();
 }
 export function colorForLabel(label) {
   if (!label) return NEUTRAL_LABEL;
@@ -78,7 +78,7 @@ export function computeCounts(labels, selectedChild, state, saved) {
   let changed = 0;
   const total = (labels || []).length;
   for (const label of labels || []) {
-    const key = `${selectedChild}-${label}`;
+    const key = `${selectedChild}-${normalizeSlotFromDB(selectedChild, label)}`;
     const cur = state[key] || '';
     const was = saved[key] || '';
     if (cur) assigned++;
@@ -91,7 +91,8 @@ export function computeCountsMissile(allLabels, selectedChild, activeTitle, stat
   let changed = 0;
   const total = allLabels.length;
   for (const label of allLabels) {
-    const key = `${selectedChild}-${activeTitle} - ${label}`;
+    const norm = normalizeSlotFromDB(selectedChild, `${activeTitle} - ${label}`);
+    const key = `${selectedChild}-${norm}`;
     const cur = state[key] || '';
     const was = saved[key] || '';
     if (cur) assigned++;
@@ -104,6 +105,48 @@ export function heroBoxFor(kind) {
   if (kind === 'zipper') return { width: 'clamp(420px,40vw,720px)', height: 'clamp(300px,42vh,560px)' };
   return { width: 'clamp(420px,44vw,760px)', height: 'clamp(220px,30vh,400px)' };
 }
+
+// ==============================
+// Table Typography (NEW - standard across assemblies)
+// ==============================
+// Use these in any grid/table to avoid blurry/pixelated headers.
+export const tableType = {
+  thSmall: {
+    padding: '1px 5px',
+    lineHeight: '0.9rem',
+    border: `1px solid ${palomaGreen}`,
+    textAlign: 'center',
+    color: palomaGreen,
+    // lighter + crisper rendering:
+    fontWeight: 400,
+    fontSize: '0.74rem',
+    letterSpacing: '0.03em',
+    background: '#10110f',
+    whiteSpace: 'nowrap',
+    position: 'sticky',
+    top: 0,
+    zIndex: 1,
+    fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
+    WebkitFontSmoothing: 'antialiased',
+    MozOsxFontSmoothing: 'grayscale',
+    textRendering: 'optimizeLegibility',
+  },
+  tdSmall: {
+    padding: '1px 5px',
+    border: `1px solid ${palomaGreen}`,
+    textAlign: 'center',
+    verticalAlign: 'middle',
+    height: 16,
+    lineHeight: '0.9rem',
+    fontSize: '0.74rem',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
+    WebkitFontSmoothing: 'antialiased',
+    MozOsxFontSmoothing: 'grayscale',
+  },
+};
 
 // ==============================
 // UI
@@ -215,14 +258,14 @@ export const styles = {
 
   // Selectors
   groupHeader: {
-    fontSize: 14,
-    fontWeight: 900,
-    letterSpacing: '.16em',
+    fontSize: 18,
+    fontWeight: 600,
+    letterSpacing: '.25em',
     color: '#c8cfb5',
     textTransform: 'uppercase',
-    borderLeft: '8px solid #2e3329',
+
     paddingLeft: 12,
-    margin: '4px 0 0',
+    margin: '13px 0px 14px 0',
   },
   gridAutoFit: {
     display: 'grid',
@@ -233,8 +276,7 @@ export const styles = {
   selectorCard: (assigned) => ({
     display: 'grid',
     gridTemplateRows: 1,
-    minHeight: 50,
-    
+    minHeight: 40,
     background: assigned ? 'linear-gradient(180deg,#1b1f18,#151813)' : 'linear-gradient(180deg,#141612,#10110f)',
     border: assigned ? '1.5px solid #3f4638' : '1.5px solid #2a2e26',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,.04), 0 10px 22px rgba(0,0,0,.35)',
@@ -254,13 +296,13 @@ export const styles = {
     color: assigned ? '#e8eadf' : '#b3b9a0',
   }),
   statusPill: (assigned) => ({
-    padding: '0px 2px',
+    padding: 'px 2px',
     fontSize: 2,
-    fontWeight: 300,
-    letterSpacing: '.04em',
+    fontWeight: 600,
+    letterSpacing: '.26em',
     background: assigned ? 'rgba(106,114,87,.18)' : 'rgba(150,150,150,.08)',
     border: assigned ? '1px solid #454d3f' : '1px solid #2e342b',
-    color: assigned ? '#f6ff00ff' : '#a8ae99',
+    color: assigned ? '#ffffffff' : '#a8ae99',
   }),
   clearBtn: (enabled) => ({
     display: 'flex',
@@ -269,10 +311,10 @@ export const styles = {
     background: enabled ? '#e53939' : '#35392E',
     color: '#fff',
     border: 'none',
-    fontWeight: 800,
-    height: 36,
+    fontWeight: 500,
+    height: 24,
     minWidth: 64,
-    padding: '0 8px',
+    padding: '0 4px',
     fontSize: 12,
     cursor: enabled ? 'pointer' : 'not-allowed',
     opacity: enabled ? 1 : 0.53,
@@ -372,7 +414,7 @@ export const styles = {
     borderRadius: 0,
     padding: 10,
     cursor: 'pointer',
-    height: 50,
+    height: 0,
   }),
 
   // Section wrap
@@ -437,7 +479,7 @@ export const styles = {
     fontSize: 10,
   },
 
-  // Sticky save bar (lifted above footer)
+  // Sticky save bar
   saveBar: {
     position: 'fixed',
     left: '400px',

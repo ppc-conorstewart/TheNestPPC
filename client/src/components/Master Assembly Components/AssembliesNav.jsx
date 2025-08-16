@@ -400,8 +400,8 @@ export default function AssembliesNav({
                     aria-hidden
                     style={{
                       position: 'absolute',
-                      top: 4,
-                      right: 4,
+                      top: 2,
+                      right: 2,
                       width: 8,
                       height: 8,
                       borderRadius: 999,
@@ -415,7 +415,7 @@ export default function AssembliesNav({
                   style={{
                     minWidth: 34,
                     height: 26,
-                    padding: '0 2px',
+                    padding: '0 0px',
                     display: 'inline-flex',
                     alignItems: 'center',
                     justifyContent: 'center',

@@ -1,10 +1,14 @@
 // ==============================
-// Master Assemblies Hub Components/SelectorGrid.jsx
+// src/components/Master Assemblies Hub Components/SelectorGrid.jsx
+// Selector grid — uses canonical slot keys `${child}-${normalizeSlot(label)}`
 // ==============================
-import AssetSelector from '../AssetSelector';
-import { legendNumberFor, styles } from '../Support Files/maKit';
 
-// Square badge used in the left-side asset selectors (yellow squares)
+import AssetSelector from '../AssetSelector';
+import { legendNumberFor, normalizeSlotFromDB, styles } from '../Support Files/maKit';
+
+// ==============================
+// UI: Yellow index square
+// ==============================
 const selectorSquare = (assigned, isHot) => ({
   width: 28,
   height: 28,
@@ -19,17 +23,20 @@ const selectorSquare = (assigned, isHot) => ({
   background: '#ffd84a',
   border: '2px solid #9b8510',
   borderRadius: 2,
-  boxShadow: isHot ? '0 0 0 1px #000 inset, 0 0 0 2px #d6dc24ff, 0 0 12px #d6dc24ff' : '0 0 0 1px #000 inset',
+  boxShadow: isHot
+    ? '0 0 0 1px #000 inset, 0 0 0 2px #d6dc24ff, 0 0 12px #d6dc24ff'
+    : '0 0 0 1px #000 inset',
 });
 
 // ==============================
+// Component
 // Props:
 // - groupings: [{ title, labels[] }]
 // - selectedChild
 // - getAssetStateSetterFields(): [assets, setAssets]
 // - assetOptions
 // - hoverLabel
-// - rowRefs (ref object passed from parent)
+// - rowRefs
 // - setClearTarget(), setClearModalOpen()
 // ==============================
 export default function SelectorGrid({
@@ -48,15 +55,17 @@ export default function SelectorGrid({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {groupings.map((g) => (
-        <div key={g.title || 'assets'} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div key={g.title || 'assets'} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {g.title ? <div style={styles.groupHeader}>{g.title}</div> : null}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 4 }}>
             {g.labels.map((label) => {
-              const slotKey = `${selectedChild}-${label}`;
+              const normalized = normalizeSlotFromDB(selectedChild, label);
+              const slotKey = `${selectedChild}-${normalized}`;
               const assetId = assets[slotKey] || '';
               const assigned = !!assetId;
-              const isHot = hoverLabel && label.toLowerCase() === hoverLabel.toLowerCase();
+              const isHot =
+                !!hoverLabel && String(label).toLowerCase() === String(hoverLabel).toLowerCase();
 
               return (
                 <div
@@ -77,27 +86,32 @@ export default function SelectorGrid({
                       justifyContent: 'space-between',
                       gap: 10,
                       flexWrap: 'nowrap',
-                      minHeight: 36,
+                      minHeight: 20,
                     }}
                   >
-                    {/* left: square number + label */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 220 }}>
+                    {/* Left: index + label */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 220 }}>
                       <div style={selectorSquare(assigned, isHot)}>{legendNumberFor(label)}</div>
                       <div style={{ ...styles.selectorLabel(assigned), fontSize: 8 }}>{label}</div>
                     </div>
 
-                    {/* middle: selector */}
-                    <div style={{ flex: '0 0 320px', maxWidth: 360 }}>
+                    {/* Middle: selector */}
+                    <div style={{ flex: '0 0 400px', maxWidth: 400 }}>
                       <AssetSelector
                         label=""
                         asset={assetId}
                         assetOptions={assetOptions}
-                        onChange={(val) => setAssets((a) => ({ ...a, [slotKey]: val }))}
+                        onChange={(val) =>
+                          setAssets((a) => ({
+                            ...a,
+                            [slotKey]: val,
+                          }))
+                        }
                       />
                     </div>
 
-                    {/* right: status + clear */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {/* Right: status + clear */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                       <div style={styles.statusPill(assigned)}>
                         {assigned ? String(assetId) : 'UNASSIGNED'}
                       </div>

@@ -60,15 +60,15 @@ async function getAssignmentsForChild(assembly, child) {
     [assembly, child]
   );
   const meta = await db.query(
-    `SELECT creation_date, recert_date
+    `SELECT status, creation_date, recert_date
        FROM master_assignments
       WHERE assembly = $1 AND child = $2
-        AND (slot = '__meta__' OR creation_date IS NOT NULL OR recert_date IS NOT NULL)
-      ORDER BY (slot = '__meta__') DESC, updated_at DESC
+        AND slot = '__meta__'
+      ORDER BY updated_at DESC
       LIMIT 1`,
     [assembly, child]
   );
-  const metaDates = meta.rows[0] || {};
+  const metaRow = meta.rows[0] || {};
   return rows.map(r => ({
     assembly: r.assembly,
     child: r.child,
@@ -76,8 +76,10 @@ async function getAssignmentsForChild(assembly, child) {
     asset_id: r.asset_id,
     updated_by: r.updated_by,
     updated_at: r.updated_at,
-    creation_date: metaDates.creation_date || null,
-    recert_date: metaDates.recert_date || null,
+    // rows don’t carry meta; caller can read it from /meta or this join
+    meta_status: metaRow.status || null,
+    creation_date: metaRow.creation_date || null,
+    recert_date: metaRow.recert_date || null,
   }));
 }
 async function upsertAssignment({ assembly, child, slot, asset_id, updated_by }) {
@@ -88,8 +90,10 @@ async function upsertAssignment({ assembly, child, slot, asset_id, updated_by })
   );
   const prevAssetId = prev.rows[0]?.asset_id || null;
 
-  await db.query('DELETE FROM master_assignments WHERE assembly = $1 AND child = $2 AND slot = $3',
-    [assembly, child, cleanSlot]);
+  await db.query(
+    'DELETE FROM master_assignments WHERE assembly = $1 AND child = $2 AND slot = $3',
+    [assembly, child, cleanSlot]
+  );
 
   if (asset_id) {
     await db.query(
@@ -106,7 +110,10 @@ async function upsertAssignment({ assembly, child, slot, asset_id, updated_by })
       await assetService.addActivityLog({
         action: 'Removed from Master Assembly',
         asset_id: prevAssetId,
-        details: JSON.stringify({ action: 'Removed from Master Assembly', assembly, child, slot: cleanSlot, new_status: 'Available' }),
+        details: JSON.stringify({
+          action: 'Removed from Master Assembly',
+          assembly, child, slot: cleanSlot, new_status: 'Available'
+        }),
         user: updated_by || 'system',
       });
     } catch {}
@@ -119,7 +126,10 @@ async function upsertAssignment({ assembly, child, slot, asset_id, updated_by })
       await assetService.addActivityLog({
         action: 'Added to Master Assembly',
         asset_id,
-        details: JSON.stringify({ action: 'Added to Master Assembly', assembly, child, slot: cleanSlot, new_status: status }),
+        details: JSON.stringify({
+          action: 'Added to Master Assembly',
+          assembly, child, slot: cleanSlot, new_status: status
+        }),
         user: updated_by || 'system',
       });
     } catch {}
@@ -134,8 +144,10 @@ async function deleteAssignment({ assembly, child, slot, new_status, notes, upda
   );
   const prevAssetId = prev.rows[0]?.asset_id || null;
 
-  await db.query('DELETE FROM master_assignments WHERE assembly = $1 AND child = $2 AND slot = $3',
-    [assembly, child, cleanSlot]);
+  await db.query(
+    'DELETE FROM master_assignments WHERE assembly = $1 AND child = $2 AND slot = $3',
+    [assembly, child, cleanSlot]
+  );
 
   if (prevAssetId) {
     const finalStatus = (new_status && String(new_status).trim()) || 'Available';
@@ -144,7 +156,10 @@ async function deleteAssignment({ assembly, child, slot, new_status, notes, upda
       await assetService.addActivityLog({
         action: 'Removed from Master Assembly',
         asset_id: prevAssetId,
-        details: JSON.stringify({ action: 'Removed from Master Assembly', assembly, child, slot: cleanSlot, new_status: finalStatus, notes: notes || '' }),
+        details: JSON.stringify({
+          action: 'Removed from Master Assembly',
+          assembly, child, slot: cleanSlot, new_status: finalStatus, notes: notes || ''
+        }),
         user: updated_by || 'system',
       });
     } catch {}
@@ -162,14 +177,14 @@ async function getSummaryForAssembly(assembly) {
      child_counts AS (
        SELECT child,
               COUNT(*) FILTER (WHERE slot <> '__meta__' AND asset_id IS NOT NULL) AS assigned_count,
-              BOOL_OR(status = 'Active') AS any_active
+              BOOL_OR(TRUE) AS any_rows
          FROM master_assignments
         WHERE assembly = $1
         GROUP BY child
      )
      SELECT c.child, c.assigned_count,
-            COALESCE(lm.status, CASE WHEN c.any_active THEN 'Active' ELSE 'Inactive' END) AS status,
-            (COALESCE(lm.status, CASE WHEN c.any_active THEN 'Active' ELSE 'Inactive' END) = 'Active') AS active
+            COALESCE(lm.status, 'Inactive') AS status,
+            (COALESCE(lm.status, 'Inactive') = 'Active') AS active
        FROM child_counts c
   LEFT JOIN latest_meta lm ON lm.child = c.child
    ORDER BY c.child ASC`,
@@ -182,11 +197,13 @@ async function getSummaryForAssembly(assembly) {
 const ALLOWED_STATUSES = new Set(['Active','Inactive','Offline','Torn Down']);
 function normalizeStatus(s) {
   const x = String(s || '').trim();
+  if (!x) return 'Inactive';
   if (ALLOWED_STATUSES.has(x)) return x;
-  // accept common aliases from prior UIs
-  const low = x.toLowerCase();
-  if (low === 'disassembled' || low === 'dis-assembled' || low === 'torn-down') return 'Torn Down';
-  if (low === 'in-active' || low === 'in active') return 'Inactive';
+  const low = x.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (low === 'active') return 'Active';
+  if (low === 'inactive' || low === 'in-active' || low === 'in active') return 'Inactive';
+  if (low === 'offline') return 'Offline';
+  if (low === 'torn down' || low === 'torn-down' || low === 'disassembled' || low === 'dis-assembled') return 'Torn Down';
   return 'Inactive';
 }
 
@@ -207,62 +224,44 @@ async function getMeta(assembly, child) {
       recert_date: row.recert_date || null,
     };
   }
-  const fallback = await db.query(
-    `SELECT status, creation_date, recert_date, updated_at
-       FROM master_assignments
-      WHERE assembly = $1 AND child = $2 AND status IS NOT NULL
-      ORDER BY updated_at DESC
-      LIMIT 1`,
-    [assembly, child]
-  );
-  const r = fallback.rows[0] || {};
-  return {
-    status: r.status || 'Inactive',
-    creation_date: r.creation_date || null,
-    recert_date: r.recert_date || null,
-  };
+  return { status: 'Inactive', creation_date: null, recert_date: null };
 }
 
 async function putMeta({ assembly, child, status, creation_date, recert_date, updated_by }) {
-  // lock to 4 statuses
   const safeStatus = normalizeStatus(status);
 
-  // handle clear creation date: if creation_date is empty -> both dates to NULL
   const hasCreation = !!creation_date;
   const isoCreation = hasCreation ? new Date(creation_date).toISOString().slice(0,10) : null;
-
   let isoRecert = null;
   if (hasCreation) {
-    // if UI supplies explicit recert, keep it; else compute +6 months
-    isoRecert = recert_date ? new Date(recert_date).toISOString().slice(0,10)
-                            : (() => { const d = new Date(isoCreation); d.setMonth(d.getMonth()+6); return d.toISOString().slice(0,10); })();
+    isoRecert = recert_date
+      ? new Date(recert_date).toISOString().slice(0,10)
+      : (() => { const d = new Date(isoCreation); d.setMonth(d.getMonth() + 6); return d.toISOString().slice(0,10); })();
   }
-  // if creation cleared, recert forced to NULL (per requirement)
 
-  // single-row __meta__ record
-  await db.query(
-    `DELETE FROM master_assignments WHERE assembly = $1 AND child = $2 AND slot = '__meta__'`,
-    [assembly, child]
-  );
-  await db.query(
-    `INSERT INTO master_assignments
-       (assembly, child, slot, asset_id, updated_by, updated_at, status, creation_date, recert_date)
-     VALUES ($1,$2,'__meta__',NULL,$3,$4,$5,$6,$7)`,
-    [assembly, child, updated_by || 'system', new Date(), safeStatus, isoCreation, isoRecert]
-  );
-
-  // propagate (for simple readers)
+  await db.query('BEGIN');
   try {
+    // maintain a single __meta__ row
     await db.query(
-      `UPDATE master_assignments
-          SET status = $1,
-              creation_date = $2,
-              recert_date = $3,
-              updated_at = $4
-        WHERE assembly = $5 AND child = $6`,
-      [safeStatus, isoCreation, isoRecert, new Date(), assembly, child]
+      `DELETE FROM master_assignments WHERE assembly = $1 AND child = $2 AND slot = '__meta__'`,
+      [assembly, child]
     );
-  } catch {}
+    await db.query(
+      `INSERT INTO master_assignments
+         (assembly, child, slot, asset_id, updated_by, updated_at, status, creation_date, recert_date)
+       VALUES ($1,$2,'__meta__',NULL,$3,$4,$5,$6,$7)`,
+      [assembly, child, updated_by || 'system', new Date(), safeStatus, isoCreation, isoRecert]
+    );
+
+    // IMPORTANT: Do NOT propagate META status to slot rows.
+    // Asset rows must keep their "MA (DB-X)" statuses.
+    // (If you want to propagate dates, add a separate UPDATE here.)
+
+    await db.query('COMMIT');
+  } catch (e) {
+    await db.query('ROLLBACK');
+    throw e;
+  }
 
   return { success: true };
 }
@@ -311,14 +310,21 @@ async function putGasketsBulk({ assembly, child, items = [], updated_by }) {
 }
 
 // ------------------ unified save ------------------
-async function saveMasterAssembly({ assembly, child, status, creation_date, recert_date, assignments = [], gaskets = [], updated_by }) {
-  await putMeta({ assembly, child, status, creation_date, recert_date, updated_by });
+async function saveMasterAssembly({
+  assembly, child,
+  status, creation_date, recert_date,
+  assignments = [], gaskets = [],
+  updated_by
+}) {
+  // 1) update slot rows first (sets assets to "MA (DB-X)")
   for (const a of (assignments || [])) {
     await upsertAssignment({ assembly, child, slot: a.slot, asset_id: a.asset_id, updated_by });
   }
   if (Array.isArray(gaskets) && gaskets.length > 0) {
     await putGasketsBulk({ assembly, child, items: gaskets, updated_by });
   }
+  // 2) write META last (no propagation into slot rows)
+  await putMeta({ assembly, child, status, creation_date, recert_date, updated_by });
   return { success: true };
 }
 

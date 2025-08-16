@@ -238,7 +238,7 @@ function AssetSelector({
     >
       <label
         style={{
-          fontWeight: 700,
+          fontWeight: 300,
           fontSize: 11,
           color: palomaGreen,
           whiteSpace: 'nowrap',
@@ -292,9 +292,9 @@ function AssetSelector({
               borderColor: borderColor,
               color: '#ffffff',
               borderRadius: 6,
-              minHeight: 30,
+              minHeight: 36,
               height: 30,
-              fontWeight: 600,
+              fontWeight: 500,
               fontSize: 12,
               width: '100%',
               minWidth: 0,

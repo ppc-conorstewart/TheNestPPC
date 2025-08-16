@@ -94,9 +94,6 @@ const GRID_BOTTOM_MARGIN = 12
 // ===== GLASS CONTAINER STYLE (fully translucent) =====
 const BLACK_CONTAINER_STYLE = {
   background: 'transparent',
-  
-  
-  
   padding: '0px',
   minWidth: 0,
   width: '100%',
@@ -116,7 +113,6 @@ const DASH_HEADER_STYLE = {
   fontFamily: "'Punoer', 'erbaum', 'Inter', Arial, sans-serif",
   fontSize: '2.2rem',
   color: '#c3c3c3ff',
-  
   textShadow: '0 2px 24px #000, 0 1px 1px #6a7257ff',
   letterSpacing: '.4em',
   fontWeight: 600,
@@ -291,7 +287,7 @@ export default function FlyHQTools() {
       }}
     >
       {/* === Page-scoped Glass Backdrop — uses /public/assets/dark-bg.png === */}
-      <GlassBackdrop image="/assets/dark-bg.png" blur={0} opacity={0.01} />
+      <GlassBackdrop image="/assets/dark-bg.png" blur={0} opacity={0.18} />
 
       {/* === Unified Glass Dashboard Container === */}
       <div
@@ -309,9 +305,61 @@ export default function FlyHQTools() {
         }}
       >
         {/* === DASHBOARD HEADER === */}
-        <div style={DASH_HEADER_STYLE}>
-          
+        <div style={{ position: 'relative', width: '100%' }}>
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: -6,
+              transform: 'translateX(-50%)',
+              width: 460,
+              height: 54,
+              borderRadius: 999,
+              background:
+                'radial-gradient(60% 120% at 50% 50%, rgba(106,114,87,0.28), rgba(0,0,0,0) 70%)',
+              filter: 'blur(10px)',
+              animation: 'pulseGlow 3.2s ease-in-out infinite',
+              pointerEvents: 'none',
+              zIndex: 5
+            }}
+          />
+          <div style={DASH_HEADER_STYLE}></div>
         </div>
+
+        <style>
+          {`
+            @keyframes pulseGlow {
+              0% { opacity: .55; transform: translateX(-50%) scale(0.98); }
+              50% { opacity: .85; transform: translateX(-50%) scale(1.02); }
+              100% { opacity: .55; transform: translateX(-50%) scale(0.98); }
+            }
+            .gradient-frame {
+              position: relative;
+              border-radius: 14px;
+              padding: 1px;
+              /* removed conic gradient fill for cleaner look */
+              background: rgba(255,255,255,0.04);
+            }
+            .gradient-inner {
+              border-radius: 13px;
+              background: rgba(10,12,10,0.25); /* more transparent */
+              box-shadow: 0 10px 24px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04);
+              height: 100%;
+              width: 100%;
+              backdrop-filter: blur(4px);
+              -webkit-backdrop-filter: blur(4px);
+              overflow: hidden;
+            }
+            .carousel-glass {
+              background: rgba(12,14,12,0.35);
+              backdrop-filter: blur(8px);
+              -webkit-backdrop-filter: blur(8px);
+              border: 1px solid rgba(106,114,87,0.55);
+              box-shadow: 0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05);
+            }
+          `}
+        </style>
+
         <div
           style={{
             width: '100%',
@@ -331,7 +379,6 @@ export default function FlyHQTools() {
               display: 'grid',
               gridTemplateColumns: '1fr 1fr',
               gridTemplateRows: '1fr 1fr',
-              
               gap: '20px',
               width: '100%',
               height: '100%',
@@ -339,19 +386,36 @@ export default function FlyHQTools() {
             }}
           >
             <div style={{ minHeight: 0, height: '100%', width: '100%', overflow: 'visible', borderRadius: 0, display: 'flex' }}>
-              <ActiveJobsCard />
+              <div className="gradient-frame" style={{ width: '100%' }}>
+                <div className="gradient-inner">
+                  <ActiveJobsCard />
+                </div>
+              </div>
             </div>
             <div style={{ minHeight: 0, height: '100%', width: '100%', overflow: 'visible', borderRadius: 0, display: 'flex' }}>
-              <DeployedCoilCard />
+              <div className="gradient-frame" style={{ width: '100%' }}>
+                <div className="gradient-inner">
+                  <DeployedCoilCard />
+                </div>
+              </div>
             </div>
             <div style={{ minHeight: 0, height: '100%', width: '100%', overflow: 'visible', borderRadius: 0, display: 'flex' }}>
-              <UpcomingPadsCard />
+              <div className="gradient-frame" style={{ width: '100%' }}>
+                <div className="gradient-inner">
+                  <UpcomingPadsCard />
+                </div>
+              </div>
             </div>
             <div style={{ minHeight: 0, height: '100%', width: '100%', overflow: 'visible', borderRadius: 0, display: 'flex' }}>
-              <MissileJobHubCard />
+              <div className="gradient-frame" style={{ width: '100%' }}>
+                <div className="gradient-inner">
+                  <MissileJobHubCard />
+                </div>
+              </div>
             </div>
           </div>
         </div>
+
         {/* === MARQUEE BAR (Stats) — glassy === */}
         <div
           className="w-full glass-card"
@@ -412,7 +476,6 @@ export default function FlyHQTools() {
               </span>
             ))}
           </div>
-          {/* CSS Animation for marquee */}
           <style>
             {`
               @keyframes marquee-scroll {
@@ -429,7 +492,7 @@ export default function FlyHQTools() {
 
       {/* ===== HQ TOOLS SWIPER SECTION (FLUSH TO FOOTER) ===== */}
       <div
-        className="w-full flex justify-center"
+        className="w-full flex justify-center carousel-glass"
         style={{
           position: 'absolute',
           left: 0,
@@ -441,7 +504,6 @@ export default function FlyHQTools() {
           zIndex: 1,
           minHeight: CAROUSEL_HEIGHT,
           height: CAROUSEL_HEIGHT,
-          background: 'transparent',
         }}
       >
         <div
@@ -507,7 +569,6 @@ export default function FlyHQTools() {
                     boxShadow: "0 6px 18px 0 rgba(0, 0, 0, 0.23)",
                   }}
                 >
-                  {/* --- CARD TITLE TAB --- */}
                   <div
                     className="w-full flex items-center uppercase border-2 border-[#6a7257] font-cornero justify-center rounded-t-2xl glass-header"
                     style={{
@@ -520,7 +581,6 @@ export default function FlyHQTools() {
                       {tool.title}
                     </h2>
                   </div>
-                  {/* --- CARD ICON --- */}
                   <div className="flex-1 flex flex-col items-center justify-center mt-0 mb-1">
                     <div
                       style={{
@@ -548,7 +608,6 @@ export default function FlyHQTools() {
                       />
                     </div>
                   </div>
-                  {/* --- CARD DESCRIPTION --- */}
                   <div className="w-full px-2 pb-1 border border-[#6a7257] rounded-xl flex items-end justify-center">
                     <p className="text-[#e6e8df] text-sm uppercase font-cornero  text-center " style={{ letterSpacing: ".03em" }}>
                       {tool.description}

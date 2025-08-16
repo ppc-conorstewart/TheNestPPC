@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import MFVAnalyticsPanel from '../components/MFV Page Components/MFVAnalyticsPanel';
-import MFVArchivedModal from '../components/MFV Page Components/MFVArchivedModal';
 import MFVBodyPressureChart from '../components/MFV Page Components/MFVBodyPressureChart';
 import MFVBodyPressureTable from '../components/MFV Page Components/MFVBodyPressureTable';
 import MFVPadControls from '../components/MFV Page Components/MFVPadControls';
@@ -36,6 +35,9 @@ ChartJS.register(
   Legend
 );
 
+// ==============================
+// Section: CSV Table Headers
+// ==============================
 const BUILD_TABLE_HEADERS = [
   'TIMESTAMP',
   'USER ID',
@@ -77,16 +79,20 @@ const tablesConfig = [
   { key: 'field', label: 'OEM Reports', url: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRFbz1FlLmX9w-sJMhtsnyRQ5DaLXuiWaw9nEJ7nRfV1CZUIBxEKk9UTurxIhaLq7491cAXWYoEfyS1/pub?gid=0&single=true&output=csv' },
 ];
 
-// Default page size
+// ==============================
+// Section: Pagination Defaults
+// ==============================
 const ROWS_PER_PAGE = 20;
 
-// Per-tab page sizes (OEM trimmed by 1 row as requested)
 const ROWS_PER_PAGE_BY_TAB = {
   build: 20,
   summary: 20,
-  field: 19   // OEM
+  field: 19
 };
 
+// ==============================
+// Section: API Helpers
+// ==============================
 async function fetchPads() {
   const res = await fetch('/api/mfv/pads');
   return res.json();
@@ -123,7 +129,35 @@ async function fetchCustomers() {
   const res = await fetch('/api/customers');
   return res.json();
 }
+async function fetchAssetsAll() {
+  const res = await fetch('/api/assets');
+  return res.json();
+}
 
+// ==============================
+// Section: PPC Normalization Helper
+// ==============================
+function normalizePpcId(input) {
+  const cleaned = String(input || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!cleaned) return '';
+  // Expect patterns like PPC000123, PPC00123A, PPC123, etc.
+  const m = cleaned.match(/^PPC(\d+)([A-Z]*)$/);
+  if (m) {
+    const digits = String(parseInt(m[1], 10)); // drop leading zeros
+    const suffix = m[2] || '';
+    return `PPC${digits}${suffix}`;
+  }
+  // If it already equals something like PPCABC123, fall back to cleaned
+  if (cleaned.startsWith('PPC')) return cleaned;
+  // If digits only, treat as PPC + digits
+  const d = cleaned.match(/(\d+)/);
+  if (d) return `PPC${parseInt(d[1], 10)}`;
+  return cleaned;
+}
+
+// ==============================
+// Section: Component
+// ==============================
 export default function MFVPageWrapper() {
   const navigate = useNavigate();
 
@@ -136,13 +170,16 @@ export default function MFVPageWrapper() {
   const [archived, setArchived] = useState([]);
   const [selectedPad, setSelectedPad] = useState('');
   const [showAdd, setShowAdd] = useState(false);
-  const [showArchivedModal, setShowArchivedModal] = useState(false);
   const [newLabel, setNewLabel] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState("chart");
   const [customers, setCustomers] = useState([]);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  // NEW: assets + qualification stats state
+  const [assets, setAssets] = useState([]);
+  const [qualificationStats, setQualificationStats] = useState(null);
 
   const chartRef = useRef();
 
@@ -151,6 +188,9 @@ export default function MFVPageWrapper() {
       ? 'http://localhost:3001'
       : '';
 
+  // ==============================
+  // Section: Local Storage Pad
+  // ==============================
   useEffect(() => {
     const storedPad = window.localStorage.getItem('MFV_SELECTED_PAD');
     if (storedPad) setSelectedPad(storedPad);
@@ -162,6 +202,9 @@ export default function MFVPageWrapper() {
     }
   }, [selectedPad]);
 
+  // ==============================
+  // Section: Load Pads / Customers / Assets
+  // ==============================
   const reloadPads = async () => {
     setLoading(true);
     try {
@@ -204,20 +247,34 @@ export default function MFVPageWrapper() {
     }
   };
 
+  const reloadAssets = async () => {
+    try {
+      const data = await fetchAssetsAll();
+      setAssets(Array.isArray(data) ? data : []);
+    } catch {
+      setAssets([]);
+    }
+  };
+
   useEffect(() => {
     reloadPads();
     reloadCustomers();
+    reloadAssets();
     // eslint-disable-next-line
   }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
       reloadPads();
+      reloadAssets();
     }, 60000);
     return () => clearInterval(interval);
     // eslint-disable-next-line
   }, []);
 
+  // ==============================
+  // Section: Load CSVs + Pad Data
+  // ==============================
   useEffect(() => {
     const sources = tablesConfig.map(t => ({ ...t }));
     Promise.all([
@@ -258,7 +315,6 @@ export default function MFVPageWrapper() {
         const flat = results.flat();
         const map = {};
         flat.forEach(r => {
-          // Normalize object-rows -> array-rows if any slipped through
           let headers = Array.isArray(r.headers) ? r.headers : [];
           let rows = Array.isArray(r.rows) ? r.rows : [];
           if (rows.length && !Array.isArray(rows[0]) && typeof rows[0] === 'object') {
@@ -274,6 +330,9 @@ export default function MFVPageWrapper() {
     // eslint-disable-next-line
   }, [pads, selectedPad]);
 
+  // ==============================
+  // Section: Pagination / Filtering
+  // ==============================
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, searchTerm, selectedPad]);
@@ -294,7 +353,6 @@ export default function MFVPageWrapper() {
     displayRows = displayRows.map(row => row.slice(0, SUMMARY_TABLE_HEADERS.length));
   }
 
-  // Robust search filter (for active tab rendering)
   const term = (searchTerm || '').toLowerCase();
   const rowMatchesTerm = (row) => {
     if (!term) return true;
@@ -308,7 +366,6 @@ export default function MFVPageWrapper() {
     displayRows = [...displayRows].reverse();
   }
 
-  // --- Use per-tab page size (OEM trimmed by 1)
   const rowsPerPage = ROWS_PER_PAGE_BY_TAB[activeTab] || ROWS_PER_PAGE;
 
   const totalPages = Math.max(1, Math.ceil(displayRows.length / rowsPerPage));
@@ -317,6 +374,9 @@ export default function MFVPageWrapper() {
     currentPage * rowsPerPage
   );
 
+  // ==============================
+  // Section: Add/Archive Pads
+  // ==============================
   const handleAddPad = async () => {
     if (!newLabel.trim() || !newUrl.trim()) return;
     const pad_key = newLabel.toLowerCase().replace(/\W+/g, '-');
@@ -358,14 +418,16 @@ export default function MFVPageWrapper() {
 
   const selectedPadLabel = pads.find(p => (p.key || '').toLowerCase() === (selectedPad || '').toLowerCase())?.label || selectedPad;
 
-  // --- NEW: Generate Post-Job Report Handler ---
+  // ==============================
+  // Section: PDF Report
+  // ==============================
   const handleGenerateReport = async () => {
     if (!selectedPad || !allSheets[selectedPad]) return;
     setGeneratingPdf(true);
     try {
       const padMeta = pads.find(p => (p.key || '').toLowerCase() === (selectedPad || '').toLowerCase()) || {};
       const customer = padMeta.customer || (padMeta.label ? padMeta.label.split(' ')[0] : "");
-      const lsd = padMeta.lsd || (padMeta.label ? padMeta.label.split(' ').slice(1).join(' ') : "");
+      const lsd = padMeta.label ? padMeta.label.split(' ').slice(1).join(' ') : "";
       const chartBase64 =
         chartRef.current && typeof chartRef.current.toBase64Image === "function"
           ? chartRef.current.toBase64Image()
@@ -385,9 +447,9 @@ export default function MFVPageWrapper() {
     setGeneratingPdf(false);
   };
 
-  // ==========================
-  // Utility: Only pass top 5 submitters (by count) to the Analytics Panel
-  // ==========================
+  // ==============================
+  // Section: Analytics Panel Props (Top Submitters passthrough unchanged)
+  // ==============================
   function getTop5Submitters(headers, rows) {
     if (!headers || !rows || rows.length === 0) return { headers, rows };
     const userIdx = headers.findIndex(h => h.toLowerCase().includes('username'));
@@ -409,7 +471,6 @@ export default function MFVPageWrapper() {
     return { headers, rows: filteredRows };
   }
 
-  // Analytics Panel rows: Only pass top 5 submitters by count
   const analyticsPanelProps = (() => {
     if (!displayHeaders || !displayRows) return { headers: displayHeaders, rows: displayRows, tabLabel: '' };
     const tabLabel = tablesConfig.find(t => t.key === activeTab)?.label || (activeTab === 'body' ? 'Body Pressures' : '');
@@ -427,9 +488,9 @@ export default function MFVPageWrapper() {
     return { headers: displayHeaders, rows: displayRows, tabLabel };
   })();
 
-  // ============
-  // Cross-Tab Search Results (Build, Test, OEM) — Body Pressure removed per request
-  // ============
+  // ==============================
+  // Section: Cross-Tab Search Results
+  // ==============================
   const buildSheet = allSheets['build'] || { headers: BUILD_TABLE_HEADERS, rows: [] };
   const summarySheet = allSheets['summary'] || { headers: SUMMARY_TABLE_HEADERS, rows: [] };
   const fieldSheet = allSheets['field'] || { headers: allSheets['field']?.headers || [], rows: [] };
@@ -452,14 +513,77 @@ export default function MFVPageWrapper() {
     return rows.slice(0, limit);
   }, [fieldSheet.rows, term]);
 
-  // Small helper for rendering micro tables
+  // ==============================
+  // Section: Latest Qualification Join (Assets × MFV Summary)
+  // ==============================
+  useEffect(() => {
+    const H = summarySheet.headers || [];
+    const R = summarySheet.rows || [];
+    if (!Array.isArray(assets) || assets.length === 0 || !Array.isArray(R) || R.length === 0) {
+      setQualificationStats(null);
+      return;
+    }
+
+    const idxTimestamp = H.findIndex(h => String(h).toUpperCase().startsWith('TIMESTAMP'));
+    const idxPpc = H.findIndex(h => String(h).toUpperCase().startsWith('PPC'));
+    const idxQual = H.findIndex(h => String(h).toUpperCase().includes('QUALIFIED'));
+
+    if (idxPpc === -1 || idxQual === -1 || idxTimestamp === -1) {
+      setQualificationStats(null);
+      return;
+    }
+
+    const assetPpcs = new Set(
+      assets
+        .map(a => normalizePpcId(a?.id))
+        .filter(Boolean)
+    );
+
+    const latestByPpc = {};
+    for (const row of R) {
+      const rawPpc = row[idxPpc];
+      const norm = normalizePpcId(rawPpc);
+      if (!assetPpcs.has(norm)) continue;
+
+      const ts = new Date(row[idxTimestamp] || '').getTime() || 0;
+      const qual = String(row[idxQual] || '').trim().toUpperCase();
+
+      if (!latestByPpc[norm] || ts > latestByPpc[norm].ts) {
+        latestByPpc[norm] = { ts, qual };
+      }
+    }
+
+    const counts = { MFV: 0, HFV: 0, EMU: 0, UNKNOWN: 0 };
+    // Initialize unknown for all asset PPCs; then overwrite with known quals
+    const allPpcs = Array.from(assetPpcs);
+    const seen = new Set();
+    for (const p of allPpcs) {
+      const rec = latestByPpc[p];
+      if (!rec) {
+        counts.UNKNOWN += 1;
+        continue;
+      }
+      const q = rec.qual.includes('MFV') ? 'MFV'
+              : rec.qual.includes('HFV') ? 'HFV'
+              : rec.qual.includes('EMU') ? 'EMU'
+              : 'UNKNOWN';
+      counts[q] += 1;
+      seen.add(p);
+    }
+
+    const totalPpc = allPpcs.length;
+    setQualificationStats({ totalPpc, counts });
+  }, [assets, allSheets.summary]);
+
+  // ==============================
+  // Section: Mini Tables + Page
+  // ==============================
   const MiniTable = ({ title, headers, rows }) => (
     <div className="w-full bg-black/70 border border-[#6a7257] rounded-lg p-3 mb-3">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-[#cfd3c3] font-bold uppercase tracking-wide text-[12px] leading-tight">{title}</h3>
         <span className="text-[10px] text-[#949C7F]">Matches: {rows.length}</span>
       </div>
-      {/* FULL-WIDTH + INTERNAL SCROLL if content is wider */}
       <div className="w-full overflow-x-auto">
         <table className="w-full text-[11px]">
           <thead>
@@ -512,7 +636,6 @@ export default function MFVPageWrapper() {
         backgroundAttachment: 'fixed'
       }}
     >
-      {/* HUB WRAPPER */}
       <div
         className="w-full h-full max-w-8xl mx-auto  flex flex-col justify-start items-center shadow-2xl border-2 border-[#6a7257] bg-[#181b17e8] backdrop-blur-lg mt-0"
         style={{
@@ -523,14 +646,10 @@ export default function MFVPageWrapper() {
           boxShadow: '0 10px 60px 6px #23281c99'
         }}
       >
-        {/* =========================== */}
-        {/* HUB HEADER ROW */}
-        {/* =========================== */}
         <div
           className="w-full flex flex-row items-stretch pt-2 pb-2"
           style={{ borderBottom: '2px solid #6a7257', background: 'rgba(0, 0, 0, 1)', borderTopLeftRadius: '0px', borderTopRightRadius: '0px' }}
         >
-          {/* LEFT: HEADER + SEARCH + TABS */}
           <div className="flex flex-col items-center  w-[1100px] max-w-[1100px] pl-3">
             <div className="flex flex-row items-center mb-0 gap-0">
               <img
@@ -547,13 +666,12 @@ export default function MFVPageWrapper() {
               Valve Test Results, Build Reports, & OEM Data
             </p>
             <div className="w-full flex justify-center mt-1 mb-2">
-              {/* Wider search bar */}
               <input
                 type="text"
                 placeholder=" Search by PPC# or Valve Name"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="w-full max-w-5xl px-4 py-2 rounded-lg uppercase border-2 border-white shadow-lg font-erbaum text-sm text-center text-white placeholder-white bg-black focus:border-[#949C7F] focus:ring-2 focus:ring-[#6a7257] transition-all duration-200"
+                className="w-full max-w-3xl px-4 py-2 rounded-lg uppercase border-2 border-white shadow-lg font-erbaum text-sm text-center text-white placeholder-white bg-black focus:border-[#949C7F] focus:ring-2 focus:ring-[#6a7257] transition-all duration-200"
                 style={{
                   outline: 'none',
                   boxShadow: '0 3px 12px 0 #23281c80',
@@ -579,21 +697,18 @@ export default function MFVPageWrapper() {
               ))}
             </div>
           </div>
-          {/* RIGHT: ANALYTICS PANEL */}
           <div className="flex-1 flex items-center justify-center pl-0 pr-6">
             <div className="rounded-lg bg-black border border-[#6a7257] h-full w-full shadow-xl flex justify-center p-1" style={{ minHeight: 160, maxHeight: 40 }}>
               <MFVAnalyticsPanel
                 headers={analyticsPanelProps.headers}
                 rows={analyticsPanelProps.rows}
                 tabLabel={analyticsPanelProps.tabLabel}
+                qualificationStats={qualificationStats}
               />
             </div>
           </div>
         </div>
 
-        {/* =========================== */}
-        {/* SEARCH RESULTS PANEL (cross-tab) */}
-        {/* =========================== */}
         {searchTerm.trim() !== '' && (
           <div className="w-full px-4 pt-3">
             <div className="bg-black/60 border-2 border-[#6a7257] rounded-md p-3">
@@ -607,9 +722,6 @@ export default function MFVPageWrapper() {
           </div>
         )}
 
-        {/* =========================== */}
-        {/* HUB CONTENT (hidden during search) */}
-        {/* =========================== */}
         {searchTerm.trim() === '' && (
           <div
             className="w-full flex-1 flex flex-col justify-start items-center py-0 px-0"
@@ -637,7 +749,6 @@ export default function MFVPageWrapper() {
                     alignItems: 'stretch'
                   }}
                 >
-                  {/* Left Controls */}
                   <div
                     className="bg-[#111211] border border-[#b0b79f] rounded-xl flex flex-col justify-start"
                     style={{
@@ -673,7 +784,6 @@ export default function MFVPageWrapper() {
                       />
                     </div>
                   </div>
-                  {/* Right Side: Chart AND Table are always mounted */}
                   <div
                     className="bg-black border border-[#b0b79f] rounded-xl flex flex-col justify-start"
                     style={{
@@ -691,7 +801,6 @@ export default function MFVPageWrapper() {
                       overflow: "hidden"
                     }}
                   >
-                    {/* Title and Display Mode */}
                     <div className="flex flex-row items-center min-h-xl  justify-between mb-4">
                       <h2 className="text-base font-semibold tracking-wide font-erbaum text-white drop-shadow-lg">
                         Daily Body Pressure{selectedPadLabel ? ` – ${selectedPadLabel}` : ""}
@@ -725,7 +834,6 @@ export default function MFVPageWrapper() {
                         >
                           &#128202; Table
                         </button>
-                        {/* --- NEW BUTTON: Generate Post-Job Report --- */}
                         <button
                           className="ml-3 px-4 py-1 rounded font-bold border border-[#6a7257] bg-[#24281a] text-[#ffdf66] hover:bg-[#32391e] hover:text-yellow-200 shadow transition-all"
                           style={{
@@ -758,7 +866,6 @@ export default function MFVPageWrapper() {
                         </button>
                       </div>
                     </div>
-                    {/* Chart AND Table are always mounted, only one visible */}
                     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                       <div
                         id="mfv-body-pressure-chart"
@@ -803,7 +910,6 @@ export default function MFVPageWrapper() {
                 </div>
               </div>
             ) : (
-              // --- All Other Tabs Use Modular Table View ---
               <div className="w-full h-full min-h-xl flex flex-col items-center bg-black justify-center px-2 py-2">
                 <MFVTableView
                   displayHeaders={displayHeaders}
@@ -814,22 +920,15 @@ export default function MFVPageWrapper() {
                   handlePrevPage={handlePrevPage}
                   handleNextPage={handleNextPage}
                   handlePageClick={handlePageClick}
-                  // NEW: let the table know our page size and whether to pad
                   rowsPerPage={rowsPerPage}
-                  padToFullHeight={activeTab !== 'field'}  // pad Build & Test; don't pad OEM
+                  padToFullHeight={activeTab !== 'field'}
                 />
               </div>
             )}
           </div>
         )}
 
-        {/* Archived Modal - Always Rendered */}
-        <MFVArchivedModal
-          archived={archived}
-          showArchivedModal={showArchivedModal}
-          setShowArchivedModal={setShowArchivedModal}
-          handleRestore={handleRestore}
-        />
+        
       </div>
     </div>
   );
