@@ -1,0 +1,552 @@
+H .gitattributes
+H .gitignore
+H .vscode/extensions.json
+H .vscode/launch.json
+H .vscode/settings.json
+H Dependancy Chart.png
+H README.md
+H Wiring Guide.docx
+H client/craco.config.js
+H client/package-lock.json
+H client/package.json
+H client/postcss.config.js
+H client/public/Torque-Boltup-Hub/hydtorquechart.png
+H client/public/Torque-Boltup-Hub/pneutorquechart.png
+H client/public/_redirects
+H client/public/asset-manifest.json
+H client/public/assets/DFIT-Schematic.png
+H client/public/assets/DFIT-Schematic2.png
+H client/public/assets/FLY-BASE.png
+H client/public/assets/FLY-MFV.png
+H client/public/assets/Flappytube.png
+H client/public/assets/Module_1/chicago_fitting.jpg
+H client/public/assets/Module_1/female_quick_coupler.jpg
+H client/public/assets/Module_1/grease_body_lube.jpg
+H client/public/assets/Module_1/male_quick_coupler.jpg
+H client/public/assets/Module_1/petcock.jpg
+H client/public/assets/Module_2/Gasket.jpg
+H client/public/assets/Paloma_Icon_Black_large.png
+H client/public/assets/Paloma_Icon_White_large.png
+H client/public/assets/Paloma_Logo_Rounded_Black_large.png
+H client/public/assets/Paloma_Logo_White_Rounded.png
+H client/public/assets/Paloma_Logo_White_Rounded2.png
+H client/public/assets/Paloma_Logo_White_Rounded3.png
+H client/public/assets/Projects.png
+H client/public/assets/asset-transfer-icon.json
+H client/public/assets/black-paper-bg.jpg
+H client/public/assets/camo-bg.jpg
+H client/public/assets/camo-btn-texture.png
+H client/public/assets/camo-btn-texture.png.lnk
+H client/public/assets/card-bg.gif
+H client/public/assets/dark-bg.png
+H client/public/assets/dark-bg2.jpg
+H client/public/assets/discord.png
+H client/public/assets/fielddashboard.png
+H client/public/assets/flyhq-logo.png
+H client/public/assets/fonts/Stencil.ttf
+H client/public/assets/fonts/Varien Outline.woff
+H client/public/assets/fonts/Varien Outline.woff2
+H client/public/assets/fonts/Varien-Italic Outline.woff
+H client/public/assets/fonts/Varien-Italic Outline.woff2
+H client/public/assets/fonts/Varien-Italic.woff
+H client/public/assets/fonts/Varien-Italic.woff2
+H client/public/assets/fonts/Varien.woff
+H client/public/assets/fonts/Varien.woff2
+H client/public/assets/fonts/unispace bd.ttf
+H client/public/assets/header-texture.png
+H client/public/assets/header-texture4.png
+H client/public/assets/header-texture6.png
+H client/public/assets/headerlogo.png
+H client/public/assets/leaderboard-btn.png
+H client/public/assets/logo.png
+H client/public/assets/logos/baytex.png
+H client/public/assets/logos/baytex2.png
+H client/public/assets/logos/bg-bg.png
+H client/public/assets/logos/chevron.png
+H client/public/assets/logos/conocophilips.png
+H client/public/assets/logos/conocophilips2.png
+H client/public/assets/logos/conocophilips3.png
+H client/public/assets/logos/conocophillips.png
+H client/public/assets/logos/kec.png
+H client/public/assets/logos/nuvista.png
+H client/public/assets/logos/nuvista2.png
+H client/public/assets/logos/pacific.png
+H client/public/assets/logos/pacificcanbriam.png
+H client/public/assets/logos/pacificcanbriam2.png
+H client/public/assets/logos/paramount.png
+H client/public/assets/logos/paramount2.png
+H client/public/assets/logos/petrochinaicon.png
+H client/public/assets/logos/teine.png
+H client/public/assets/logos/teine2.png
+H client/public/assets/logos/tourmaline.png
+H client/public/assets/logos/tourmalineballdrop.png
+H client/public/assets/logos/tourmalineballdrop2.png
+H client/public/assets/logos/truecanadiankec.png
+H client/public/assets/logos/truecanadiankec2.png
+H client/public/assets/logos/veren.png
+H client/public/assets/logos/veren2.png
+H client/public/assets/logos/whitecap.png
+H client/public/assets/logos/whitecap2.png
+H client/public/assets/metal-texture.jpg
+H client/public/assets/mfv-docs/QF-571.01 Valve Teardown- Rev H.pdf
+H client/public/assets/mfv-docs/QF.1000 - SLV Inspection Report Checklist.pdf
+H client/public/assets/mfv-docs/QF.1001 - SLV Retest Procedure.pdf
+H client/public/assets/mfv-docs/VW (A) - STACK UP - 5-15K FM3 - REV B.pdf
+H client/public/assets/mfv-docs/VW (B) - STACK UP - 5-15K FM3 - REV B.pdf
+H client/public/assets/mfv-docs/VW (C) - STACK UP - 5-15K FM3 - REV B.pdf
+H client/public/assets/mfv-docs/VW (D) - STACK UP - 5-15K FM3 - REV B.pdf
+H client/public/assets/mfv-docs/VW (E) - STACK UP - 5-15K FM3 - REV B.pdf
+H client/public/assets/mfv-docs/VW (F) - STACK UP - 5-15K FM3 - REV B.pdf
+H client/public/assets/mfv-docs/VW(A) - STACK UP - 7-15K FM1 - REV C.pdf
+H client/public/assets/mfv-docs/VW(B) - STACK UP - 7-15K FM1 - REV C.pdf
+H client/public/assets/mfv-docs/VW(C) - STACK UP - 7-15K FM1 - REV C.pdf
+H client/public/assets/mfv-docs/VW(D) - STACK UP - 7-15K FM1 - REV C.pdf
+H client/public/assets/mfv-docs/VW(E) - STACK UP - 7-15K FM1 - REV C.pdf
+H client/public/assets/mfv-docs/VW(F) - STACK UP - 7-15K FM1 - REV C.pdf
+H client/public/assets/mfv-docs/VW(OEM) - STACK UP - 5-15K FM3 - REV B.pdf
+H client/public/assets/mfv-docs/VW(OEM) - STACK UP - 7-15K FM1 - REV C.pdf
+H client/public/assets/mfv-docs/Valve Testing - QF-571.12 - REV I.pdf
+H client/public/assets/mfv-icon.png
+H client/public/assets/mfv-icon3.png
+H client/public/assets/new-bg.jpg
+H client/public/assets/overwatchanimation.mp4
+H client/public/assets/paloma-favicon.ico
+H client/public/assets/paloma-favicon.png
+H client/public/assets/paloma-shop-btn.png
+H client/public/assets/shop.jpg
+H client/public/assets/shop/decanter.png
+H client/public/assets/shop/hat.png
+H client/public/assets/shop/journal.png
+H client/public/assets/shop/mysterybox.png
+H client/public/assets/shop/pen.png
+H client/public/assets/sidebarbackground.png
+H client/public/assets/spinning-valve.gif
+H client/public/assets/wellhead.png
+H client/public/assets/whitelogo.png
+H client/public/assets/workorder-logo.png
+H client/public/assets/wrench-valve.json
+H client/public/contact_list.xlsx
+H client/public/index.html
+H client/public/static.json
+H client/public/~$contact_list.xlsx
+H client/src/App.jsx
+H client/src/LandingPage.jsx
+H client/src/api.js
+H client/src/assets/24hourchart.png
+H client/src/assets/BodyPressuresChart.png
+H client/src/assets/Fly-HQ Icons/.json
+H client/src/assets/Fly-HQ Icons/AddIcon.json
+H client/src/assets/Fly-HQ Icons/AnalyticsIcon.json
+H client/src/assets/Fly-HQ Icons/ArchiveIcon.json
+H client/src/assets/Fly-HQ Icons/AssetManagementIcon.json
+H client/src/assets/Fly-HQ Icons/ChartIcon.json
+H client/src/assets/Fly-HQ Icons/CheckBoxIcon.json
+H client/src/assets/Fly-HQ Icons/CustomersIcon.json
+H client/src/assets/Fly-HQ Icons/DashboardIcon.json
+H client/src/assets/Fly-HQ Icons/EditIcon.json
+H client/src/assets/Fly-HQ Icons/FieldSupeIcon.json
+H client/src/assets/Fly-HQ Icons/HistoryIcon.json
+H client/src/assets/Fly-HQ Icons/JobMapIcon.json
+H client/src/assets/Fly-HQ Icons/JobPlannerDocumentHubIcon.json
+H client/src/assets/Fly-HQ Icons/JobPlannerIcon.json
+H client/src/assets/Fly-HQ Icons/ManagementIcon.json
+H client/src/assets/Fly-HQ Icons/MeasureMentsIcon.json
+H client/src/assets/Fly-HQ Icons/OverwatchIcon.json
+H client/src/assets/Fly-HQ Icons/ProjectsIcon.json
+H client/src/assets/Fly-HQ Icons/QRICon.json
+H client/src/assets/Fly-HQ Icons/SafetyIcon.json
+H client/src/assets/Fly-HQ Icons/SearchIcon.json
+H client/src/assets/Fly-HQ Icons/SourcingIcon.json
+H client/src/assets/Fly-HQ Icons/TableIcon.json
+H client/src/assets/Fly-HQ Icons/ToggleIcon.json
+H client/src/assets/Fly-HQ Icons/TrainingIcon.json
+H client/src/assets/Fly-HQ Icons/TrashIcon.json
+H client/src/assets/Fly-HQ Icons/TruckingIcon.json
+H client/src/assets/Fly-HQ Icons/UploadIcon.json
+H client/src/assets/Fly-HQ Icons/WorkorderHubIcon.json
+H client/src/assets/Fly-HQ Icons/wired-outline-1004-management-team-hover-smooth.json
+H client/src/assets/Fly-IQ Icons/DocumentIcon.json
+H client/src/assets/Fly-IQ Icons/ExpensingIcon.json
+H client/src/assets/Fly-IQ Icons/FleetUpdateIcon.json
+H client/src/assets/Fly-IQ Icons/GamesIcon.json
+H client/src/assets/Fly-IQ Icons/HUB-ReceiptSubmission.json
+H client/src/assets/Fly-IQ Icons/HUB-ScheduleIcon.json
+H client/src/assets/Fly-IQ Icons/HUB-ShiftUpdateIcon.json
+H client/src/assets/Fly-IQ Icons/HUB-TruckUpdateIcon.json
+H client/src/assets/Fly-IQ Icons/LeaderboardIcon.json
+H client/src/assets/Fly-IQ Icons/MSDSIcon.json
+H client/src/assets/Fly-IQ Icons/MaintenanceIcon.json
+H client/src/assets/Fly-IQ Icons/PointsIcon.json
+H client/src/assets/Fly-IQ Icons/ResourcesIcon.json
+H client/src/assets/Fly-IQ Icons/SafetyBulletinIcon.json
+H client/src/assets/Fly-IQ Icons/SafetyDocsIcon.json
+H client/src/assets/Fly-IQ Icons/ScheduleIcon.json
+H client/src/assets/Fly-IQ Icons/ShopIcon.json
+H client/src/assets/Fly-IQ Icons/TQDoc.json
+H client/src/assets/Fly-IQ Icons/TorqueWrenchIcon.png
+H client/src/assets/Fly-IQ Icons/TrainingIcon.json
+H client/src/assets/Fly-IQ Icons/VideoHubIcon.json
+H client/src/assets/Library/FracSpread.png
+H client/src/assets/Library/Pumpdown.png
+H client/src/assets/Master Assemblies/MasterDogbone.png
+H client/src/assets/Master Assemblies/MasterZipper.png
+H client/src/assets/Master Assemblies/PNG/Asset 3.png
+H client/src/assets/Master Assemblies/PNG/double barrel2.png
+H client/src/assets/Master Assemblies/PNG/double barrelcv.png
+H client/src/assets/Master Assemblies/PNG/doublebarrel1.png
+H client/src/assets/Master Assemblies/PNG/doublebarrelut.png
+H client/src/assets/Master Assemblies/doublebarrel.png
+H client/src/assets/Paloma_Icon_Black_large.png
+H client/src/assets/Stats-715.png
+H client/src/assets/flyiqheader.png
+H client/src/assets/fonts/Cornero.otf
+H client/src/assets/fonts/Punoer.otf
+H client/src/assets/fonts/Stencil.ttf
+H client/src/assets/fonts/Varien Outline.woff
+H client/src/assets/fonts/Varien Outline.woff2
+H client/src/assets/fonts/Varien-Italic Outline.woff
+H client/src/assets/fonts/Varien-Italic Outline.woff2
+H client/src/assets/fonts/Varien-Italic.woff
+H client/src/assets/fonts/Varien-Italic.woff2
+H client/src/assets/fonts/Varien.woff
+H client/src/assets/fonts/Varien.woff2
+H client/src/assets/fonts/unispace bd.ttf
+H client/src/assets/palomaassets.png
+H client/src/assets/stats-wells.png
+H client/src/assets/whitelogo.png
+H client/src/components/Asset Components/ActiveTransfers.jsx
+H client/src/components/Asset Components/ActivityLogTable.jsx
+H client/src/components/Asset Components/AddAssetModal.jsx
+H client/src/components/Asset Components/AssetFilters.jsx
+H client/src/components/Asset Components/AssetHistoryModal.jsx
+H client/src/components/Asset Components/AssetTable.jsx
+H client/src/components/Asset Components/AssetsOverview.jsx
+H client/src/components/Asset Components/EditAssetModal.jsx
+H client/src/components/Asset Components/FormField.jsx
+H client/src/components/Asset Components/PalomaQRCodeModal.jsx
+H client/src/components/Asset Components/Physical Transfer Components/AssetSelector.jsx
+H client/src/components/Asset Components/Physical Transfer Components/NonSerializedItems.jsx
+H client/src/components/Asset Components/Physical Transfer Components/QRScanModal.jsx
+H client/src/components/Asset Components/Physical Transfer Components/SignaturePadSection.jsx
+H client/src/components/Asset Components/PhysicalAssetTransferModal.jsx
+H client/src/components/Asset Components/RightPanel.jsx
+H client/src/components/Asset Components/ViewBOLModal.jsx
+H client/src/components/AssetTabsNav.jsx
+H client/src/components/AuditChecklistModal.jsx
+H client/src/components/CalendarView.jsx
+H client/src/components/ConfirmDeleteModal.jsx
+H client/src/components/Customer Hub Components/AddCustomerModal.jsx
+H client/src/components/Customer Hub Components/CustomerFieldContacts.jsx
+H client/src/components/Customer Hub Components/CustomerGeneralInfoPanel.jsx
+H client/src/components/Customer Hub Components/CustomerListPanel.jsx
+H client/src/components/Customer Hub Components/CustomerLogoCard.jsx
+H client/src/components/Customer Hub Components/CustomerProgramInfo.jsx
+H client/src/components/CustomerSimpleViewer.jsx
+H client/src/components/DocumentHubModal.jsx
+H client/src/components/FiltersAndSearch.jsx
+H client/src/components/Fly Base Components/BuildTrackerCard.jsx
+H client/src/components/Fly Base Components/MFVReportsCard.jsx
+H client/src/components/Fly Base Components/ShopDocumentCard.jsx
+H client/src/components/Fly Base Components/SidebarFlyBase.jsx
+H client/src/components/Fly Base Components/TransfersCard.jsx
+H client/src/components/Fly IQ Components/Fleet Components/FleetSection.jsx
+H client/src/components/Fly IQ Components/Fleet Components/FleetTruckUpdate.jsx
+H client/src/components/Fly IQ Components/Operations Components/FieldDocumentationHub.jsx
+H client/src/components/Fly IQ Components/Operations Components/Job Update Components/EquipmentListModal.jsx
+H client/src/components/Fly IQ Components/Operations Components/Job Update Components/ImageUploadRow.jsx
+H client/src/components/Fly IQ Components/Operations Components/Job Update Components/JobSelector.jsx
+H client/src/components/Fly IQ Components/Operations Components/Job Update Components/JobUpdateForm.jsx
+H client/src/components/Fly IQ Components/Operations Components/Job Update Components/ValvePanel.jsx
+H client/src/components/Fly IQ Components/Operations Components/JobScheduleHub.jsx
+H client/src/components/Fly IQ Components/Operations Components/JobUpdate.jsx
+H client/src/components/Fly IQ Components/Operations Components/OperationsSection.jsx
+H client/src/components/Fly IQ Components/Paloma Zone Components/PalomaZoneSection.jsx
+H client/src/components/Fly IQ Components/Safety Components/SafetySection.jsx
+H client/src/components/Fly IQ Components/SidebarFlyIQ.jsx
+H client/src/components/Fly IQ Components/Torque Components/Torque-Gasket-Bolt.jsx
+H client/src/components/Fly IQ Components/Torque Components/TorqueToolSignout.jsx
+H client/src/components/Fly IQ Components/Torque Components/TorqueandServiceManualsHub.jsx
+H client/src/components/Fly IQ Components/Torque Components/TorqueandServiceSection.jsx
+H client/src/components/Fly IQ Components/Training Components/InstVideosHub.jsx
+H client/src/components/Fly IQ Components/Training Components/TrainingSection.jsx
+H client/src/components/Footer.jsx
+H client/src/components/HQ-Dashboard/ActiveFncrsCard.jsx
+H client/src/components/HQ-Dashboard/ActiveJobsCard.jsx
+H client/src/components/HQ-Dashboard/DeployedCoilCard.jsx
+H client/src/components/HQ-Dashboard/MissileJobHubCard.jsx
+H client/src/components/HQ-Dashboard/MissileJobsCard.jsx
+H client/src/components/HQ-Dashboard/UpcomingPadsCard.jsx
+H client/src/components/Header.jsx
+H client/src/components/InteractiveMap.jsx
+H client/src/components/JobPlannerComponents/CalendarView.jsx
+H client/src/components/JobPlannerComponents/DiscordIDModal.jsx
+H client/src/components/JobPlannerComponents/FilterBar.jsx
+H client/src/components/JobPlannerComponents/JobModal.jsx
+H client/src/components/JobPlannerComponents/JobPlannerRightPanel.jsx
+H client/src/components/JobPlannerComponents/SourcingModal.jsx
+H client/src/components/JobPlannerComponents/TableView.jsx
+H client/src/components/JobPlannerComponents/ViewToggleButtons.jsx
+H client/src/components/Layout.jsx
+H client/src/components/MFV Page Components/MFVAnalyticsPanel.jsx
+H client/src/components/MFV Page Components/MFVArchivedModal.jsx
+H client/src/components/MFV Page Components/MFVBodyPressureChart.jsx
+H client/src/components/MFV Page Components/MFVBodyPressureTable.jsx
+H client/src/components/MFV Page Components/MFVPadControls.jsx
+H client/src/components/MFV Page Components/MFVTableView.jsx
+H client/src/components/MFV Page Components/ValveStatsChart.jsx
+H client/src/components/MFVTracker.jsx
+H client/src/components/Master Assembly Components/AssembliesNav.jsx
+H client/src/components/Master Assembly Components/AssetSelector.jsx
+H client/src/components/Master Assembly Components/ClearAssetStatusModal.jsx
+H client/src/components/Master Assembly Components/Master Assemblies Hub Components/AssemblySelectors.jsx
+H client/src/components/Master Assembly Components/Master Assemblies Hub Components/GasketMaintenancePanel.jsx
+H client/src/components/Master Assembly Components/Master Assemblies Hub Components/GasketUsagePanel.jsx
+H client/src/components/Master Assembly Components/Master Assemblies Hub Components/HeroPanel.jsx
+H client/src/components/Master Assembly Components/Master Assemblies Hub Components/HistoryPane.jsx
+H client/src/components/Master Assembly Components/Master Assemblies Hub Components/HotspotOverlay.jsx
+H client/src/components/Master Assembly Components/Master Assemblies Hub Components/MaintenanceHealthPanel.jsx
+H client/src/components/Master Assembly Components/Master Assemblies Hub Components/MetaDatesCard.jsx
+H client/src/components/Master Assembly Components/Master Assemblies Hub Components/MetaHeader.jsx
+H client/src/components/Master Assembly Components/Master Assemblies Hub Components/SelectorGrid.jsx
+H client/src/components/Master Assembly Components/MasterAssembliesDBTable.jsx
+H client/src/components/Master Assembly Components/MasterAssemblyDocuments.jsx
+H client/src/components/Master Assembly Components/MasterAssetVisualPanel.jsx
+H client/src/components/Master Assembly Components/Mater Asssemblies DB Components/AssemblyActionIcons.jsx
+H client/src/components/Master Assembly Components/Mater Asssemblies DB Components/DBDetailPane.jsx
+H client/src/components/Master Assembly Components/Mater Asssemblies DB Components/DogbonesTable.jsx
+H client/src/components/Master Assembly Components/Mater Asssemblies DB Components/FlowcrossesTable.jsx
+H client/src/components/Master Assembly Components/Mater Asssemblies DB Components/MissilesTable.jsx
+H client/src/components/Master Assembly Components/Mater Asssemblies DB Components/ViewAssemblyPanel.jsx
+H client/src/components/Master Assembly Components/Mater Asssemblies DB Components/ZippersTable.jsx
+H client/src/components/Master Assembly Components/Mater Asssemblies DB Components/gasketsApi.js
+H client/src/components/Master Assembly Components/MissilePanel.jsx
+H client/src/components/Master Assembly Components/PalomaQRCodeModal.jsx
+H client/src/components/Master Assembly Components/Support Files/hotspotMaps.js
+H client/src/components/Master Assembly Components/Support Files/maConsts.js
+H client/src/components/Master Assembly Components/Support Files/maDerived.js
+H client/src/components/Master Assembly Components/Support Files/maKit.js
+H client/src/components/Master Assembly Components/Support Files/maShared.js
+H client/src/components/Master Assembly Components/Support Files/masterMetaApi.js
+H client/src/components/MasterAssembliesHub.jsx
+H client/src/components/MasterAssemblyDetail.jsx
+H client/src/components/Missile DB Components/MissileDBTable.jsx
+H client/src/components/ModalsContainer.jsx
+H client/src/components/ModelViewer.jsx
+H client/src/components/Overwatch Components/ActivePadsNav.jsx
+H client/src/components/Overwatch Components/AddRequiredItemModal.jsx
+H client/src/components/Overwatch Components/BodyPressureChartCard.jsx
+H client/src/components/Overwatch Components/CoilTabCard.jsx
+H client/src/components/Overwatch Components/LastShiftUpdateCard.jsx
+H client/src/components/Overwatch Components/LiveBodyPressureCard.jsx
+H client/src/components/Overwatch Components/OverwatchDashboardGrid.jsx
+H client/src/components/Overwatch Components/OverwatchHeader.jsx
+H client/src/components/Overwatch Components/RequiredItemsCard.jsx
+H client/src/components/Overwatch Components/ZoneCountCard.jsx
+H client/src/components/Overwatch Components/ZonesCompletedCard.jsx
+H client/src/components/PalomaShop.jsx
+H client/src/components/PalomaToast.jsx
+H client/src/components/Projects Components/BodyPressureMonitoringCard.jsx
+H client/src/components/Projects Components/PalomaBEVCard.jsx
+H client/src/components/Projects Components/PalomaLauncherCard.jsx
+H client/src/components/Projects Components/PalomaTubingHeadCard.jsx
+H client/src/components/ProtectedRoute.jsx
+H client/src/components/RightSidebarTabs.jsx
+H client/src/components/Sidebar.jsx
+H client/src/components/SiteMeasurementsCanvasComponents/CanvasHelpModal.jsx
+H client/src/components/SiteMeasurementsCanvasComponents/CanvasToolbar.jsx
+H client/src/components/SiteMeasurementsCanvasComponents/Grid.jsx
+H client/src/components/SiteMeasurementsCanvasComponents/NorthMarker.jsx
+H client/src/components/SiteMeasurementsCanvasComponents/ResourcesSidebar.jsx
+H client/src/components/SiteMeasurementsCanvasComponents/SpacingField.jsx
+H client/src/components/SiteMeasurementsCanvasComponents/WellGroup.jsx
+H client/src/components/SubmitTicketModal.jsx
+H client/src/components/TableControls.jsx
+H client/src/components/ToolCardCarousel.jsx
+H client/src/components/Training Hub Components/CompetencyChecklist.jsx
+H client/src/components/Training Hub Components/CompetencyMatrix.js
+H client/src/components/Training Hub Components/CompetencyTabs.jsx
+H client/src/components/Training Hub Components/DocumentHub.jsx
+H client/src/components/Training Hub Components/EmployeeList.jsx
+H client/src/components/Training Hub Components/VisitsTable.jsx
+H client/src/components/TransferModal.jsx
+H client/src/components/TransferSuccessModal.jsx
+H client/src/components/Workorder Components/AlertsModal.jsx
+H client/src/components/Workorder Components/AssemblyPage.jsx
+H client/src/components/Workorder Components/BOMPage.jsx
+H client/src/components/Workorder Components/Consumables.jsx
+H client/src/components/Workorder Components/DFITPage.jsx
+H client/src/components/Workorder Components/DogbonesPage.jsx
+H client/src/components/Workorder Components/FlowCrossAssemblyPage.jsx
+H client/src/components/Workorder Components/NotesPage.jsx
+H client/src/components/Workorder Components/PPLDropdownPage.jsx
+H client/src/components/Workorder Components/PageRenderer.jsx
+H client/src/components/Workorder Components/SimpleViewer.jsx
+H client/src/components/Workorder Components/SiteMeasurementsCanvas.jsx
+H client/src/components/Workorder Components/SiteMeasurementsPage.jsx
+H client/src/components/Workorder Components/SpecificationsWindow.jsx
+H client/src/components/Workorder Components/SpecsPanel.jsx
+H client/src/components/Workorder Components/SwabValveAssemblyPage.jsx
+H client/src/components/Workorder Components/UpperMasterAssemblyPage.jsx
+H client/src/components/Workorder Components/WOInfoPage.jsx
+H client/src/components/Workorder Components/WorkorderCard.jsx
+H client/src/components/Workorder Components/WorkorderFooter.jsx
+H client/src/components/Workorder Components/WorkorderForm.jsx
+H client/src/components/Workorder Components/WorkorderHeader.jsx
+H client/src/components/Workorder Components/WorkorderModal.jsx
+H client/src/components/Workorder Components/ZippersPage.jsx
+H client/src/components/Workorder Components/workorderData.js
+H client/src/components/ui/Button.jsx
+H client/src/components/ui/ButtonEffects.css
+H client/src/components/ui/GlassBackdrop.jsx
+H client/src/components/ui/ScaleToFit.jsx
+H client/src/components/ui/WorkorderButtons.jsx
+H client/src/components/ui/animations/wired-gradient-1301-arrow-right-key-hover-press.json
+H client/src/components/ui/animations/wired-gradient-1303-arrow-left-key-hover-press.json
+H client/src/constants/assetFields.js
+H client/src/constants/workorderConfig.js
+H client/src/context/JobContext.js
+H client/src/data/Asset-Specifications.xlsx
+H client/src/data/AssetSpecifications.json
+H client/src/data/TorqueSpecs.js
+H client/src/data/convert-specs.js
+H client/src/data/gasketology.json
+H client/src/hooks/useActivityLog.js
+H client/src/hooks/useAssemblyModel.js
+H client/src/hooks/useAssemblyWeight.js
+H client/src/hooks/useAssets.js
+H client/src/hooks/useFilteredPaginated.js
+H client/src/hooks/useLivePolling.js
+H client/src/hooks/useUser.js
+H client/src/hooks/useWorkorderSection.js
+H client/src/index.css
+H client/src/index.js
+H client/src/pages/Analytics.jsx
+H client/src/pages/ContactList.jsx
+H client/src/pages/CustomerHub.jsx
+H client/src/pages/FLYBASE.jsx
+H client/src/pages/FlyHQ.jsx
+H client/src/pages/FlyHQTools.css
+H client/src/pages/FlyHQTools.jsx
+H client/src/pages/FlyIQ.jsx
+H client/src/pages/JobMap.jsx
+H client/src/pages/JobPlanner.jsx
+H client/src/pages/MFVDocumentation.jsx
+H client/src/pages/MFVField.jsx
+H client/src/pages/MFVPage.jsx
+H client/src/pages/MFVSummary.jsx
+H client/src/pages/OverwatchPage.jsx
+H client/src/pages/Projects.jsx
+H client/src/pages/ProjectsPage.jsx
+H client/src/pages/Safety.jsx
+H client/src/pages/SourcingPage.css
+H client/src/pages/SourcingPage.jsx
+H client/src/pages/TrainingHub.jsx
+H client/src/pages/TrainingRoom.jsx
+H client/src/pages/ValveReports.jsx
+H client/src/pages/WorkorderHub.jsx
+H client/src/src_tree_full.txt
+H client/src/styles/glass.css
+H client/src/templates/Cards/UniversalCard.jsx
+H client/src/templates/Hubs/HubContainer.jsx
+H client/src/templates/Hubs/HubContainerSkeleton.jsx
+H client/src/templates/Hubs/HubNoTable.jsx
+H client/src/templates/Hubs/HubTemplateShowcase.jsx
+H client/src/utils/dlsConverter.js
+H client/src/utils/fractionToDecimal.js
+H client/src/utils/generateMfvReport.js
+H client/src/utils/toastUtils.js
+H client/tailwind.config.js
+H del
+H desktop.ini
+H full-dependency-map.png
+H git
+H master-assemblies-graph.png
+H package-lock.json
+H package.json
+H public/contact_list.xlsx
+H public/index.html
+H server/auth/discordStrategy.js
+H server/bots/discord-bot/backfill.js
+H server/bots/discord-bot/index.js
+H server/bots/discord-bot/package.json
+H server/config/config.js
+H server/config/passport.js
+H server/data/flyiq.db
+H server/db.js
+H server/flyhq_assets.db
+H server/index.js
+H server/jobs.js
+H server/package-lock.json
+H server/package.json
+H server/parseInt(id
+H server/public/assets/logos/aoc-1753750817963.png
+H server/public/assets/logos/aoc-1753751237421.png
+H server/public/assets/logos/aoc-1753755612116.png
+H server/public/assets/logos/baytex-1753749638979.png
+H server/public/assets/logos/baytex-1753749648516.png
+H server/public/assets/logos/baytex-1753749669390.png
+H server/public/assets/logos/baytex-1753749746587.png
+H server/public/assets/logos/baytex-1753750331103.png
+H server/public/assets/logos/baytex-1753750437566.png
+H server/public/assets/logos/baytex-1753751749452.png
+H server/public/assets/logos/baytex-1753752006819.png
+H server/public/assets/logos/baytex-1753752224890.png
+H server/public/assets/logos/baytex-1753752445978.png
+H server/public/assets/logos/chevron-1753753094031.png
+H server/public/assets/logos/conocophillips-1753753105118.png
+H server/public/assets/logos/cygnet-1753907932271.png
+H server/public/assets/logos/haloexploration-1753749117148.png
+H server/public/assets/logos/haloexploration-1753757022024.png
+H server/public/assets/logos/nuvista-1753753118782.png
+H server/public/assets/logos/pacificcanbriam-1753753128272.png
+H server/public/assets/logos/paramount-1753753147078.png
+H server/public/assets/logos/petrochina-1753753355073.png
+H server/public/assets/logos/stepenergy-1753911877072.png
+H server/public/assets/logos/stepenergy-1753911879992.png
+H server/public/assets/logos/stepenergy-1753911880558.png
+H server/public/assets/logos/stepenergy-1753911881015.png
+H server/public/assets/logos/stepenergy-1753911881216.png
+H server/public/assets/logos/stepenergy-1753911889487.png
+H server/public/assets/logos/stepenergy-1753912171054.png
+H server/public/assets/logos/teine-1753753156830.png
+H server/public/assets/logos/tourmaline-1753753163035.png
+H server/public/assets/logos/tourmalineballdrop-1753753169286.png
+H server/public/assets/logos/truecanadiankec-1753753178637.png
+H server/public/assets/logos/veren-1753753186736.png
+H server/public/assets/logos/whitecap-1753753194717.png
+H server/routes/FieldDocumentationHub.js
+H server/routes/FlyIQJobsSchedule.js
+H server/routes/InstructionalVideosHub.js
+H server/routes/TorqueandServiceHub.js
+H server/routes/activity.js
+H server/routes/assets.js
+H server/routes/customers.js
+H server/routes/drafts.js
+H server/routes/jobs.js
+H server/routes/masterAssignments.js
+H server/routes/mfvPads.js
+H server/routes/projects.js
+H server/routes/sourcing.js
+H server/routes/transfers.js
+H server/server.js
+H server/services/assets.js
+H server/services/flyhq_jobs.db
+H server/services/masterAssignments.service.js
+H server/sourcing.js
+H server/templates/Workorder Blank NEST.pdf
+H server/tools/package-lock.json
+H server/tools/package.json
+H server/tools/project-graph.svg
+H server/tools/sqlite/activity_log.csv
+H server/tools/sqlite/assets.csv
+H server/tools/sqlite/drafts.csv
+H server/tools/sqlite/flyhq_assets.db
+H server/tools/sqlite/jobs.csv
+H server/tools/sqlite/sqldiff.exe
+H server/tools/sqlite/sqlite3.exe
+H server/tools/sqlite/sqlite3_analyzer.exe
+H server/tools/sqlite/sqlite3_rsync.exe
+H server/tools/sqlite/transfers.csv
+H server/utils/uploads.js
+H web-server.js
+H ~$import_jobs.xlsx
