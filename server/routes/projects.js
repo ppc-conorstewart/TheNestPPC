@@ -1,14 +1,13 @@
+// ==============================
 // server/routes/projects.js
 // Projects API: checklist, files, progress
-// Requires: express, pg, multer
-
+// ==============================
 const express = require('express');
-const { Pool } = require('pg');
 const multer = require('multer');
 const crypto = require('crypto');
+const db = require('../db'); // shared Pool (Render + Local)
 
 const router = express.Router();
-const pool = new Pool(); // uses PG env vars
 
 // Multer: in-memory buffer (DB storage)
 const upload = multer({
@@ -26,7 +25,7 @@ const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 router.get('/:projectId/checklist', async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `SELECT id, label, is_completed, sort_index, created_at, updated_at
        FROM projects_checklist_items
        WHERE project_id = $1 AND deleted_at IS NULL
@@ -47,7 +46,7 @@ router.post('/:projectId/checklist', async (req, res) => {
     const { label, sortIndex = 0, actor } = req.body || {};
     if (!label || typeof label !== 'string') return res.status(400).json({ error: 'label is required' });
 
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `INSERT INTO projects_checklist_items
          (project_id, label, sort_index, created_by, updated_by)
        VALUES ($1, $2, $3, $4, $4)
@@ -56,7 +55,7 @@ router.post('/:projectId/checklist', async (req, res) => {
     );
     const item = rows[0];
 
-    await pool.query(
+    await db.query(
       `INSERT INTO projects_checklist_item_events (checklist_id, event_type, new_value, actor)
        VALUES ($1, 'created', $2, $3)`,
       [item.id, JSON.stringify(item), actor || null]
@@ -75,7 +74,7 @@ router.patch('/checklist/:itemId', async (req, res) => {
     const { itemId } = req.params;
     const { label, isCompleted, sortIndex, actor } = req.body || {};
 
-    const { rows: before } = await pool.query(
+    const { rows: before } = await db.query(
       `SELECT id, label, is_completed, sort_index
        FROM projects_checklist_items
        WHERE id = $1 AND deleted_at IS NULL`,
@@ -84,7 +83,7 @@ router.patch('/checklist/:itemId', async (req, res) => {
     if (before.length === 0) return res.status(404).json({ error: 'Not found' });
     const oldValue = before[0];
 
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `UPDATE projects_checklist_items
          SET label = COALESCE($2, label),
              is_completed = COALESCE($3, is_completed),
@@ -97,7 +96,7 @@ router.patch('/checklist/:itemId', async (req, res) => {
     );
     const newValue = rows[0];
 
-    await pool.query(
+    await db.query(
       `INSERT INTO projects_checklist_item_events (checklist_id, event_type, old_value, new_value, actor)
        VALUES ($1, 'edited', $2, $3, $4)`,
       [itemId, JSON.stringify(oldValue), JSON.stringify(newValue), actor || null]
@@ -114,9 +113,7 @@ router.patch('/checklist/:itemId', async (req, res) => {
 router.delete('/checklist/:itemId', async (req, res) => {
   try {
     const { itemId } = req.params;
-    const { actor } = req.query;
-
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `UPDATE projects_checklist_items
          SET deleted_at = NOW(), updated_at = NOW()
        WHERE id = $1 AND deleted_at IS NULL
@@ -125,10 +122,10 @@ router.delete('/checklist/:itemId', async (req, res) => {
     );
     if (rows.length === 0) return res.status(404).json({ error: 'Not found' });
 
-    await pool.query(
+    await db.query(
       `INSERT INTO projects_checklist_item_events (checklist_id, event_type, old_value, actor)
        VALUES ($1, 'deleted', $2, $3)`,
-      [itemId, JSON.stringify(rows[0]), actor || null]
+      [itemId, JSON.stringify(rows[0]), req.query.actor || null]
     );
 
     res.status(204).end();
@@ -140,7 +137,7 @@ router.delete('/checklist/:itemId', async (req, res) => {
 
 // Bulk reorder
 router.post('/:projectId/checklist/reorder', async (req, res) => {
-  const client = await pool.connect();
+  const client = await db.connect();
   try {
     const { projectId } = req.params;
     const { order = [], actor } = req.body || {}; // [{id, sortIndex}]
@@ -163,7 +160,7 @@ router.post('/:projectId/checklist/reorder', async (req, res) => {
     await client.query('COMMIT');
     res.status(204).end();
   } catch (e) {
-    await pool.query('ROLLBACK');
+    await db.query('ROLLBACK');
     console.error(e);
     res.status(500).json({ error: 'Failed to reorder' });
   } finally {
@@ -184,7 +181,7 @@ router.get('/:projectId/files', async (req, res) => {
     const filter = kind ? 'AND kind = $2' : '';
     if (kind) params.push(kind);
 
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `SELECT id, kind, filename, mime_type, byte_size, uploaded_by, created_at
        FROM projects_files
        WHERE project_id = $1 AND deleted_at IS NULL ${filter}
@@ -210,7 +207,7 @@ router.post('/:projectId/files', upload.single('file'), async (req, res) => {
     const digest = sha256(buf);
 
     // De-dupe within project
-    const dup = await pool.query(
+    const dup = await db.query(
       `SELECT id FROM projects_files
        WHERE project_id = $1 AND sha256_hex = $2 AND deleted_at IS NULL LIMIT 1`,
       [projectId, digest]
@@ -219,7 +216,7 @@ router.post('/:projectId/files', upload.single('file'), async (req, res) => {
       return res.status(200).json({ id: dup.rows[0].id, deduped: true });
     }
 
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `INSERT INTO projects_files
          (project_id, kind, filename, mime_type, byte_size, content, sha256_hex, width, height, uploaded_by)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
@@ -248,7 +245,7 @@ router.post('/:projectId/files', upload.single('file'), async (req, res) => {
 router.delete('/files/:fileId', async (req, res) => {
   try {
     const { fileId } = req.params;
-    const { rowCount } = await pool.query(
+    const { rowCount } = await db.query(
       `UPDATE projects_files SET deleted_at = NOW()
        WHERE id = $1 AND deleted_at IS NULL`,
       [fileId]
@@ -265,7 +262,7 @@ router.delete('/files/:fileId', async (req, res) => {
 router.get('/files/:fileId/download', async (req, res) => {
   try {
     const { fileId } = req.params;
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `SELECT filename, mime_type, byte_size, content
        FROM projects_files
        WHERE id = $1 AND deleted_at IS NULL`,
@@ -290,7 +287,7 @@ router.get('/files/:fileId/download', async (req, res) => {
 router.get('/:projectId/progress', async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { rows } = await pool.query(
+    const { rows } = await db.query(
       `SELECT progress_pct
        FROM projects_progress
        WHERE project_id = $1`,
