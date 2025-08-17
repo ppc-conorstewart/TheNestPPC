@@ -40,7 +40,7 @@ app.use(cors({
 // Static Uploads and Logos
 // ==============================
 app.use('/uploads', express.static(uploadDir));
-// ✅ cross‑platform logo path (works on Render/Linux and Windows)
+// ✅ cross-platform logo path (works on Render/Linux and Windows)
 const LOGOS_DIR = path.join(__dirname, 'public', 'assets', 'logos');
 console.log('Serving customer logos from:', LOGOS_DIR);
 app.use('/assets/logos', express.static(LOGOS_DIR));
@@ -312,7 +312,6 @@ if (HAS_DISCORD_OAUTH) {
     })(req, res, next);
   });
 } else {
-  // Fallback endpoints so we never hit unknown strategy
   app.get('/auth/discord', (_req, res) => {
     res.status(503).send('Discord OAuth is not configured on this deployment.');
   });
