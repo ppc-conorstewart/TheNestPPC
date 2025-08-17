@@ -1,53 +1,43 @@
 // ==============================
 // server/db.js
-// PostgreSQL connection pool — Render-safe (SSL) with hard guard
+// PostgreSQL connection pool — Auto-detect hosted via DATABASE_URL (Render-safe)
 // ==============================
 
 const { Pool } = require('pg');
 
-const isRender = !!process.env.RENDER;
+// Prefer a hosted connection whenever a non-local DATABASE_URL is present.
+const rawUrl = process.env.DATABASE_URL || '';
+const hasHostedUrl = !!rawUrl && !/^postgres(?:ql)?:\/\/localhost/i.test(rawUrl);
 
 // Helper: build SSL config
 function buildSSL() {
-  // If PGSSLMODE=require or PGSSL=true -> use TLS (no CA on Render)
-  const requireSSL =
+  // If we're using a hosted URL, default to TLS unless explicitly disabled.
+  const requireFlag =
     String(process.env.PGSSLMODE || '').toLowerCase() === 'require' ||
-    String(process.env.PGSSL || '').toLowerCase() === 'true';
+    String(process.env.PGSSL || '').toLowerCase() === 'true' ||
+    hasHostedUrl;
 
-  return requireSSL ? { rejectUnauthorized: false } : false;
+  return requireFlag ? { rejectUnauthorized: false } : false;
 }
 
-let pool;
-
-// Hosted environment (Render): require DATABASE_URL
-if (isRender) {
-  if (!process.env.DATABASE_URL || /^postgresql?:\/\/localhost/i.test(process.env.DATABASE_URL)) {
-    console.error('[DB] Missing or invalid DATABASE_URL on Render. Refusing to start.');
-    console.error('[DB] Set DATABASE_URL to your Render Postgres *External Database URL*.');
-    throw new Error('DATABASE_URL not configured for hosted environment');
-  }
-
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: buildSSL(),
-    max: Number(process.env.PGPOOL_MAX || 10),
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
-
-} else {
-  // Local dev fallback
-  pool = new Pool({
-    user: process.env.PGUSER || 'postgres',
-    host: process.env.PGHOST || 'localhost',
-    database: process.env.PGDATABASE || 'The NEST',
-    password: process.env.PGPASSWORD || 'Paloma',
-    port: Number(process.env.PGPORT || 5432),
-    ssl: buildSSL(),
-    max: Number(process.env.PGPOOL_MAX || 10),
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-  });
-}
+const pool = hasHostedUrl
+  ? new Pool({
+      connectionString: rawUrl,
+      ssl: buildSSL(),
+      max: Number(process.env.PGPOOL_MAX || 10),
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+    })
+  : new Pool({
+      user: process.env.PGUSER || 'postgres',
+      host: process.env.PGHOST || 'localhost',
+      database: process.env.PGDATABASE || 'The NEST',
+      password: process.env.PGPASSWORD || 'Paloma',
+      port: Number(process.env.PGPORT || 5432),
+      ssl: buildSSL(),
+      max: Number(process.env.PGPOOL_MAX || 10),
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 10_000,
+    });
 
 module.exports = pool;
