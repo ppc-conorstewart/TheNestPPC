@@ -1,6 +1,7 @@
 // =================== Imports and Assets ===================
 import Lottie from "lottie-react";
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import EditIcon from '../../assets/Fly-HQ Icons/EditIcon.json';
 import HistoryIcon from '../../assets/Fly-HQ Icons/HistoryIcon.json';
 import QRICon from '../../assets/Fly-HQ Icons/QRICon.json';
@@ -31,6 +32,71 @@ const colWidths = {
   status: 108,
   actions: 98,
 };
+
+// =================== Helper: Format Status (pretty label) ===================
+function formatStatusLabel(status) {
+  if (!status || typeof status !== "string") return status;
+
+  // Missile
+  const missileMatch = status.match(/^MA-MI-(\d+)$/i);
+  if (missileMatch) {
+    return `Master Assembly (Missile-${missileMatch[1]})`;
+  }
+
+  // Dogbones, Zippers, Flowcrosses like: MA (DB-1), MA (ZIP-2), MA (FC-3)
+  const nonMissileMatch = status.match(/^MA\s*\(([A-Z]{2,3})-([A-Z0-9]+)\)$/i);
+  if (nonMissileMatch) {
+    const abbr = nonMissileMatch[1].toUpperCase();
+    const num = nonMissileMatch[2];
+
+    let fullName = abbr;
+    if (abbr === "DB") fullName = "Dogbone";
+    if (abbr === "ZIP") fullName = "Zipper";
+    if (abbr === "FC") fullName = "Flowcross";
+
+    return `Master Assembly (${fullName}-${num})`;
+  }
+
+  return status;
+}
+
+// =================== Helper: Build route target from status ===================
+function routeForStatus(status) {
+  if (!status || typeof status !== 'string') return null;
+
+  // Missiles: MA-MI-1 -> Assemblies tab, assembly=Missiles, child=Missile-1
+  const mi = status.match(/^MA-MI-(\d+)$/i);
+  if (mi) {
+    const child = `Missile-${mi[1]}`;
+    const label = `Master Assembly (${child})`;
+    return {
+      to: `/fly-hq?tab=assemblies&assembly=${encodeURIComponent('Missiles')}&child=${encodeURIComponent(child)}`,
+      label,
+      title: `Click to navigate to ${label}`
+    };
+  }
+
+  // MA (DB-1) / MA (ZIP-2) / MA (FC-3)
+  const m = status.match(/^MA\s*\(([A-Z]{2,3})-([A-Z0-9]+)\)$/i);
+  if (!m) return null;
+
+  const abbr = m[1].toUpperCase();
+  const num = m[2];
+  let assemblyTitle = '';
+  let child = '';
+
+  if (abbr === 'DB') { assemblyTitle = 'Dog Bones'; child = `Dogbone-${num}`; }
+  else if (abbr === 'ZIP') { assemblyTitle = 'Zippers'; child = `Zipper-${num}`; }
+  else if (abbr === 'FC') { assemblyTitle = 'Flowcrosses'; child = `Flowcross-${num}`; }
+  else return null;
+
+  const label = `Master Assembly (${child})`;
+  return {
+    to: `/fly-hq?tab=assemblies&assembly=${encodeURIComponent(assemblyTitle)}&child=${encodeURIComponent(child)}`,
+    label,
+    title: `Click to navigate to ${label}`
+  };
+}
 
 // =================== Asset Table Component ===================
 export default function AssetTable({
@@ -211,6 +277,10 @@ export default function AssetTable({
               }
             }
 
+            // Build display and route for the status cell
+            const pretty = formatStatusLabel(asset.status);
+            const route = routeForStatus(asset.status);
+
             return (
               <tr
                 key={asset.id}
@@ -224,7 +294,26 @@ export default function AssetTable({
                   asset.name,
                   asset.category,
                   asset.location,
-                  asset.status
+                  // Status cell becomes a routed link (when routeable)
+                  route ? (
+                    <Link
+                      to={route.to}
+                      title={route.title}
+                      style={{
+                        color: statusColor || textMain,
+                        fontWeight: 800,
+                        textDecoration: 'none',
+                        cursor: 'pointer',
+                        display: 'inline-block'
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+                      onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+                    >
+                      {pretty}
+                    </Link>
+                  ) : (
+                    pretty
+                  )
                 ].map((cell, cellIdx) => (
                   <td
                     key={cellIdx}

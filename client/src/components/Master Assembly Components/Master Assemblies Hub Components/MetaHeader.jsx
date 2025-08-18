@@ -1,7 +1,5 @@
 // ==============================
 // src/components/Master Assembly Components/Master Assemblies Hub Components/MetaHeader.jsx
-// Master Assembly: Header row (Glass depth on status + actions • Animated divider)
-// — QR button removed (static QR now lives inside MetaDatesCard)
 // ==============================
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -21,7 +19,7 @@ function hexToRgb(hex){
 }
 
 // ==============================
-// Status config (purely visual)
+// Status config
 // ==============================
 const STATUS_ITEMS = [
   { label: 'ACTIVE',     value: 'Active',     bg: '#000000ff', border: '#2c7a33', text: '#9dff57' },
@@ -31,7 +29,7 @@ const STATUS_ITEMS = [
 ];
 
 // ==============================
-// Status pill (now with optional glow bound to border color)
+// Status pill
 // ==============================
 function StatusPill({ item, animated=false }) {
   return (
@@ -70,7 +68,6 @@ export default function MetaHeader({
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
 
-  // Inject keyframes once (shared with ViewAssemblyPanel)
   useEffect(() => {
     const id = '__paloma_status_glow_keyframes__';
     if (typeof document !== 'undefined' && !document.getElementById(id)) {
@@ -88,7 +85,7 @@ export default function MetaHeader({
   }, []);
 
   // ------------------------------
-  // Dropdown overlay positioning
+  // Dropdown overlay
   // ------------------------------
   const menuRef = useRef(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0, width: 180 });
@@ -133,11 +130,9 @@ export default function MetaHeader({
   const updateLabel = `Update ${selectedChild || ''}`;
 
   return (
-    <div style={{ ...styles.headerRow, position: 'relative', alignText: 'center'}}>
-      {/* Title */}
+    <div style={{ ...styles.headerRow, position: 'relative', alignText: 'center' }}>
       <div style={styles.title(goldAccent)}>{selectedChild}</div>
 
-      {/* Status + Update side by side */}
       <GlassPanel pad={8} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         <div style={styles.subTitle(palomaGreen)}>STATUS:</div>
         <div ref={wrapRef} style={{ position: 'relative', display: 'inline-block' }}>
@@ -147,7 +142,6 @@ export default function MetaHeader({
             aria-haspopup="listbox"
             aria-expanded={open}
           >
-            {/* Animated current pill — glow color = border color */}
             <StatusPill item={current} animated />
           </button>
         </div>
@@ -167,7 +161,6 @@ export default function MetaHeader({
 
       <GradientDivider />
 
-      {/* Dropdown */}
       {open &&
         createPortal(
           <div
@@ -203,7 +196,6 @@ export default function MetaHeader({
                   ...(item.value === status ? { background: '#171a14' } : {}),
                 }}
               >
-                {/* Menu items: no glow to reduce visual noise */}
                 <StatusPill item={item} />
               </div>
             ))}

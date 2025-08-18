@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "cd client && npm install && npm run build",
-    "start": "node web-server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",

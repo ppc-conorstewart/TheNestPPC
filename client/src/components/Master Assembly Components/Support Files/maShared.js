@@ -61,29 +61,22 @@ export function normalizeSlotFromDB(selectedChild, rawSlot) {
 
 // ==============================
 // API Helpers
-// NOTE: Some environments expose `/api/master/assignments?assembly=...&child=...`,
-// others use `/api/master/assignments/:assembly/:child`.
-// The function below tries both, returning whichever works first.
 // ==============================
+// Use query-string API exclusively to avoid 404s/twitching:
+//   /api/master/assignments?assembly=Dog%20Bones&child=Dogbone-1
 export async function apiFetchAssignments(assemblyTitle, selectedChild) {
-  const tryPaths = [
-    `${API}/api/master/assignments/${encodeURIComponent(assemblyTitle)}/${encodeURIComponent(selectedChild)}`,
-    `${API}/api/master/assignments?assembly=${encodeURIComponent(assemblyTitle)}&child=${encodeURIComponent(selectedChild)}`
-  ];
-  for (const url of tryPaths) {
-    try {
-      const res = await fetch(url, { credentials: 'include' });
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json) && json.length >= 0) return json;
-      }
-    } catch (_) {}
+  try {
+    const url = `${API}/api/master/assignments?assembly=${encodeURIComponent(assemblyTitle)}&child=${encodeURIComponent(selectedChild)}`;
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json) ? json : [];
+  } catch {
+    return [];
   }
-  return [];
 }
 
 export async function apiUpsertAssignment({ assembly, child, slot, asset_id }) {
-  // PUT route is consistent across both styles
   await fetch(`${API}/api/master/assignments`, {
     method: 'PUT',
     credentials: 'include',

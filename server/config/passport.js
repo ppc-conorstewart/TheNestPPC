@@ -1,11 +1,29 @@
-// ==============================
 // server/config/passport.js
-// Exports an initialized Passport instance
-// ==============================
 
-const passport = require('passport');
-const configureDiscordStrategy = require('../auth/discordStrategy');
+const DiscordStrategy = require('passport-discord').Strategy;
 
-configureDiscordStrategy(passport);
+module.exports = function(passport) {
+  passport.serializeUser((user, done) => {
+    done(null, user);
+  });
 
-module.exports = passport;
+  passport.deserializeUser((obj, done) => {
+    done(null, obj);
+  });
+
+  passport.use(
+    new DiscordStrategy(
+      {
+        clientID:     process.env.DISCORD_CLIENT_ID,
+        clientSecret: process.env.DISCORD_CLIENT_SECRET,
+        callbackURL:  process.env.DISCORD_CALLBACK_URL,
+        scope:        ['identify', 'email', 'guilds']
+      },
+      (accessToken, refreshToken, profile, done) => {
+        // You can save or lookup the user in your DB here.
+        // For now, just pass the profile through:
+        return done(null, profile);
+      }
+    )
+  );
+};

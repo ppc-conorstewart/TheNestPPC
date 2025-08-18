@@ -40,7 +40,6 @@ export default function AssetTabsNav({
   const getTabStyle = (isActive) => ({
     ...tabBase,
     color: isActive ? '#6a7257' : railMuted,
-    // keep size; just change look
     background: isActive
       ? 'linear-gradient(180deg, #121310 0%, #0f100e 55%, #0b0c0a 100%)'
       : 'linear-gradient(180deg, rgba(20,22,18,.35) 0%, rgba(14,15,13,.15) 100%)',
@@ -275,6 +274,17 @@ export default function AssetTabsNav({
           <span style={{ position: 'relative', zIndex: 2 }}>Master Assemblies DB</span>
           <span style={topGlow(activeTab === 'ma_db')} />
           <span style={underline(activeTab === 'ma_db')} />
+        </button>
+
+        <button
+          style={getTabStyle(activeTab === 'analytics')}
+          onClick={() => setActiveTab('analytics')}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
+        >
+          <span style={{ position: 'relative', zIndex: 2 }}>Analytics</span>
+          <span style={topGlow(activeTab === 'analytics')} />
+          <span style={underline(activeTab === 'analytics')} />
         </button>
       </div>
 

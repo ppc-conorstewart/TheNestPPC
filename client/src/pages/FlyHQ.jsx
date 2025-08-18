@@ -2,23 +2,22 @@
 // FLYHQ — IMPORTS
 // ==============================
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import useActivityLog from '../hooks/useActivityLog';
-import useAssets from '../hooks/useAssets';
-import useFilteredPaginated from '../hooks/useFilteredPaginated';
-
+import { useSearchParams } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
 import AssetFilters from '../components/Asset Components/AssetFilters';
+import AssetHistoryModal from '../components/Asset Components/AssetHistoryModal';
+import AssetTable from '../components/Asset Components/AssetTable';
 import RightPanel from '../components/Asset Components/RightPanel';
+import AssetAnalytics from '../components/AssetAnalytics';
 import AssetTabsNav from '../components/AssetTabsNav';
+import MasterAssembliesDBTable from '../components/Master Assembly Components/MasterAssembliesDBTable';
 import MasterAssembliesHub from '../components/MasterAssembliesHub';
 import ModalsContainer from '../components/ModalsContainer';
 import TableControls from '../components/TableControls';
-
-import AssetHistoryModal from '../components/Asset Components/AssetHistoryModal';
-import AssetTable from '../components/Asset Components/AssetTable';
-import MasterAssembliesDBTable from '../components/Master Assembly Components/MasterAssembliesDBTable';
-
-import { ToastContainer } from 'react-toastify';
 import { HEADER_LABELS } from '../constants/assetFields';
+import useActivityLog from '../hooks/useActivityLog';
+import useAssets from '../hooks/useAssets';
+import useFilteredPaginated from '../hooks/useFilteredPaginated';
 import { useLivePolling } from '../hooks/useLivePolling';
 import { showPalomaToast } from '../utils/toastUtils';
 
@@ -26,8 +25,6 @@ import { showPalomaToast } from '../utils/toastUtils';
 // FLYHQ — CONSTANTS
 // ==============================
 const camoBg = '/assets/dark-bg.jpg';
-const railAccent = '#9CAA6B';
-const railText = '#b0b79f';
 
 // ==============================
 // FLYHQ — HELPERS
@@ -47,19 +44,31 @@ function coerceTs(x) {
 // FLYHQ — COMPONENT
 // ==============================
 export default function FlyHQ() {
-  const [activeTab, setActiveTab] = useState('assets');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const urlTab = (searchParams.get('tab') || 'assets').toLowerCase();
+  const [activeTab, setActiveTab] = useState(urlTab);
+  useEffect(() => {
+    const next = (searchParams.get('tab') || 'assets').toLowerCase();
+    if (next !== activeTab) setActiveTab(next);
+  }, [searchParams]);
+
+  const setTab = useCallback((tab) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', tab);
+    setSearchParams(next, { replace: true });
+    setActiveTab(tab);
+  }, [searchParams, setSearchParams]);
+
   const [filters, setFilters] = useState({ id: '', sn: '', name: '', category: '', location: '', status: '' });
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'ascending' });
-  const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(15);
   const [searchTerm, setSearchTerm] = useState('');
-
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showTransferSuccess, setShowTransferSuccess] = useState(false);
   const [selectedAssetIds, setSelectedAssetIds] = useState([]);
   const [newLocation, setNewLocation] = useState('');
-  const [transferredAssets, setTransferredAssets] = useState([]);
   const [editAsset, setEditAsset] = useState(null);
   const [assetPendingDelete, setAssetPendingDelete] = useState(null);
   const [showPhysicalTransfer, setShowPhysicalTransfer] = useState(false);
@@ -73,7 +82,7 @@ export default function FlyHQ() {
     return val === null ? true : val === 'true';
   });
   useEffect(() => { window.localStorage.setItem('showMAAssets', showMAAssets); }, [showMAAssets]);
-  const handleToggleMA = useCallback(() => setShowMAAssets(prev => !prev), []);
+  const handleToggleMA = useCallback(() => setShowMAAssets((prev) => !prev), []);
 
   const [showRightPanelAssets, setShowRightPanelAssets] = useState(() => {
     const val = window.localStorage.getItem('showRightPanelAssets');
@@ -82,7 +91,6 @@ export default function FlyHQ() {
   useEffect(() => { window.localStorage.setItem('showRightPanelAssets', showRightPanelAssets); }, [showRightPanelAssets]);
 
   const [showMasterHistory, setShowMasterHistory] = useState(false);
-
   const [lastSeenActivityTs, setLastSeenActivityTs] = useState(() => {
     const v = window.localStorage.getItem('lastSeenActivityTs');
     return v ? parseInt(v, 10) : 0;
@@ -93,10 +101,10 @@ export default function FlyHQ() {
   const assets = Array.isArray(rawAssets) ? rawAssets : [];
   const { activityLogs, fetchActivityLogs } = useActivityLog();
 
-  const { filtered: rawFiltered } = useFilteredPaginated(assets, filters, sortConfig, currentPage, rowsPerPage);
+  const { filtered: rawFiltered } = useFilteredPaginated(assets, filters, sortConfig, 1, rowsPerPage);
   const filteredBase = useMemo(() => (Array.isArray(rawFiltered) ? rawFiltered : []), [rawFiltered]);
   const filtered = useMemo(
-    () => (showMAAssets ? filteredBase : filteredBase.filter(a => !isMAStatus(a.status))),
+    () => (showMAAssets ? filteredBase : filteredBase.filter((a) => !isMAStatus(a.status))),
     [filteredBase, showMAAssets]
   );
   const searched = useMemo(() => {
@@ -137,7 +145,6 @@ export default function FlyHQ() {
   const statusOptions = useMemo(() => Array.from(new Set(assets.map((a) => a.status))).filter(Boolean), [assets]);
 
   const tableScrollRef = useRef(null);
-  const [activityLogHeight, setActivityLogHeight] = useState(350);
   useEffect(() => {
     let raf = 0;
     let t = 0;
@@ -174,7 +181,7 @@ export default function FlyHQ() {
   const handleSort = useCallback((key) => {
     setSortConfig((prev) => ({
       key,
-      direction: prev.key === key && prev.direction === 'ascending' ? 'descending' : 'ascending',
+      direction: prev.key === key && prev.direction === 'ascending' ? 'descending' : 'ascending'
     }));
   }, []);
   const toggleSelect = useCallback((id) => {
@@ -193,11 +200,11 @@ export default function FlyHQ() {
       const apiPayload = { id: payload.id, name: payload.name, category: payload.category, location: payload.location, status: payload.status, sn: payload.sn };
       Object.keys(apiPayload).forEach((k) => (apiPayload[k] === undefined || apiPayload[k] === null || apiPayload[k] === '') && delete apiPayload[k]);
       const res = await fetch('http://localhost:3001/api/assets', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(apiPayload) });
-      if (!res.ok) { let msg = "Unknown error"; try { msg = (await res.json()).error || msg; } catch {} throw new Error(msg); }
+      if (!res.ok) { let msg = 'Unknown error'; try { msg = (await res.json()).error || msg; } catch {} throw new Error(msg); }
       setShowAddModal(false);
       await Promise.all([fetchAssets(), fetchActivityLogs?.()]);
-      showPalomaToast({ message: `Successfully added asset "${payload.id}"`, detail: `Asset has been added to the database.`, type: "success" });
-    } catch (err) { showPalomaToast({ message: `Failed to add asset`, detail: err?.message || "Unknown error", type: "error" }); }
+      showPalomaToast({ message: 'Successfully added asset', detail: 'Asset has been added to the database.', type: 'success' });
+    } catch (err) { showPalomaToast({ message: 'Failed to add asset', detail: err?.message || 'Unknown error', type: 'error' }); }
   }, [fetchAssets, fetchActivityLogs]);
 
   const handleEditAsset = useCallback(async (updated) => {
@@ -205,24 +212,24 @@ export default function FlyHQ() {
       const assetId = updated.id;
       const payload = { name: updated.name, category: updated.category, location: updated.location, status: updated.status, sn: updated.sn };
       Object.keys(payload).forEach((k) => (payload[k] === undefined || payload[k] === null || payload[k] === '') && delete payload[k]);
-      const res = await fetch(`http://localhost:3001/api/assets/${encodeURIComponent(assetId)}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (!res.ok) { let msg = "Unknown error"; try { msg = (await res.json()).error || msg; } catch {} throw new Error(msg); }
+      const res = await fetch('http://localhost:3001/api/assets/' + encodeURIComponent(assetId), { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!res.ok) { let msg = 'Unknown error'; try { msg = (await res.json()).error || msg; } catch {} throw new Error(msg); }
       setEditAsset(null);
       await Promise.all([fetchAssets(), fetchActivityLogs?.()]);
-      showPalomaToast({ message: `Successfully edited asset "${assetId}"`, detail: `All changes have been saved.`, type: "success" });
-    } catch (err) { showPalomaToast({ message: `Failed to update asset`, detail: err?.message || "Unknown error", type: "error" }); }
+      showPalomaToast({ message: 'Successfully edited asset', detail: 'All changes have been saved.', type: 'success' });
+    } catch (err) { showPalomaToast({ message: 'Failed to update asset', detail: err?.message || 'Unknown error', type: 'error' }); }
   }, [fetchAssets, fetchActivityLogs]);
 
   const handleDeleteClick = useCallback((asset) => setAssetPendingDelete(asset), []);
   const confirmDelete = useCallback(async () => {
     if (!assetPendingDelete) return;
     try {
-      await fetch(`http://localhost:3001/api/assets/${encodeURIComponent(assetPendingDelete.id)}`, { method: 'DELETE', credentials: 'include' });
+      await fetch('http://localhost:3001/api/assets/' + encodeURIComponent(assetPendingDelete.id), { method: 'DELETE', credentials: 'include' });
       const name = assetPendingDelete.name;
       setAssetPendingDelete(null);
       await Promise.all([fetchAssets(), fetchActivityLogs()]);
-      showPalomaToast({ message: `Asset "${name}" deleted`, detail: `The asset has been removed from the system.`, type: "success" });
-    } catch (err) { showPalomaToast({ message: `Failed to delete asset`, detail: err?.message || "Unknown error", type: "error" }); }
+      showPalomaToast({ message: 'Asset deleted', detail: 'The asset has been removed from the system.', type: 'success' });
+    } catch (err) { showPalomaToast({ message: 'Failed to delete asset', detail: err?.message || 'Unknown error', type: 'error' }); }
   }, [assetPendingDelete, fetchAssets, fetchActivityLogs]);
   const cancelDelete = useCallback(() => setAssetPendingDelete(null), []);
 
@@ -230,16 +237,16 @@ export default function FlyHQ() {
     const idsToTransfer = selectedAssetIds;
     if (!idsToTransfer.length || !newLocation) return;
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/assets/transfer`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetIds: idsToTransfer, newLocation }) });
+      const res = await fetch(process.env.REACT_APP_API_URL + '/api/assets/transfer', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assetIds: idsToTransfer, newLocation }) });
       if (res.ok) {
         setShowTransferModal(false); setSelectedAssetIds([]); setNewLocation('');
         await fetchAssets(); setShowTransferSuccess(true); await fetchActivityLogs();
-        showPalomaToast({ message: `Successfully transferred asset${idsToTransfer.length > 1 ? 's' : ''} "${idsToTransfer.join(', ')}"`, detail: `Moved to ${newLocation}.`, type: "success" });
+        showPalomaToast({ message: 'Successfully transferred assets', detail: 'Location updated.', type: 'success' });
       } else {
         const errText = await res.text();
-        showPalomaToast({ message: `Failed to transfer asset(s)`, detail: errText, type: "error" });
+        showPalomaToast({ message: 'Failed to transfer assets', detail: errText, type: 'error' });
       }
-    } catch (err) { showPalomaToast({ message: `Error transferring asset(s)`, detail: err?.message || "Unknown error", type: "error" }); }
+    } catch (err) { showPalomaToast({ message: 'Error transferring assets', detail: err?.message || 'Unknown error', type: 'error' }); }
   }, [fetchAssets, fetchActivityLogs, newLocation, selectedAssetIds]);
 
   const pollUpdates = useCallback(() => {
@@ -276,19 +283,26 @@ export default function FlyHQ() {
   }, [latestActivityTs]);
   const closeRightPanel = useCallback(() => setShowRightPanelAssets(false), []);
 
+  const initialSelection = useMemo(() => {
+    const tab = (searchParams.get('tab') || '').toLowerCase();
+    const assembly = searchParams.get('assembly') || '';
+    const child = searchParams.get('child') || '';
+    return { tab, assembly, child };
+  }, [searchParams]);
+
   return (
     <div
-      className="relative font-erbaum uppercase text-sm text-white bg-fixed bg-cover"
-      style={{ backgroundImage: `url(${camoBg})`, backgroundColor: '#000', minHeight: '100%',marginLeft: 6, width: '100%', position: 'relative', overflow: 'hidden' }}
+      className='relative font-erbaum uppercase text-sm text-white bg-fixed bg-cover'
+      style={{ backgroundImage: 'url(' + camoBg + ')', backgroundColor: '#000', minHeight: '100%', marginLeft: 6, width: '100%', position: 'relative', overflow: 'hidden' }}
     >
-      <ToastContainer position="bottom-right" autoClose={4100} hideProgressBar={false} closeOnClick pauseOnHover draggable theme="dark" />
+      <ToastContainer position='bottom-right' autoClose={4100} hideProgressBar={false} closeOnClick pauseOnHover draggable theme='dark' />
 
-      <div className="absolute top-0 left-0 right-0 bottom-0 flex items-stretch justify-center" style={{ zIndex: 1, paddingRight: 0, minHeight: '100%', minWidth: '100%', boxSizing: 'border-box', width: '100%' }}>
+      <div className='absolute top-0 left-0 right-0 bottom-0 flex items-stretch justify-center' style={{ zIndex: 1, paddingRight: 0, minHeight: '100%', minWidth: '100%', boxSizing: 'border-box', width: '100%' }}>
         <div style={{ background: '#000', borderRadius: '0px', maxWidth: 'none', width: '100%', height: '100%', margin: '0 auto', border: '2px solid #282d25', boxShadow: '0 4px 36px 0 #10141177', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{ background: '#000', borderRadius: 0, border: 3, width: '100%', boxSizing: 'border-box', minHeight: 50, margin: 0, padding: 0 }}>
             <AssetTabsNav
               activeTab={activeTab}
-              setActiveTab={setActiveTab}
+              setActiveTab={setTab}
               showRightPanelAssets={showRightPanelAssets}
               setShowRightPanelAssets={(val) => (val ? openRightPanel() : closeRightPanel())}
               unreadBadge={hasUnread}
@@ -298,15 +312,15 @@ export default function FlyHQ() {
           </div>
 
           {activeTab === 'assets' && (
-            <div className="flex flex-row justify-center items-stretch mx-auto" style={{ width: '100%', padding: 0, background: '#000', borderTop: '3px solid #6a7257', border: `2px solid #282d25`, borderRadius: '4px 4px 2px 6px', height: `100%`, boxSizing: 'border-box', minHeight: 0, marginBottom: 20, position: 'relative' }}>
+            <div className='flex flex-row justify-center items-stretch mx-auto' style={{ width: '100%', padding: 0, background: '#000', borderTop: '3px solid #6a7257', border: '2px solid #282d25', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0, marginBottom: 20, position: 'relative' }}>
               <div
-                className="flex flex-col"
+                className='flex flex-col'
                 style={{
                   flex: showRightPanelAssets ? '1 1 auto' : '1 1 100%',
                   minWidth: 1100,
                   background: '#000',
-                  borderRight: `2px solid #282d25`,
-                  border: `2px solid #282d25`,
+                  borderRight: '2px solid #282d25',
+                  border: '2px solid #282d25',
                   height: '100%',
                   padding: '4px 4px 4px 4px',
                   boxSizing: 'border-box',
@@ -362,7 +376,7 @@ export default function FlyHQ() {
                 style={{
                   width: showRightPanelAssets ? 520 : 0,
                   minWidth: showRightPanelAssets ? 480 : 0,
-                  flex: `0 0 ${showRightPanelAssets ? 520 : 0}px`,
+                  flex: '0 0 ' + (showRightPanelAssets ? 520 : 0) + 'px',
                   overflow: 'hidden',
                   display: 'flex',
                   opacity: showRightPanelAssets ? 1 : 0,
@@ -378,25 +392,39 @@ export default function FlyHQ() {
                   filteredAssets={filtered}
                   activityLogs={activityLogs}
                   assetNameMap={assetNameMap}
-                  activityLogHeight={activityLogHeight}
+                  activityLogHeight={350}
                 />
               </div>
             </div>
           )}
 
           {activeTab === 'assemblies' && (
-            <div className="flex flex-row justify-center items-stretch mx-auto" style={{ width: '100%', padding: 0, background: '#000', borderRight: `3px solid #282d25`, borderTop: '2px solid #6a7257', borderRadius: '4px 4px 2px 6px', height: `100%`, boxSizing: 'border-box', minHeight: 0 }}>
-              <MasterAssembliesHub historyOpen={showMasterHistory} setHistoryOpen={setShowMasterHistory} />
+            <div className='flex flex-row justify-center items-stretch mx-auto' style={{ width: '100%', padding: 0, background: '#000', borderRight: '3px solid #282d25', borderTop: '2px solid #6a7257', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0 }}>
+              <MasterAssembliesHub
+                historyOpen={showMasterHistory}
+                setHistoryOpen={setShowMasterHistory}
+                initialSelection={initialSelection}
+              />
             </div>
           )}
 
           {activeTab === 'ma_db' && (
-            <div className="flex flex-row justify-center items-stretch mx-auto" style={{ width: '100%', padding: 0, background: '#000', borderTop: '3px solid #6a7257', border: `2px solid #282d25`, borderRadius: '4px 4px 2px 6px', height: `100%`, boxSizing: 'border-box', minHeight: 0 }}>
-              <div className="flex flex-col" style={{ flex: '1 1 auto', minWidth: 1100, background: '#000', border: `2px solid #282d25`, height: '100%', padding: '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0 }}>
+            <div className='flex flex-row justify-center items-stretch mx-auto' style={{ width: '100%', padding: 0, background: '#000', borderTop: '3px solid #6a7257', border: '2px solid #282d25', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0 }}>
+              <div className='flex flex-col' style={{ flex: '1 1 auto', minWidth: 1100, background: '#000', border: '2px solid #282d25', height: '100%', padding: '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0 }}>
                 <div ref={tableScrollRef} style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
                   <div style={{ fontSize: '0.66rem', height: '100%' }}>
                     <MasterAssembliesDBTable />
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'analytics' && (
+            <div className='flex flex-row justify-center items-stretch mx-auto' style={{ width: '100%', padding: 0, background: '#000', borderTop: '3px solid #6a7257', border: '2px solid #282d25', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0 }}>
+              <div className='flex flex-col' style={{ flex: '1 1 auto', minWidth: 1100, background: '#000', border: '2px solid #282d25', height: '100%', padding: '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0 }}>
+                <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+                  <AssetAnalytics assets={assets} activityLogs={activityLogs} />
                 </div>
               </div>
             </div>

@@ -1,6 +1,5 @@
 // ==============================
 // src/pages/LandingPage.jsx
-// Landing Page (Discord login temporarily disabled; hubs always visible)
 // ==============================
 
 import { useEffect, useState } from 'react';
@@ -11,14 +10,7 @@ const FLYBASELogo = '/assets/FLY-BASE.png';
 const palomaLogo = '/assets/Paloma_Logo_White_Rounded.png';
 const backgroundGif = '/assets/card-bg.gif';
 
-// ==============================
-// Feature Flag: disable Discord auth UX on Landing
-// ==============================
-const DISCORD_AUTH_DISABLED = true;
-
-// ==============================
 // Crest color mapping (borders + accents)
-// ==============================
 const CREST_COLORS = [
   {
     border: '#6a7257', // Army green FIELD
@@ -37,55 +29,17 @@ const CREST_COLORS = [
   }
 ];
 
-// ==============================
-// URL helpers
-// ==============================
-function isValidHttpUrl(str) {
-  try {
-    const u = new URL(str);
-    return u.protocol === 'http:' || u.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-function trimTrailingSlash(s = '') {
-  return s.replace(/\/+$/, '');
-}
-
-// ==============================
 // Checkmark SVG
-// ==============================
 function Check({ color }) {
   return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 20 20"
-      fill="none"
-      style={{ marginRight: 6, display: 'inline-block', verticalAlign: 'middle' }}
-    >
-      <path
-        d="M5 10.6L8.2 14L15 7"
-        stroke={color}
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <svg width="18" height="18" viewBox="0 0 20 20" fill="none" style={{ marginRight: 6, display: 'inline-block', verticalAlign: 'middle' }}>
+      <path d="M5 10.6L8.2 14L15 7" stroke={color} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// ==============================
-// Rotating rectangular glow segment
-// ==============================
-function RotatingSegment({
-  color,
-  idx,
-  boxSize = 350,
-  rectPad = 15,
-  rectRx = 65,
-  strokeW = 7
-}) {
+// Rotating segment (rectangular) — perfectly centered on the logo
+function RotatingSegment({ color, idx, boxSize = 350, rectPad = 15, rectRx = 65, strokeW = 7 }) {
   const svgSize = boxSize + rectPad * 2;
   const rectSize = boxSize;
   const rectOffset = rectPad;
@@ -100,8 +54,8 @@ function RotatingSegment({
         zIndex: 3,
         width: svgSize,
         height: svgSize,
-        pointerEvents: 'none',
-        transform: 'translate(-50%, -50%)'
+        pointerEvents: "none",
+        transform: "translate(-50%, -50%)"
       }}
     >
       <rect
@@ -139,17 +93,10 @@ function RotatingSegment({
   );
 }
 
-// ==============================
-// Landing Page
-// ==============================
 export default function LandingPage() {
   const [user, setUser] = useState(null);
 
-  // ------------------------------
-  // Optional persisted user (kept for future reactivation)
-  // ------------------------------
   useEffect(() => {
-    if (DISCORD_AUTH_DISABLED) return;
     const params = new URLSearchParams(window.location.search);
     const userData = params.get('user');
     if (userData) {
@@ -173,42 +120,23 @@ export default function LandingPage() {
     }
   }, []);
 
-  // ------------------------------
-  // API base URL (kept for future reactivation)
-  // ------------------------------
-  const rawEnvUrl =
-    (process.env.REACT_APP_API_URL || window.__API_URL__ || '').trim();
-  const BASE_URL = trimTrailingSlash(
-    rawEnvUrl || `${window.location.origin}`
-  );
+  const BASE_URL = process.env.REACT_APP_API_URL;
 
-  // ------------------------------
-  // Discord login handler (kept but unused while disabled)
-  // ------------------------------
   const handleDiscordLogin = () => {
-    const loginUrl = `${BASE_URL}/auth/discord`;
-    if (!isValidHttpUrl(loginUrl)) {
-      console.error('Invalid Discord login URL generated:', loginUrl, {
-        BASE_URL,
-        rawEnvUrl
-      });
-      alert(
-        'Login is not configured correctly yet. Please set REACT_APP_API_URL to your API URL and redeploy.'
-      );
-      return;
-    }
-    window.location.href = loginUrl;
+    window.location.href = `${BASE_URL}/auth/discord`;
   };
 
-  // ------------------------------
-  // Hub card configs
-  // ------------------------------
+  // Card configs (label, logo, bullets, onClick, color index)
   const CARDS = [
     {
       title: 'FIELD',
       logo: flyIqLogo,
       accent: CREST_COLORS[0],
-      bullets: ['Interactive Field Training', 'Paloma Points', 'Paloma Shop Access'],
+      bullets: [
+        'Interactive Field Training',
+        'Paloma Points',
+        'Paloma Shop Access'
+      ],
       onClick: () => (window.location.href = '/fly-iq')
     },
     {
@@ -230,21 +158,16 @@ export default function LandingPage() {
       title: 'BASE',
       logo: FLYBASELogo,
       accent: CREST_COLORS[2],
-      bullets: ['Valve Reports', 'Valve Documentation', 'Shop guides'],
+      bullets: [
+        'Valve Reports',
+        'Valve Documentation',
+        'Shop guides'
+      ],
       onClick: () => (window.location.href = '/fly-mfv')
     }
   ];
 
-  // ------------------------------
-  // Auth gating override
-  // ------------------------------
-  const isAuthorized = DISCORD_AUTH_DISABLED ? true : !!user;
-  const greetingName = user?.username || user?.id || 'Operator';
-
-  // ------------------------------
-  // Render (login screen is suppressed while disabled)
-  // ------------------------------
-  if (!isAuthorized) {
+  if (!user) {
     return (
       <div className="relative w-full h-full overflow-hidden">
         <img
@@ -262,11 +185,9 @@ export default function LandingPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-white mt-8 text-center">
             To Gain Access to The Nest
           </h1>
-          {/* Login button intentionally hidden while DISCORD_AUTH_DISABLED === true */}
           <button
             onClick={handleDiscordLogin}
             className="mt-8 bg-indigo-600 hover:bg-indigo-700 px-8 py-3 rounded-lg text-lg font-semibold transition shadow-md"
-            style={{ display: DISCORD_AUTH_DISABLED ? 'none' : 'inline-flex' }}
           >
             Log in with Discord
           </button>
@@ -275,9 +196,6 @@ export default function LandingPage() {
     );
   }
 
-  // ------------------------------
-  // Main content
-  // ------------------------------
   return (
     <div className="relative w-full h-full overflow-hidden">
       <img
@@ -288,7 +206,7 @@ export default function LandingPage() {
       <div className="absolute inset-0 bg-black bg-opacity-80 z-0" />
       <div className="relative z-10 h-full w-full flex flex-col items-center justify-start p-0">
         <h1 className="uppercase font-erbaum font-extrabold text-6xl text-[white] mt-6 text-center drop-shadow-[0_4px_16px_rgba(0,0,0,0.4)]">
-          Welcome to The Nest{DISCORD_AUTH_DISABLED ? '' : `, ${greetingName}!`}
+          Welcome to The Nest, {user.username || user.id}!
         </h1>
         <h2 className="text-xl font-bold font-erbaum mt-6 mb-6 text-white tracking-wider">
           SELECT A HUB:
@@ -308,7 +226,7 @@ export default function LandingPage() {
               }}
               onClick={card.onClick}
             >
-              {/* Logo with centered rotating rectangle on hover */}
+              {/* Logo with perfectly centered rotating rectangle on hover */}
               <div
                 className="crest-block transition-all duration-200 ease-in-out"
                 style={{
@@ -324,41 +242,27 @@ export default function LandingPage() {
               >
                 <img
                   src={card.logo}
-                  alt={card.title + ' Logo'}
+                  alt={card.title + " Logo"}
                   style={{
                     width: 260,
                     height: 260,
-                    objectFit: 'contain',
+                    objectFit: "contain",
                     margin: 0,
                     transition: 'transform .19s cubic-bezier(.25,.8,.36,1.04)'
                   }}
                   className="crest-img"
                 />
-                <div
-                  className="rotating-rect-segment"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: 380,
-                    height: 380,
-                    pointerEvents: 'none',
-                    zIndex: 3,
-                    opacity: 0
-                  }}
-                >
-                  <RotatingSegment
-                    color={card.accent.accent}
-                    idx={idx}
-                    boxSize={350}
-                    rectPad={15}
-                    rectRx={65}
-                    strokeW={7}
-                  />
+                {/* Rotating glowing segment on hover only, perfectly centered */}
+                <div className="rotating-rect-segment" style={{
+                  position: 'absolute',
+                  top: 0, left: 0, width: 380, height: 380,
+                  pointerEvents: 'none', zIndex: 3,
+                  opacity: 0
+                }}>
+                  <RotatingSegment color={card.accent.accent} idx={idx} boxSize={350} rectPad={15} rectRx={65} strokeW={7} />
                 </div>
               </div>
-
-              {/* Description text */}
+              {/* Description text floating underneath */}
               <div
                 className="description-block"
                 style={{
@@ -374,9 +278,9 @@ export default function LandingPage() {
                       className="flex items-center justify-center text-[1.1rem] font-bold font-erbaum tracking-wide"
                       style={{
                         color: 'white',
-                        padding: '1.5px 0',
+                        padding: "1.5px 0",
                         fontSize: 18,
-                        textShadow: '0 1px 6px #23241c55'
+                        textShadow: "0 1px 6px #23241c55"
                       }}
                     >
                       <Check color={card.accent.check} /> {item}
@@ -384,8 +288,7 @@ export default function LandingPage() {
                   ))}
                 </div>
               </div>
-
-              {/* Hover animation keyframes */}
+              {/* Animation and hover logic for the rotating segment */}
               <style>{`
                 .group:hover .crest-block, .group:focus .crest-block {
                   transform: scale(1.00);
