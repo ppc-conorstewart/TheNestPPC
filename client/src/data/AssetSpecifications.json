@@ -1,0 +1,197 @@
+{
+  "Spool Spacer |3.0625 15K | 12\"": {
+    "weight": 71.21,
+    "OAL": 12,
+    "fillVolume": 1.4485199201134
+  },
+  "Spool Spacer |3.0625 15K | 24\"": {
+    "weight": 110.68,
+    "OAL": 24,
+    "fillVolume": 2.8970398402268
+  },
+  "Spool Spacer |3.0625 15K | 36\"": {
+    "weight": 138.8,
+    "OAL": 36,
+    "fillVolume": 4.345559760340201
+  },
+  "Spool Spacer |3.0625 15K | 48\"": {
+    "weight": 174.63,
+    "OAL": 48,
+    "fillVolume": 5.7940796804536
+  },
+  "Spool Spacer |3.0625 15K | 60\"": {
+    "weight": 205.93,
+    "OAL": 60,
+    "fillVolume": 7.242599600567001
+  },
+  "Spool Spacer |3.0625 15K | 72\"": {
+    "weight": 236.78,
+    "OAL": 72,
+    "fillVolume": 8.691119520680402
+  },
+  "Spool Spacer |3.0625 15K | 96\"": {
+    "weight": 304.81,
+    "OAL": 96,
+    "fillVolume": 11.5881593609072
+  },
+  "Spool Spacer |3.0625 15K | 120\"": {
+    "weight": 373.76,
+    "OAL": 120,
+    "fillVolume": 14.485199201134002
+  },
+  "Spool Spacer | 5.125 15K | 14\"": {
+    "weight": 94.35,
+    "OAL": 14,
+    "fillVolume": 4.732676357066328
+  },
+  "Spool Spacer | 5.125 15K | 16\"": {
+    "weight": 221.35,
+    "OAL": 16,
+    "fillVolume": 5.408772979504374
+  },
+  "Spool Spacer | 5.125 15K | 24\"": {
+    "weight": 274.88,
+    "OAL": 24,
+    "fillVolume": 8.113159469256562
+  },
+  "Spool Spacer | 5.125 15K | 36\"": {
+    "weight": 352.89,
+    "OAL": 36,
+    "fillVolume": 12.169739203884841
+  },
+  "Spool Spacer | 5.125 15K | 48\"": {
+    "weight": 435.45,
+    "OAL": 48,
+    "fillVolume": 16.226318938513124
+  },
+  "Spool Spacer | 5.125 15K | 60\"": {
+    "weight": 530.7,
+    "OAL": 60,
+    "fillVolume": 20.282898673141407
+  },
+  "Spool Spacer | 5.125 15K | 72\"": {
+    "weight": 592.39,
+    "OAL": 72,
+    "fillVolume": 24.339478407769683
+  },
+  "Spool Spacer | 5.125 15K | 96\"": {
+    "weight": 756.59,
+    "OAL": 96,
+    "fillVolume": 32.45263787702625
+  },
+  "Spool Spacer | 5.125 15K | 120\"": {
+    "weight": 917.16,
+    "OAL": 120,
+    "fillVolume": 40.565797346282814
+  },
+  "Spool Spacer | 7.0625 15K | 16\"OAL": {
+    "weight": 360.15,
+    "OAL": 16,
+    "fillVolume": 10.271359633446068
+  },
+  "Spool Spacer | 7.0625 15K | 18\"OAL": {
+    "weight": 379.66,
+    "OAL": 18,
+    "fillVolume": 11.555279587626828
+  },
+  "Spool Spacer | 7.0625 15K | 20\"OAL": {
+    "weight": 403.24,
+    "OAL": 20,
+    "fillVolume": 12.839199541807584
+  },
+  "Spool Spacer | 7.0625 15K | 24\"OAL": {
+    "weight": 452.23,
+    "OAL": 24,
+    "fillVolume": 15.407039450169103
+  },
+  "Spool Spacer | 7.0625 15K | 36\"OAL": {
+    "weight": 587.4,
+    "OAL": 36,
+    "fillVolume": 23.110559175253655
+  },
+  "Spool Spacer | 7.0625 15K | 48\"OAL": {
+    "weight": 730.74,
+    "OAL": 48,
+    "fillVolume": 30.814078900338206
+  },
+  "Spool Spacer | 7.0625 15K | 60\"OAL": {
+    "weight": 868.18,
+    "OAL": 60,
+    "fillVolume": 38.51759862542276
+  },
+  "Spool Spacer | 7.0625 15K | 72\"OAL": {
+    "weight": 1006.07,
+    "OAL": 72,
+    "fillVolume": 46.22111835050731
+  },
+  "Spool Spacer | 7.0625 15K | 96\"OAL": {
+    "weight": 1283.21,
+    "OAL": 96,
+    "fillVolume": 61.62815780067641
+  },
+  "Spool Spacer | 7.0625 15K | 120\"OAL": {
+    "weight": 1566.25,
+    "OAL": 120,
+    "fillVolume": 77.03519725084551
+  },
+  "Spool Spacer | 7.0625 15K | 144\"OAL": {
+    "weight": 1844.76,
+    "OAL": 144,
+    "fillVolume": 92.44223670101462
+  },
+  "Spool Spacer | 7.0625 15K | 240\"OAL": {
+    "weight": 2943.36,
+    "OAL": 240,
+    "fillVolume": 154.07039450169103
+  },
+  "VALVES": {
+    "weight": null,
+    "OAL": "OAL(INCHES)",
+    "fillVolume": "Fill Volume (Litres)"
+  },
+  "Hydraulic Valve | 7.0625 15K | FLG x FLG": {
+    "weight": 2993.71,
+    "OAL": 42,
+    "fillVolume": 26.962319037795933
+  },
+  "Hydraulic Valve | 7.0625 15K | STD x STD": {
+    "weight": 1871.97,
+    "OAL": 24,
+    "fillVolume": 15.407039450169103
+  },
+  "Hydraulic Valve | 7.0625 15K | FLG x STD": {
+    "weight": 2313.32,
+    "OAL": 32.5,
+    "fillVolume": 20.86369925543733
+  },
+  "Hydraulic Valve | 5.125 15K": {
+    "weight": 1483.25,
+    "OAL": 24,
+    "fillVolume": 8.113159469256562
+  },
+  "Hydraulic Valve |3.0625 15K": {
+    "weight": 562.45,
+    "OAL": 24,
+    "fillVolume": 2.8970398402268
+  },
+  "Manual Valve |3.0625 15K": {
+    "weight": 347.91,
+    "OAL": 24,
+    "fillVolume": 2.8970398402268
+  },
+  "Manual Valve | 5.125 15K": {
+    "weight": 1392.53,
+    "OAL": 24,
+    "fillVolume": 8.113159469256562
+  },
+  "Manual Valve | 7.0625 15K": {
+    "weight": 2404.04,
+    "OAL": 42,
+    "fillVolume": 26.962319037795933
+  },
+  "ADAPTERS": {
+    "weight": null,
+    "OAL": "OAL(INCHES)",
+    "fillVolume": "Column1"
+  }
+}

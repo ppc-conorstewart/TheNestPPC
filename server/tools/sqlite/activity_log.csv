@@ -1,0 +1,10 @@
+id,timestamp,action,asset_id,details,user
+24,2025-06-03T05:49:33.956Z,"Added Asset","PPC 000123","{""name"":""Hydraulic Valve | 5-1/8\"" 15K"",""category"":""Valves"",""sn"":""TEST TEST TEST "",""status"":""Available"",""location"":""Red Deer""}",ppc.conorstewart
+25,2025-06-03T05:49:44.140Z,"Updated Asset","PPC 000123","{""name"":""Hydraulic Valve | 5-1/8\"" 15K"",""category"":""Valves"",""sn"":""TEST""}",ppc.conorstewart
+26,2025-06-03T05:49:58.345Z,"Transferred Multiple Assets","PPC 000123","{""items"":[{""id"":""PPC 000123"",""name"":""Hydraulic Valve | 5-1/8\"" 15K"",""sn"":""TEST""}],""newLocation"":""Grand Prairie""}",ppc.conorstewart
+27,2025-06-03T05:50:15.246Z,"Deleted Asset","PPC 000123","{""name"":""Hydraulic Valve | 5-1/8\"" 15K"",""category"":""Valves"",""sn"":""TEST"",""status"":""Available"",""location"":""Grand Prairie""}",ppc.conorstewart
+28,2025-06-11T23:14:39.663Z,"Updated Asset",Non-PPC000776,"{""name"":""10 Station Hydraulic Remote Stand"",""category"":""Valves"",""sn"":""asd""}",ppc.conorstewart
+29,2025-06-11T23:14:55.213Z,"Updated Asset",Non-PPC000776,"{""name"":""10 Station Hydraulic Remote Stand"",""category"":""Valves"",""sn"":""N/A""}",ppc.conorstewart
+30,2025-06-12T01:30:14.836Z,"Updated Asset",Non-PPC000776,"{""name"":""10 Station Hydraulic Remote Stand"",""category"":""Valves"",""sn"":""Nothing""}",ppc.conorstewart
+31,2025-06-20T14:54:33.410Z,"Updated Asset","PPC 030270","{""name"":""Hydraulic Valve | 7-1/16\"" 15K | FLG x FLG"",""category"":""Valves"",""sn"":""PA21277"",""status"":""Under Review""}","Unknown User"
+32,2025-06-20T14:54:34.463Z,"Updated Asset","PPC 030270","{""name"":""Hydraulic Valve | 7-1/16\"" 15K | FLG x FLG"",""category"":""Valves"",""sn"":""PA21277"",""status"":""Under Review""}","Unknown User"

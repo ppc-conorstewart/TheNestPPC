@@ -1,0 +1,249 @@
+@import url("https://use.typekit.net/auy8bpd.css");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========= Responsive scaling for all major sizes ========= */
+:root {
+  --base-font-size: 16px;
+  --base-padding: 1rem;
+  --base-margin: 1rem;
+}
+
+html {
+  font-size: var(--base-font-size);
+  --responsive-padding: var(--base-padding);
+  --responsive-margin: var(--base-margin);
+  font-family: 'MyFont', 'erbaum', 'Inter', 'Arial', sans-serif;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body, #root {
+  background-color: black !important;
+  font-family: 'MyFont', 'erbaum', 'Inter', 'Arial', sans-serif;
+  min-height: 100vh;
+  min-width: 100vw;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+/* Remove any universal default margin or padding on containers */
+.main-container,
+.asset-table,
+.content-wrapper,
+.sidebar,
+.header,
+.footer {
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+}
+
+/* Responsive font/padding logic can be applied inside pages/components if needed */
+@media (min-width: 1440px) {
+  :root {
+    --base-font-size: 17px;
+    --base-padding: 1.15rem;
+    --base-margin: 1.15rem;
+  }
+}
+@media (min-width: 1920px) {
+  :root {
+    --base-font-size: 15px;
+    --base-padding: 1rem;
+    --base-margin: 1.25rem;
+  }
+}
+@media (min-width: 2560px) {
+  :root {
+    --base-font-size: 19.5px;
+    --base-padding: 1.5rem;
+    --base-margin: 1.5rem;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #6a7257;
+  border-radius: 4px;
+  border: 2px solid #000;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #000000;
+}
+
+@keyframes spin3D {
+  0% {
+    transform: rotate3d(1, 1, 0, 0deg);
+  }
+  100% {
+    transform: rotate3d(1, 1, 0, 360deg);
+  }
+}
+
+/* Toastify toast notification fixes */
+.Toastify__toast-container {
+  pointer-events: none;
+  z-index: 99999 !important;
+}
+.Toastify__toast {
+  pointer-events: all;
+  box-sizing: border-box;
+  margin: 16px !important;
+}
+.Toastify__progress-bar {
+  background: #6a7257 !important;
+  background-image: none !important;
+}
+
+.swiper-wrapper {
+  transition-timing-function: linear !important;
+}
+
+@keyframes pulseDot {
+  0% {
+    box-shadow: 0 0 0 0 #4ade8099, 0 0 8px 2px #4ade8070;
+    opacity: 1;
+  }
+  60% {
+    box-shadow: 0 0 0 10px #4ade8011, 0 0 8px 2px #4ade8070;
+    opacity: 0.92;
+  }
+  100% {
+    box-shadow: 0 0 0 0 #4ade8000, 0 0 8px 2px #4ade8070;
+    opacity: 1;
+  }
+}
+
+/* ========== Font Faces (Unchanged) ========== */
+@font-face {
+  font-family: 'Varien';
+  src: url('./assets/fonts/Varien.woff2') format('woff2'),
+       url('./assets/fonts/Varien.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Varien';
+  src: url('./assets/fonts/Varien-Italic.woff2') format('woff2'),
+       url('./assets/fonts/Varien-Italic.woff') format('woff');
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Varien Outline';
+  src: url('./assets/fonts/Varien Outline.woff2') format('woff2'),
+       url('./assets/fonts/Varien Outline.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Varien Italic Outline';
+  src: url('./assets/fonts/Varien-Italic Outline.woff2') format('woff2'),
+       url('./assets/fonts/Varien-Italic Outline.woff') format('woff');
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Unispace BD';
+  src: url('./assets/fonts/unispace bd.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Stencil';
+  src: url('./assets/fonts/Stencil.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Punoer';
+  src: url('./assets/fonts/Punoer.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ========== Cornero ========== */
+@font-face {
+  font-family: 'Font-cornero';
+  src: url('./assets/fonts/Cornero.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+/* ============================= */
+/* Frosted Glass and Glow Styles  */
+/* ============================= */
+
+.paloma-frosted-glass {
+  position: relative;
+  overflow: hidden;
+  background: rgba(24,26,22,0.62);
+  border-radius: 24px;
+  border: 2.5px solid rgba(162,185,120,0.14);
+  box-shadow: 0 6px 48px 0 #23270090, 0 2px 14px #6a725760, 0 1.5px 0 #35392e99 inset;
+  backdrop-filter: blur(32px) saturate(120%);
+  -webkit-backdrop-filter: blur(32px) saturate(120%);
+  transition: box-shadow .33s, border-color .26s;
+}
+.paloma-frosted-glass:before {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border-radius: 24px;
+  background: linear-gradient(133deg, rgba(255,255,255,0.07) 10%, rgba(106,114,87,0.06) 72%, rgba(162,185,120,0.07) 100%);
+  box-shadow: 0 0px 48px 0 #23270010;
+  mix-blend-mode: lighten;
+}
+.paloma-frosted-glass:after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  border-radius: 24px;
+  opacity: 0.18;
+  mix-blend-mode: overlay;
+}
+.paloma-frosted-glass.glow {
+  border-color: #b6ffb3cc;
+  box-shadow:
+    0 0 52px 0 #5f8543a0,
+    0 6px 44px 0 #2d361e70,
+    0 2px 14px #6a725730,
+    0 1.5px 0 #35392e99 inset;
+}
+
+.prominent-gradient-header {
+  -webkit-text-stroke: 0.8px #bfc98c66;
+}
