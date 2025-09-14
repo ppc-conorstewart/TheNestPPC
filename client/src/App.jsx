@@ -1,5 +1,5 @@
 // ==============================
-// App.jsx — Router, Layout, and Page Fixes (Full Output)
+// FILE: client/src/App.jsx
 // ==============================
 
 import React from 'react';
@@ -16,12 +16,14 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { Slide, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import LandingPage from './LandingPage';
-import Analytics from './pages/Analytics';
 import CustomerHub from './pages/CustomerHub';
+import DiscordHub from './pages/DiscordHub';
+import DocumentationHub from './pages/DocumentationHub';
 import FLYBASE from './pages/FLYBASE';
 import FlyHQ from './pages/FlyHQ';
 import FlyHQTools from './pages/FlyHQTools';
 import FlyIQ from './pages/FlyIQ';
+import InteractiveTraining from './pages/InteractiveTraining';
 import JobMap from './pages/JobMap';
 import JobPlanner from './pages/JobPlanner';
 import MFVDocumentation from './pages/MFVDocumentation';
@@ -30,6 +32,7 @@ import MFVPage from './pages/MFVPage';
 import MFVSummary from './pages/MFVSummary';
 import OverwatchPage from './pages/OverwatchPage';
 import Projects from './pages/Projects';
+import ServiceEquipment from './pages/ServiceEquipment';
 import SourcingPage from './pages/SourcingPage';
 import TrainingHub from './pages/TrainingHub';
 import ValveReports from './pages/ValveReports';
@@ -40,6 +43,9 @@ import './styles/glass.css';
 
 // === Context Debugging ===
 import { useJobContext } from './context/JobContext';
+
+// === Background FX ===
+import BackgroundFX from './components/BackgroundFX';
 
 // ==============================
 // AuthListener — URL User Param LocalStorage Handler
@@ -66,9 +72,8 @@ function AuthListener() {
 // App — Page Routing/Context/Toast Layout
 // ==============================
 export default function App() {
-  // === Hook call only inside function! ===
   const debugContext = useJobContext?.();
-  console.log("App.jsx context value", debugContext);
+  console.log('App.jsx context value', debugContext);
 
   return (
     <Router>
@@ -76,11 +81,12 @@ export default function App() {
       <div style={{
         minHeight: '100vh',
         width: '100vw',
-        // IMPORTANT: make the app wrapper transparent so GlassBackdrop shows through
         background: 'transparent',
         position: 'relative',
         overflowX: 'hidden'
       }}>
+        <BackgroundFX />
+
         <Routes>
           <Route
             path="/fly-iq"
@@ -123,6 +129,16 @@ export default function App() {
             }
           />
           <Route
+            path="/discord-hub"
+            element={
+              <Layout hideSidebar>
+                <ProtectedRoute>
+                  <DiscordHub />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
             path="/job-planner"
             element={
               <Layout>
@@ -153,11 +169,11 @@ export default function App() {
             }
           />
           <Route
-            path="/analytics"
+            path="/documentation"
             element={
               <Layout>
                 <ProtectedRoute>
-                  <Analytics />
+                  <DocumentationHub />
                 </ProtectedRoute>
               </Layout>
             }
@@ -263,11 +279,31 @@ export default function App() {
             }
           />
           <Route
+            path="/interactive-training"
+            element={
+              <Layout>
+                <ProtectedRoute>
+                  <InteractiveTraining />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
             path="/customer-hub"
             element={
               <Layout>
                 <ProtectedRoute>
                   <CustomerHub />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
+            path="/service-equipment"
+            element={
+              <Layout>
+                <ProtectedRoute>
+                  <ServiceEquipment />
                 </ProtectedRoute>
               </Layout>
             }
@@ -294,7 +330,6 @@ export default function App() {
           />
         </Routes>
 
-        {/* Dedicated Paloma toast container */}
         <ToastContainer
           containerId="paloma"
           position="bottom-right"

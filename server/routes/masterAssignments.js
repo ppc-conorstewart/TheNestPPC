@@ -13,6 +13,7 @@ const express = require('express');
 const router = express.Router();
 
 const svc = require('../services/masterAssignments.service');
+const assetsSvc = require('../services/assets');
 
 // ------------------------------
 // Helpers
@@ -201,7 +202,7 @@ router.post('/save', async (req, res) => {
 // ------------------------------
 
 // GET /api/master/history
-router.get('/history', async (req, res) => {
+router.get('/history', async (_req, res) => {
   try {
     const rows = await svc.getHistory(400);
     return ok(res, rows || []);
@@ -219,6 +220,20 @@ router.post('/history', async (req, res) => {
   } catch (e) {
     console.error('POST /history failed', e);
     return bad(res, 'Failed to add history', 500);
+  }
+});
+
+// ------------------------------
+// Available Assets (unassigned + status = Available)
+// ------------------------------
+// GET /api/master/available-assets
+router.get('/available-assets', async (_req, res) => {
+  try {
+    const rows = await assetsSvc.getAvailableAssets();
+    return ok(res, rows || []);
+  } catch (e) {
+    console.error('GET /available-assets failed', e);
+    return bad(res, 'Failed to fetch available assets', 500);
   }
 });
 

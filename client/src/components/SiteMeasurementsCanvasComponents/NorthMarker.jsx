@@ -1,62 +1,79 @@
-import React, { useState } from "react";
-import { Group, Circle, Arrow, Text } from "react-konva";
+// =====================================================
+// File: NorthMarker.jsx
+// =====================================================
 
-// All-black, sharp, pro North Marker
-export default function NorthMarker({ x, y, angle, onRotate, onMove, zoom = 1, pan = { x: 0, y: 0 } }) {
+import { useRef, useState } from 'react';
+import { Arrow, Circle, Group, Line, Text } from 'react-konva';
+
+// =================== North Marker (Right-Side Handle, No-Jump, Correct Delta) ===================
+export default function NorthMarker({ x, y, angle, onRotate, onMove }) {
+  const groupRef = useRef(null);
   const [isRotating, setIsRotating] = useState(false);
 
-  // Mouse down: check for Alt key to rotate
-  const handlePointerDown = e => {
-    if (e.evt.altKey) {
-      setIsRotating(true);
-      window.addEventListener("mousemove", handlePointerMove);
-      window.addEventListener("mouseup", handlePointerUp);
-      e.cancelBubble = true;
-    }
+  const startAngleRef = useRef(0);
+  const startPointerDegRef = useRef(0);
+
+  // Pointer angle in scene coords (0° on +X axis; increases counterclockwise)
+  const pointerDeg = stage => {
+    const ptr = stage.getPointerPosition();
+    if (!ptr) return 0;
+    const inv = stage.getAbsoluteTransform().copy().invert();
+    const p = inv.point(ptr);
+    const c = groupRef.current.getAbsolutePosition();
+    const dx = p.x - c.x;
+    const dy = p.y - c.y;
+    return (Math.atan2(dy, dx) * 180) / Math.PI;
   };
 
-  const handlePointerMove = e => {
-    const stage = document.querySelector("canvas");
+  const startRotate = e => {
+    const stage = groupRef.current?.getStage();
     if (!stage) return;
-    const rect = stage.getBoundingClientRect();
-    const pointer = {
-      x: (e.clientX - rect.left - pan.x) / zoom,
-      y: (e.clientY - rect.top - pan.y) / zoom
-    };
-    const dx = pointer.x - x;
-    const dy = pointer.y - y;
-    const newAngle = (Math.atan2(dx, -dy) * 180) / Math.PI;
-    onRotate(newAngle);
-  };
+    e.cancelBubble = true;
 
-  const handlePointerUp = e => {
-    setIsRotating(false);
-    window.removeEventListener("mousemove", handlePointerMove);
-    window.removeEventListener("mouseup", handlePointerUp);
+    setIsRotating(true);
+    startAngleRef.current = angle;
+    startPointerDegRef.current = pointerDeg(stage);
+
+    const moveNS = 'mousemove.north';
+    const upNS = 'mouseup.north';
+    const touchMoveNS = 'touchmove.north';
+    const touchEndNS = 'touchend.north';
+
+    const handleMove = () => {
+      const current = pointerDeg(stage);
+      const delta = current - startPointerDegRef.current;
+      const next = startAngleRef.current + delta; // pure delta—no 90° offset
+      onRotate && onRotate(next);
+    };
+
+    const handleUp = () => {
+      setIsRotating(false);
+      stage.off(moveNS);
+      stage.off(upNS);
+      stage.off(touchMoveNS);
+      stage.off(touchEndNS);
+    };
+
+    stage.on(moveNS, handleMove);
+    stage.on(upNS, handleUp);
+    stage.on(touchMoveNS, handleMove);
+    stage.on(touchEndNS, handleUp);
   };
 
   return (
     <Group
+      ref={groupRef}
       x={x}
       y={y}
       rotation={angle}
       draggable={!isRotating}
       onDragMove={e => onMove && onMove(e.target.x(), e.target.y())}
-      onMouseDown={handlePointerDown}
-      onTouchStart={handlePointerDown}
-      cursor={isRotating ? "crosshair" : "pointer"}
       listening
     >
-      {/* Outer Circle: Black border, slight white fill */}
-      <Circle
-        radius={28}
-        fill="#fafafc"
-        stroke="#111"
-        strokeWidth={3.2}
-        shadowBlur={5}
-        shadowColor="#000"
-      />
-      {/* Black Arrow: sharp, with soft shadow */}
+      {/* Base circle */}
+      <Circle radius={28} fill="#fafafc" stroke="#111" strokeWidth={3.2} shadowBlur={5} shadowColor="#000" />
+
+      {/* Arrow (points up at 0°) */}
       <Arrow
         points={[0, 11, 0, -30]}
         pointerLength={16}
@@ -68,26 +85,23 @@ export default function NorthMarker({ x, y, angle, onRotate, onMove, zoom = 1, p
         shadowBlur={4}
         opacity={0.98}
       />
-      {/* Big Black "N" */}
-      <Text
-        text="N"
-        fontSize={25}
-        fontStyle="bold"
-        fontFamily="sans-serif"
-        x={-11}
-        y={-56}
-        fill="#111"
-        shadowBlur={0}
-      />
-      {/* "NORTH" label */}
-      <Text
-        text="NORTH"
-        fontSize={11}
-        fontStyle="bold"
-        fontFamily="sans-serif"
-        x={-21}
-        y={33}
-        fill="#444"
+
+      {/* Labels */}
+      <Text text="N" fontSize={25} fontStyle="bold" fontFamily="sans-serif" x={-11} y={-56} fill="#111" />
+      <Text text="NORTH" fontSize={11} fontStyle="bold" fontFamily="sans-serif" x={-21} y={33} fill="#444" />
+
+      {/* Right-side rotation handle */}
+      <Line points={[30, 0, 42, 0]} stroke="#6a7257" strokeWidth={2} />
+      <Circle
+        x={48}
+        y={0}
+        radius={7}
+        fill="#6a7257"
+        stroke="#111"
+        strokeWidth={1.5}
+        onMouseDown={startRotate}
+        onTouchStart={startRotate}
+        listening
       />
     </Group>
   );

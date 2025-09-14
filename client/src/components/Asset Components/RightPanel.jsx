@@ -36,6 +36,14 @@ export default function RightPanel({
     margin: '0 0 0px 0',
   };
 
+  const availableCount = filteredAssets.filter(a => a.status === 'Available').length;
+  const newCount = filteredAssets.filter(a => a.status === 'New').length;
+  const inUseCount = filteredAssets.filter(a => a.status === 'In-Use').length;
+  const underReviewCount = filteredAssets.filter(a => a.status === 'Under Review').length;
+  const downedCount = filteredAssets.filter(a => a.status === 'Downed').length;
+  const masterAssembliesCount = filteredAssets.filter(a => a.category === 'Master Assembly').length;
+  const totalCount = filteredAssets.length;
+
   return (
     <div
       style={{
@@ -66,11 +74,38 @@ export default function RightPanel({
         }}
       >
         <div style={sectionTitleStyle}>Asset Summary</div>
-        <div style={{ display: 'flex', gap: 0, justifyContent: 'center', alignItems: 'center', padding: 0, marginBottom: 0 }}>
-          <SummaryCard label="AVAILABLE" value={filteredAssets.filter((a) => a.status === 'Available').length} color="#00ff0da3" />
-          <SummaryCard label="NEW" value={filteredAssets.filter((a) => a.status === 'New').length} color="#ffc107d3" />
-          <SummaryCard label="IN-USE" value={filteredAssets.filter((a) => a.status === 'In-Use').length} color="#ff0202b8" />
-          <SummaryCard label="TOTAL" value={filteredAssets.length} color="#ffffff" strong />
+
+        {/* ===== Compact Table Layout (Two Columns) ===== */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            columnGap: 12,
+            rowGap: 2,
+            padding: '6px 8px 6px 8px',
+          }}
+        >
+          <SummaryPair label="AVAILABLE" value={availableCount} color="#7CFC00" />
+          <SummaryPair label="NEW" value={newCount} color="#1E90FF" />
+          <SummaryPair label="IN-USE" value={inUseCount} color="#FFFF00" />
+          <SummaryPair label="UNDER REVIEW" value={underReviewCount} color="#A0522D" />
+          <SummaryPair label="DOWNED" value={downedCount} color="#FF0000" />
+          <SummaryPair label="MASTER ASSEMBLIES" value={masterAssembliesCount} color="#800080" />
+        </div>
+
+        {/* ===== Total Row ===== */}
+        <div
+          style={{
+            padding: '6px 8px 8px 8px',
+            borderTop: '1px solid #23251d',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <span style={{ color: '#b0b79f', fontSize: '0.95em' }}>TOTAL</span>
+          <span style={{ color: '#fff', fontWeight: 800, fontSize: '1.1em' }}>{totalCount}</span>
         </div>
       </div>
 
@@ -112,15 +147,17 @@ export default function RightPanel({
         }}
       >
         <div style={sectionTitleStyle}>Activity Log</div>
-        <div style={{
-          background: bgAccent,
-          borderRadius: 0,
-          border: 2,
-          padding: 6,
-          flex: 1,
-          minHeight: 0,
-          overflowY: 'auto',
-        }}>
+        <div
+          style={{
+            background: bgAccent,
+            borderRadius: 0,
+            border: 2,
+            padding: 6,
+            flex: 1,
+            minHeight: 0,
+            overflowY: 'auto',
+          }}
+        >
           <ActivityLogTable logs={activityLogs} assetNameMap={assetNameMap} compact />
         </div>
       </div>
@@ -128,11 +165,20 @@ export default function RightPanel({
   );
 }
 
-function SummaryCard({ label, value, strong, color }) {
+// =================== Summary Pair Component ===================
+function SummaryPair({ label, value, color }) {
   return (
-    <div style={{ background: '#10110f', borderRadius: 0, minWidth: 105, padding: '10px 10px', margin: '0 4px', textAlign: 'center', flex: 1 }}>
-      <div style={{ color: '#b0b79f', fontSize: '0.97em', marginBottom: 3, fontWeight: 500 }}>{label}</div>
-      <div style={{ fontSize: '1.5em', fontWeight: 700, color: strong ? '#fff' : color, letterSpacing: 1 }}>{value}</div>
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: 8,
+        padding: '2px 4px',
+      }}
+    >
+      <span style={{ color: '#b0b79f', fontSize: '0.92em' }}>{label}</span>
+      <span style={{ color: color, fontWeight: 700 }}>{value}</span>
     </div>
   );
 }

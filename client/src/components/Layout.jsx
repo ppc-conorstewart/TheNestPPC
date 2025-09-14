@@ -2,7 +2,6 @@
 
 import { useLocation } from 'react-router-dom'
 import Footer from './Footer'
-import Header from './Header'
 import Sidebar from './Sidebar'
 
 const MODULE_PATHS = [
@@ -11,19 +10,19 @@ const MODULE_PATHS = [
   '/job-planner',
   '/workorder-hub',
   '/sourcing',
-  '/analytics',
+  '/documentation',
   '/projects',
   '/pad-overwatch',
 ]
 
-const HEADER_HEIGHT = 36
-const HEADER_BORDER = 0
-const FOOTER_HEIGHT = 28
-
+// ==============================
+// LAYOUT • ROOT CONTAINER
+// ==============================
 export default function Layout({ children, hideSidebar }) {
   const { pathname } = useLocation()
-  const isFlyIQ = pathname.startsWith("/fly-iq")
-  const showSidebar = !isFlyIQ && MODULE_PATHS.some(p => pathname.startsWith(p)) && !hideSidebar
+  const isFlyIQ = pathname.startsWith('/fly-iq')
+  const showSidebar =
+    !isFlyIQ && MODULE_PATHS.some(p => pathname.startsWith(p)) && !hideSidebar
 
   return (
     <div
@@ -31,39 +30,56 @@ export default function Layout({ children, hideSidebar }) {
       style={{
         minHeight: '100vh',
         flexDirection: 'row',
-        width: '100vw',
-        background: 'transparent', // let GlassBackdrop show through
+        width: '100%',                 // prevent 100vw overflow
+        background: 'transparent',
+        overflowX: 'hidden'            // hard-stop any horizontal scroll
       }}
     >
       {showSidebar && <Sidebar />}
+
+      {/* ============================== */}
+      {/* LAYOUT • PAGE COLUMN           */}
+      {/* ============================== */}
       <div
-        className="flex flex-col flex-1 min-h-screen transition-margin duration-300 relative"
+        className="flex flex-col flex-1 transition-margin duration-300 relative"
         style={{
-          minHeight: '100vh',
+          minHeight: 0,
           marginLeft: showSidebar ? '56px' : '0px',
-          paddingTop: HEADER_HEIGHT + HEADER_BORDER,
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          background: 'transparent', // let GlassBackdrop show through
+          background: 'transparent',
+          overflowX: 'hidden'          // shield column from micro overflows
         }}
       >
-        <Header />
+        {/* ============================== */}
+        {/* LAYOUT • MAIN CONTENT         */}
+        {/* ============================== */}
         <main
           className="flex-1 w-full overflow-y-auto custom-scrollbar"
           style={{
-            minHeight: 0, // Let flexbox handle sizing
-            background: 'transparent', // let GlassBackdrop show through
+            flex: '1 1 auto',
+            background: 'transparent',
             width: '100%',
             boxSizing: 'border-box',
             position: 'relative',
-            zIndex: 2, // ensure content stacks above backdrop
+            zIndex: 2,
+            minHeight: 0,
+            overflowX: 'hidden'        // no horizontal scrollbar in main
           }}
         >
           {children}
         </main>
+
+        {/* ============================== */}
+        {/* LAYOUT • FOOTER               */}
+        {/* ============================== */}
         <Footer />
       </div>
+
+      {/* ============================== */}
+      {/* LAYOUT • INLINE STYLES         */}
+      {/* ============================== */}
       <style>{`
         aside.group:hover ~ div.flex-1 {
           margin-left: 256px !important;

@@ -1,4 +1,6 @@
-// src/pages/SourcingPage.jsx
+// ==========================================
+// FILE: src/pages/SourcingPage.jsx
+// ==========================================
 
 import axios from 'axios';
 import { useEffect, useState } from 'react';
@@ -9,6 +11,9 @@ import { API } from '../api';
 import SubmitTicketModal from '../components/SubmitTicketModal';
 import './SourcingPage.css';
 
+// ==============================
+// ======= NAV ITEMS ============
+// ==============================
 const NAV_ITEMS = [
   { label: 'TABLE & CALENDAR', key: 'table' },
   { label: 'PARTS LIST', key: 'parts' },
@@ -16,15 +21,19 @@ const NAV_ITEMS = [
   { label: 'SOURCING ANALYTICS', key: 'analytics' },
 ];
 
-// Helper to ensure valid date string for <input type="date" />
+// ==============================
+// Helper: format date for inputs
+// ==============================
 function formatInputDate(dateValue) {
   if (!dateValue) return '';
   const d = new Date(dateValue);
   if (isNaN(d.getTime())) return '';
-  // toISOString always UTC, so adjust if you want local, but for most backend ISO timestamps this is safest:
   return d.toISOString().slice(0, 10);
 }
 
+// ==========================================
+// COMPONENT: SourcingPage
+// ==========================================
 export default function SourcingPage() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -39,6 +48,12 @@ export default function SourcingPage() {
     priority: 'All',
     category: 'All',
   });
+
+  // ==============================
+  // ======= UI LOCAL STATE =======
+  // ==============================
+  const [isCompletedOpen, setIsCompletedOpen] = useState(true);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(true);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -174,27 +189,20 @@ export default function SourcingPage() {
       const res = await axios.patch(`${API}/api/sourcing/${ticketId}`, {
         expectedDate: newDate,
       });
-      setTickets((prev) =>
-        prev.map((t) => (t.id === ticketId ? res.data : t))
-      );
+      setTickets((prev) => prev.map((t) => (t.id === ticketId ? res.data : t)));
     } catch (err) {
-      alert(
-        err.response?.data?.error ||
-          'There was an error updating the expected date.'
-      );
+      alert(err.response?.data?.error || 'There was an error updating the expected date.');
     }
   };
 
   const completedTickets = tickets.filter(
-    (t) =>
-      t.status === 'Received' ||
-      t.status === 'Complete'
+    (t) => t.status === 'Received' || t.status === 'Complete'
   );
 
   const TICKETS_AREA_HEIGHT = 420;
 
   return (
-    <div className="min-h-auto w-full flex justify-center items-start bg-[#181a1b] py-0 px-0" style={{backgroundImage:"url('/assets/dark-bg.jpg')", backgroundSize:"cover"}}>
+    <div className="w-full min-h-screen flex justify-center items-start bg-transparent py-0 px-0">
       <SubmitTicketModal
         open={showForm}
         onClose={handleModalClose}
@@ -205,31 +213,35 @@ export default function SourcingPage() {
         setError={setError}
       />
 
-      <div className="w-full max-w-full flex flex-row bg-black bg-opacity-90 rounded-none border-none shadow-none min-h-full">
-        {/* LEFT NAV PANEL */}
-        <div className="w-[210px] min-w-[170px] bg-[#0a0b0c] border-r-2 border-[#202021] flex flex-col py-4 px-2 items-start">
-          {NAV_ITEMS.map(({label, key}) => (
+      <div className="w-full max-w-full flex flex-row rounded-none border-none shadow-none min-h-full bg-transparent">
+        {/* ============================== */}
+        {/* LEFT NAV PANEL (Glass)         */}
+        {/* ============================== */}
+        <div className="w-[210px] min-w-[170px] glass glass-panel border-r border-transparent/20 flex flex-col py-4 px-2 items-start">
+          {NAV_ITEMS.map(({ label, key }) => (
             <button
               key={key}
               className={`mb-0 font-varien text-[1.02rem] tracking-wide text-center w-full py-1 px-1 rounded transition-all ${
                 activeNav === key
-                  ? 'bg-[#111214] text-[#6a7257] font-bold shadow-inner'
-                  : 'text-[#6a7257] hover:bg-[#1a1b1d] hover:text-white'
+                  ? 'glass-button-active'
+                  : 'glass-button'
               }`}
               onClick={() => setActiveNav(key)}
-              style={{textTransform: "uppercase", lineHeight: 1.2, letterSpacing: '0.08em'}}
+              style={{ textTransform: 'uppercase', lineHeight: 1.2, letterSpacing: '0.08em' }}
             >
               {label}
             </button>
           ))}
         </div>
 
-        {/* MAIN CONTENT */}
+        {/* ============================== */}
+        {/* MAIN CONTENT                   */}
+        {/* ============================== */}
         <div className="flex-1 flex flex-col gap-0 px-0 py-0 min-h-[calc(100vh-64px)]">
-          {/* HUB HEADER */}
-          <div className="w-full flex items-center text-center justify-center border-b border-[#242624] pb-1 px-8 mb-0">
+          {/* HUB HEADER (Glass) */}
+          <div className="w-full flex items-center justify-center pb-1 px-8 mb-0 glass glass-header">
             <h1
-              className="text-[2.8rem] tracking-widest  text-white text-center  drop-shadow-lg uppercase font-bold"
+              className="text-[2.8rem] tracking-widest text-white text-center uppercase font-bold drop-shadow-lg"
               style={{
                 fontFamily: "'Varien', 'varien', 'Inter', 'Arial', 'sans-serif'",
                 fontStyle: 'italic',
@@ -241,32 +253,34 @@ export default function SourcingPage() {
             </h1>
             <button
               onClick={handleModalOpen}
-              className="bg-[#222] hover:bg-[#6a7257] border border-[#6a7257] justify-end ml-80 text-white font-bold px-5 py-1 rounded-lg shadow transition text-base"
+              className="ml-80 glass-cta text-white font-bold px-5 py-1 rounded-lg transition text-base"
             >
               + Submit New Ticket
             </button>
           </div>
 
           {activeNav === 'table' && (
-            <div className="flex flex-col w-full gap-4 px-3 flex-1 relative" style={{height: 'calc(100vh - 110px)'}}>
+            <div
+              className="flex flex-col w-full gap-4 px-3 flex-1 relative"
+              style={{ height: 'calc(100vh - 110px)' }}
+            >
+              {/* ============================== */}
+              {/* CURRENT TICKETS (Glass)        */}
+              {/* ============================== */}
               <div
-                className="bg-[#141516] rounded-xl border border-[#6a7257] w-full shadow mb-1 overflow-auto"
-                style={{flex: '0 0 auto', maxHeight: TICKETS_AREA_HEIGHT, minHeight: 180}}
+                className="glass rounded-xl w-full shadow mb-1 overflow-auto"
+                style={{ flex: '0 0 auto', maxHeight: TICKETS_AREA_HEIGHT, minHeight: 180 }}
               >
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between border-b border-[#6a7257] px-6 py-2 gap-2">
-                  <h2 className="text-lg text-[#6a7257] font-varien font-bold uppercase">
-                    Current Tickets
-                  </h2>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between glass-subheader px-6 py-2 gap-2">
+                  <h2 className="text-lg text-[#cfd3c3] font-varien font-bold uppercase">Current Tickets</h2>
                   <div className="flex flex-wrap gap-3 justify-end items-center">
                     <div>
-                      <label className="text-[#6a7257] mr-1 font-xs">
-                        Filter by Status:
-                      </label>
+                      <label className="text-[#cfd3c3] mr-1 font-xs">Filter by Status:</label>
                       <select
                         name="status"
                         value={filters.status}
                         onChange={handleFilterChange}
-                        className="bg-black border border-[#6a7257] text-white px-3 py-0 rounded"
+                        className="glass-input text-white px-3 py-0 rounded"
                       >
                         <option>All</option>
                         <option>Requested</option>
@@ -276,14 +290,12 @@ export default function SourcingPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-[#6a7257] mr-1 font-xs">
-                        Filter by Priority:
-                      </label>
+                      <label className="text-[#cfd3c3] mr-1 font-xs">Filter by Priority:</label>
                       <select
                         name="priority"
                         value={filters.priority}
                         onChange={handleFilterChange}
-                        className="bg-black border border-[#6a7257] text-white px-3 py-0 rounded"
+                        className="glass-input text-white px-3 py-0 rounded"
                       >
                         <option>All</option>
                         <option>High</option>
@@ -292,14 +304,12 @@ export default function SourcingPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-[#6a7257] mr-2 font-xs">
-                        Filter by Category:
-                      </label>
+                      <label className="text-[#cfd3c3] mr-2 font-xs">Filter by Category:</label>
                       <select
                         name="category"
                         value={filters.category}
                         onChange={handleFilterChange}
-                        className="bg-black border border-[#6a7257] text-white px-3 py-0 rounded"
+                        className="glass-input text-white px-3 py-0 rounded"
                       >
                         <option>All</option>
                         <option>Consumables</option>
@@ -310,8 +320,9 @@ export default function SourcingPage() {
                     </div>
                   </div>
                 </div>
+
                 <div className="p-2">
-                  <table className="min-w-full my-0 text-center text-gray-400 bg-black text-left text-sm">
+                  <table className="min-w-full my-0 text-center text-gray-200 bg-transparent text-left text-sm">
                     <thead>
                       <tr>
                         <th className="px-2 py-2">Item</th>
@@ -338,14 +349,14 @@ export default function SourcingPage() {
                             t.status !== 'Cancelled'
                         )
                         .map((t) => (
-                          <tr key={t.id} className="odd:bg-[#222] even:bg-black">
+                          <tr key={t.id} className="glass-row">
                             <td className="px-2 text-xs font-bold py-2">{t.item_description || t.itemDescription}</td>
                             <td className="px-2 text-xs py-1">{t.base}</td>
                             <td className="px-2 text-xs py-1">
                               {formatInputDate(t.needed_by || t.neededBy)}
                             </td>
                             <td className="px-2 text-xs py-1">{t.quantity}</td>
-                            <td className="px-2 text-sm text-[#6a7257] font-bold py-1">{t.project}</td>
+                            <td className="px-2 text-sm text-[#cfd3c3] font-bold py-1">{t.project}</td>
                             <td className="px-2 text-xs py-1">{t.vendor || '—'}</td>
                             <td className="px-2 text-xs py-1">{t.category}</td>
                             <td className="px-2 text-xs py-1">{t.priority}</td>
@@ -354,19 +365,19 @@ export default function SourcingPage() {
                                 type="date"
                                 value={formatInputDate(t.expected_date || t.expectedDate)}
                                 onChange={(e) => handleExpectedDateChange(e, t.id)}
-                                className="bg-black border text-xs border-gray-700 text-white px-2 py-1 rounded "
+                                className="glass-input text-xs text-white px-2 py-1 rounded"
                               />
                             </td>
                             <td className="px-3 py-2">
                               <span
-                                className={`px-2 py-1  text-sm font-bold  ${
+                                className={`px-2 py-1 text-sm font-bold status-pill ${
                                   t.status === 'Requested'
-                                    ? 'bg-yellow-500 text-black'
+                                    ? 'pill-requested'
                                     : t.status === 'Ordered'
-                                    ? 'bg-blue-500 text-white'
+                                    ? 'pill-ordered'
                                     : t.status === 'Received'
-                                    ? 'bg-green-600 text-white'
-                                    : 'bg-gray-600 text-white'
+                                    ? 'pill-received'
+                                    : 'pill-default'
                                 }`}
                               >
                                 {t.status}
@@ -380,15 +391,13 @@ export default function SourcingPage() {
                                     href={p}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="underline text-[#6a7257] mr-2 text-xs"
+                                    className="underline text-[#cfd3c3] mr-2 text-xs"
                                   >
                                     View
                                   </a>
                                 ))
                               ) : (
-                                <button className="bg-[#333] hover:bg-[#444] text-white px-2 py-1 rounded text-xs">
-                                  Upload
-                                </button>
+                                <button className="glass-chip text-white px-2 py-1 rounded text-xs">Upload</button>
                               )}
                             </td>
                             <td className="px-3 py-2">
@@ -397,13 +406,13 @@ export default function SourcingPage() {
                             <td className="px-3 py-2">
                               <button
                                 onClick={() => handleEditClick(t)}
-                                className="bg-yellow-500 px-2 py-1 rounded text-black mr-2 text-xs"
+                                className="glass-btn-warn text-black mr-2 text-xs"
                               >
                                 Edit
                               </button>
                               <button
                                 onClick={() => handleDelete(t.id)}
-                                className="bg-red-600 px-2 py-1 rounded text-white text-xs"
+                                className="glass-btn-danger text-white text-xs"
                               >
                                 Delete
                               </button>
@@ -415,17 +424,37 @@ export default function SourcingPage() {
                 </div>
               </div>
 
-              <div style={{flex: 1}}></div>
+              <div style={{ flex: 1 }} />
 
+              {/* ============================== */}
+              {/* BOTTOM ROW                     */}
+              {/* ============================== */}
               <div className="flex flex-row text-center gap-4 w-full mt-auto">
-                <div className="bg-[#141516] text-center rounded-xl border border-[#6a7257] w-1/2 shadow mb-2 overflow-auto flex flex-col">
-                  <div className="flex  text-center border-b border-[#6a7257] px-6 py-0">
-                    <h2 className="text-lg text-center text-[#6a7257] font-varien font-style: italic uppercase">
+                {/* ====================================== */}
+                {/* Completed Orders (Glass • Collapsible) */}
+                {/* ====================================== */}
+                <div className="glass rounded-xl w-1/2 shadow mb-2 overflow-hidden flex flex-col"
+                     style={{
+                       transition: 'max-height 280ms ease',
+                       transformOrigin: 'bottom',
+                       maxHeight: isCompletedOpen ? 600 : 44
+                     }}>
+                  <div className="flex items-center justify-between glass-subheader px-6 py-0">
+                    <h2 className="text-lg text-center text-[#cfd3c3] font-varien uppercase">
                       Completed Orders Log
                     </h2>
+                    <button
+                      onClick={() => setIsCompletedOpen((s) => !s)}
+                      className="glass-chip text-white px-3 py-0.5 rounded text-xs"
+                      aria-label="Toggle Completed Orders"
+                      title={isCompletedOpen ? 'Collapse' : 'Expand'}
+                    >
+                      {isCompletedOpen ? '▼' : '▲'}
+                    </button>
                   </div>
-                  <div className="p-1">
-                    <table className="min-w-full my-0 text-center text-gray-400 bg-black text-left text-sm">
+
+                  <div className="p-1" style={{ overflow: 'auto' }}>
+                    <table className="min-w-full my-0 text-center text-gray-200 bg-transparent text-left text-sm">
                       <thead>
                         <tr>
                           <th className="px-2 py-2">Item</th>
@@ -442,19 +471,17 @@ export default function SourcingPage() {
                       </thead>
                       <tbody>
                         {completedTickets.map((t) => (
-                          <tr key={t.id} className="odd:bg-[#1b221b] even:bg-black">
+                          <tr key={t.id} className="glass-row">
                             <td className="px-2 text-xs font-bold py-2">{t.item_description || t.itemDescription}</td>
                             <td className="px-2 text-xs py-1">{t.base}</td>
                             <td className="px-2 text-xs py-1">{t.quantity}</td>
-                            <td className="px-2 text-sm text-[#6a7257] font-bold py-1">{t.project}</td>
+                            <td className="px-2 text-sm text-[#cfd3c3] font-bold py-1">{t.project}</td>
                             <td className="px-2 text-xs py-1">{t.vendor || '—'}</td>
                             <td className="px-2 text-xs py-1">{t.category}</td>
                             <td className="px-2 text-xs py-1">{t.priority}</td>
                             <td className="px-2 text-xs py-1">{formatInputDate(t.expected_date || t.expectedDate) || '—'}</td>
                             <td className="px-2 py-2">
-                              <span className="bg-green-600 px-2 py-1 rounded text-white text-xs font-bold">
-                                {t.status}
-                              </span>
+                              <span className="status-pill pill-received text-xs font-bold">{t.status}</span>
                             </td>
                             <td className="px-2 py-2">
                               {new Date(t.updated_at || t.completedAt || t.createdAt).toLocaleString()}
@@ -463,7 +490,7 @@ export default function SourcingPage() {
                         ))}
                         {!completedTickets.length && (
                           <tr>
-                            <td colSpan={10} className="text-center py-6 text-gray-500">No completed orders yet.</td>
+                            <td colSpan={10} className="text-center py-6 text-gray-400">No completed orders yet.</td>
                           </tr>
                         )}
                       </tbody>
@@ -471,11 +498,30 @@ export default function SourcingPage() {
                   </div>
                 </div>
 
-                <div className="bg-[#141516] rounded-xl border border-[#6a7257] w-1/2 shadow mb-2 flex flex-col">
-                  <h2 className="text-lg text-[#6a7257] font-varien font-bold uppercase border-b border-[#6a7257] px-6 py-0">
-                    Sourcing Calendar
-                  </h2>
-                  <div className="flex justify-center py-6 flex-1">
+                {/* ================================ */}
+                {/* Calendar (Glass • Collapsible)   */}
+                {/* ================================ */}
+                <div className="glass rounded-xl w-1/2 shadow mb-2 overflow-hidden flex flex-col"
+                     style={{
+                       transition: 'max-height 280ms ease',
+                       transformOrigin: 'bottom',
+                       maxHeight: isCalendarOpen ? 600 : 44
+                     }}>
+                  <div className="flex items-center justify-between glass-subheader px-6 py-0">
+                    <h2 className="text-lg text-[#cfd3c3] font-varien font-bold uppercase">
+                      Sourcing Calendar
+                    </h2>
+                    <button
+                      onClick={() => setIsCalendarOpen((s) => !s)}
+                      className="glass-chip text-white px-3 py-0.5 rounded text-xs"
+                      aria-label="Toggle Calendar"
+                      title={isCalendarOpen ? 'Collapse' : 'Expand'}
+                    >
+                      {isCalendarOpen ? '▼' : '▲'}
+                    </button>
+                  </div>
+
+                  <div className="flex justify-center py-6 flex-1" style={{ overflow: 'auto' }}>
                     <Calendar
                       calendarType="US"
                       className="my-calendar"
@@ -488,7 +534,7 @@ export default function SourcingPage() {
                           });
                           return found ? (
                             <div className="tile-label">
-                              {`${found.item_description || found.itemDescription} Delivery`}
+                              {(found.item_description || found.itemDescription) + ' Delivery'}
                             </div>
                           ) : null;
                         }
@@ -502,13 +548,13 @@ export default function SourcingPage() {
           )}
 
           {activeNav === 'parts' && (
-            <div className="flex flex-1 justify-center items-center text-2xl text-gray-600 font-varien">Parts List coming soon...</div>
+            <div className="flex flex-1 justify-center items-center text-2xl text-gray-300 font-varien glass">Parts List coming soon...</div>
           )}
           {activeNav === 'vendors' && (
-            <div className="flex flex-1 justify-center items-center text-2xl text-gray-600 font-varien">Vendors List coming soon...</div>
+            <div className="flex flex-1 justify-center items-center text-2xl text-gray-300 font-varien glass">Vendors List coming soon...</div>
           )}
           {activeNav === 'analytics' && (
-            <div className="flex flex-1 justify-center items-center text-2xl text-gray-600 font-varien">Sourcing Analytics coming soon...</div>
+            <div className="flex flex-1 justify-center items-center text-2xl text-gray-300 font-varien glass">Sourcing Analytics coming soon...</div>
           )}
         </div>
       </div>

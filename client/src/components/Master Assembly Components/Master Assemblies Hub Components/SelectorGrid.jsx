@@ -67,6 +67,10 @@ export default function SelectorGrid({
               const isHot =
                 !!hoverLabel && String(label).toLowerCase() === String(hoverLabel).toLowerCase();
 
+              const __usedGlobal = new Set(Object.values(assets || {}).filter(Boolean));
+              const excludedIds = new Set(__usedGlobal);
+              if (assetId) excludedIds.delete(assetId);
+
               return (
                 <div
                   key={label}
@@ -101,6 +105,7 @@ export default function SelectorGrid({
                         label=""
                         asset={assetId}
                         assetOptions={assetOptions}
+                        excludedIds={excludedIds}
                         onChange={(val) =>
                           setAssets((a) => ({
                             ...a,

@@ -157,10 +157,6 @@ export default function ActiveJobsCard() {
         borderColor: '#6a7257',
       }}
     >
-      <h2 className="text-xl text-green-400 border-b border-[#6a7257]  font-punoer font-bold underline mb-2 tracking-wide text-center uppercase">
-        Active Jobs
-      </h2>
-
       <ZoneModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -175,7 +171,6 @@ export default function ActiveJobsCard() {
         <div className="text-center text-gray-400 py-6">No active jobs found.</div>
       ) : (
         <div className="w-full flex-1 min-h-0 flex flex-col">
-          {/* Fit entire table (header + rows) into available space without scroll */}
           <ScaleToFit className="w-full flex-1 min-h-0">
             <div className="w-full">
               {/* HEADER ROW */}
@@ -240,7 +235,7 @@ export default function ActiveJobsCard() {
                         <span className="text-sm text-[#b0b79f] font-mono text-center">{job.surface_lsd}</span>
                       </div>
                       {/* Wells */}
-                      <div className="flex flex-col items-center w-full">
+                      <div className="flex flex-col items-center w/full">
                         <span className="text-sm text-[#a9c27a] font-bold font-mono text-center">
                           {job.num_wells != null && !isNaN(Number(job.num_wells))
                             ? Number(job.num_wells).toFixed(0)
@@ -248,13 +243,13 @@ export default function ActiveJobsCard() {
                         </span>
                       </div>
                       {/* Zones */}
-                      <div className="flex flex-col items-center w-full">
+                      <div className="flex flex-col items-center w/full">
                         <span className="text-sm text-[#a9c27a] font-bold font-mono text-center">
                           {zp.completed} / {zp.total || "-"}
                         </span>
                       </div>
                       {/* Progress Bar */}
-                      <div className="flex flex-col items-center w-full">
+                      <div className="flex flex-col items-center w/full">
                         <span className="text-xs font-bold text-gray-300 mb-2">
                           {zp.total > 0
                             ? `PROGRESS: ${percent}%`
@@ -271,7 +266,7 @@ export default function ActiveJobsCard() {
                         </div>
                       </div>
                       {/* End Date */}
-                      <div className="flex flex-col items-center w-full">
+                      <div className="flex flex-col items-center w/full">
                         <span
                           className={
                             "text-sm font-bold font-mono text-center transition-colors " +
@@ -301,7 +296,7 @@ export default function ActiveJobsCard() {
                         </span>
                       </div>
                       {/* Actions */}
-                      <div className="flex flex-row items-center justify-center w-full gap-2">
+                      <div className="flex flex-row items-center justify-center w/full gap-2">
                         {/* Update Zone Count */}
                         <button
                           title="Update Zone Count"

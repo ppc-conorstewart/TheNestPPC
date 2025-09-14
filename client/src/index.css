@@ -1,10 +1,15 @@
+/* ========================================== */
+/* FILE: client/src/index.css                 */
+/* ========================================== */
 @import url("https://use.typekit.net/auy8bpd.css");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ========= Responsive scaling for all major sizes ========= */
+/* ============================== */
+/* GLOBAL ROOT                    */
+/* ============================== */
 :root {
   --base-font-size: 16px;
   --base-padding: 1rem;
@@ -23,11 +28,14 @@ html {
   padding: 0;
 }
 
+/* ============================== */
+/* APP SHELL (NO HORIZONTAL SCROLL) */
+/* ============================== */
 body, #root {
   background-color: black !important;
   font-family: 'MyFont', 'erbaum', 'Inter', 'Arial', sans-serif;
   min-height: 100vh;
-  min-width: 100vw;
+  min-width: 100%;
   height: 100%;
   width: 100%;
   margin: 0;
@@ -36,7 +44,9 @@ body, #root {
   overflow-x: hidden;
 }
 
-/* Remove any universal default margin or padding on containers */
+/* ============================== */
+/* RESETS                         */
+/* ============================== */
 .main-container,
 .asset-table,
 .content-wrapper,
@@ -48,7 +58,9 @@ body, #root {
   box-sizing: border-box;
 }
 
-/* Responsive font/padding logic can be applied inside pages/components if needed */
+/* ============================== */
+/* RESPONSIVE TYPE SCALE          */
+/* ============================== */
 @media (min-width: 1440px) {
   :root {
     --base-font-size: 17px;
@@ -71,6 +83,9 @@ body, #root {
   }
 }
 
+/* ============================== */
+/* GLOBAL WEBKIT SCROLLBAR (kept minimal globally) */
+/* ============================== */
 ::-webkit-scrollbar {
   width: 12px;
   height: 8px;
@@ -87,50 +102,30 @@ body, #root {
   background-color: #000000;
 }
 
+/* ============================== */
+/* ANIMATIONS / MISC              */
+/* ============================== */
 @keyframes spin3D {
-  0% {
-    transform: rotate3d(1, 1, 0, 0deg);
-  }
-  100% {
-    transform: rotate3d(1, 1, 0, 360deg);
-  }
+  0% { transform: rotate3d(1, 1, 0, 0deg); }
+  100% { transform: rotate3d(1, 1, 0, 360deg); }
 }
 
 /* Toastify toast notification fixes */
-.Toastify__toast-container {
-  pointer-events: none;
-  z-index: 99999 !important;
-}
-.Toastify__toast {
-  pointer-events: all;
-  box-sizing: border-box;
-  margin: 16px !important;
-}
-.Toastify__progress-bar {
-  background: #6a7257 !important;
-  background-image: none !important;
-}
+.Toastify__toast-container { pointer-events: none; z-index: 99999 !important; }
+.Toastify__toast { pointer-events: all; box-sizing: border-box; margin: 16px !important; }
+.Toastify__progress-bar { background: #6a7257 !important; background-image: none !important; }
 
-.swiper-wrapper {
-  transition-timing-function: linear !important;
-}
+.swiper-wrapper { transition-timing-function: linear !important; }
 
 @keyframes pulseDot {
-  0% {
-    box-shadow: 0 0 0 0 #4ade8099, 0 0 8px 2px #4ade8070;
-    opacity: 1;
-  }
-  60% {
-    box-shadow: 0 0 0 10px #4ade8011, 0 0 8px 2px #4ade8070;
-    opacity: 0.92;
-  }
-  100% {
-    box-shadow: 0 0 0 0 #4ade8000, 0 0 8px 2px #4ade8070;
-    opacity: 1;
-  }
+  0%   { box-shadow: 0 0 0 0 #4ade8099, 0 0 8px 2px #4ade8070; opacity: 1; }
+  60%  { box-shadow: 0 0 0 10px #4ade8011, 0 0 8px 2px #4ade8070; opacity: 0.92; }
+  100% { box-shadow: 0 0 0 0 #4ade8000, 0 0 8px 2px #4ade8070; opacity: 1; }
 }
 
-/* ========== Font Faces (Unchanged) ========== */
+/* ============================== */
+/* FONT FACES                     */
+/* ============================== */
 @font-face {
   font-family: 'Varien';
   src: url('./assets/fonts/Varien.woff2') format('woff2'),
@@ -139,7 +134,6 @@ body, #root {
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Varien';
   src: url('./assets/fonts/Varien-Italic.woff2') format('woff2'),
@@ -148,7 +142,6 @@ body, #root {
   font-style: italic;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Varien Outline';
   src: url('./assets/fonts/Varien Outline.woff2') format('woff2'),
@@ -157,7 +150,6 @@ body, #root {
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Varien Italic Outline';
   src: url('./assets/fonts/Varien-Italic Outline.woff2') format('woff2'),
@@ -166,7 +158,6 @@ body, #root {
   font-style: italic;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Unispace BD';
   src: url('./assets/fonts/unispace bd.ttf') format('truetype');
@@ -174,7 +165,6 @@ body, #root {
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Stencil';
   src: url('./assets/fonts/Stencil.ttf') format('truetype');
@@ -182,7 +172,6 @@ body, #root {
   font-style: normal;
   font-display: swap;
 }
-
 @font-face {
   font-family: 'Punoer';
   src: url('./assets/fonts/Punoer.otf') format('opentype');
@@ -190,8 +179,6 @@ body, #root {
   font-style: normal;
   font-display: swap;
 }
-
-/* ========== Cornero ========== */
 @font-face {
   font-family: 'Font-cornero';
   src: url('./assets/fonts/Cornero.otf') format('opentype');
@@ -199,10 +186,10 @@ body, #root {
   font-style: normal;
   font-display: swap;
 }
-/* ============================= */
-/* Frosted Glass and Glow Styles  */
-/* ============================= */
 
+/* ============================= */
+/* Frosted Glass / Glow          */
+/* ============================= */
 .paloma-frosted-glass {
   position: relative;
   overflow: hidden;
@@ -244,6 +231,253 @@ body, #root {
     0 1.5px 0 #35392e99 inset;
 }
 
-.prominent-gradient-header {
-  -webkit-text-stroke: 0.8px #bfc98c66;
+.prominent-gradient-header { -webkit-text-stroke: 0.8px #bfc98c66; }
+
+/* ============================= */
+/* Paloma Scrollbar System       */
+/* ============================= */
+.scrollbar-paloma {
+  --sb-size: 10px;
+  --sb-radius: 10px;
+  --sb-track: #0b0c0a;
+  --sb-thumb: #6a7257;
+  --sb-thumb-hover: #8ea07a;
+  --sb-thumb-active: #b9c68f;
+  scrollbar-color: var(--sb-thumb) transparent;
+  scrollbar-width: thin;
 }
+.scrollbar-paloma::-webkit-scrollbar { width: var(--sb-size); height: var(--sb-size); }
+.scrollbar-paloma::-webkit-scrollbar-track { background: #0b0c0a; border-radius: var(--sb-radius); }
+.scrollbar-paloma::-webkit-scrollbar-thumb { background-color: #6a7257; border-radius: var(--sb-radius); border: 2px solid var(--sb-track); }
+.scrollbar-paloma::-webkit-scrollbar-thumb:hover { background-color: #8ea07a; }
+.scrollbar-paloma::-webkit-scrollbar-thumb:active { background-color: #b9c68f; }
+
+.scrollbar-hover { scrollbar-width: none; }
+.scrollbar-hover:hover { scrollbar-width: thin; }
+.scrollbar-hover::-webkit-scrollbar { width: 0; height: 0; }
+.scrollbar-hover:hover::-webkit-scrollbar { width: var(--sb-size); height: var(--sb-size); }
+
+.scrollbar-thin { --sb-size: 6px; }
+.scrollbar-wide { --sb-size: 14px; }
+.scrollbar-none { scrollbar-width: none !important; }
+.scrollbar-none::-webkit-scrollbar { display: none !important; }
+
+.edge-fade-y {
+  --edge-size: 18px;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--edge-size), #000 calc(100% - var(--edge-size)), transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--edge-size), #000 calc(100% - var(--edge-size)), transparent 100%);
+}
+.edge-fade-x {
+  --edge-size: 18px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--edge-size), #000 calc(100% - var(--edge-size)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--edge-size), #000 calc(100% - var(--edge-size)), transparent 100%);
+}
+/* ===== Bottom-only edge fade utility ===== */
+.edge-fade-bottom{
+  --edge-size: 18px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - var(--edge-size)), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 calc(100% - var(--edge-size)), transparent 100%);
+}
+
+/* ============================= */
+/* BACKGROUND FX LAYER           */
+/* ============================= */
+.bgfx-root {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.bgfx-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: blur(0.2px);
+  background: transparent;
+}
+
+#root, body {
+  position: relative;
+  z-index: 1;
+}
+
+/* ===================================================== */
+/* RESPONSIVE FOUNDATION: FLUID TYPE, SPACING, LAYOUT    */
+/* ===================================================== */
+:root{
+  --fluid-min: 320;
+  --fluid-max: 1440;
+
+  --fs-00: clamp(10px, 0.78rem + 0.1vw, 12px);
+  --fs-0:  clamp(12px, 0.85rem + 0.25vw, 14px);
+  --fs-1:  clamp(14px, 0.9rem + 0.5vw, 16px);
+  --fs-2:  clamp(16px, 1rem + 0.8vw, 18px);
+  --fs-3:  clamp(18px, 1.1rem + 1vw, 22px);
+  --fs-4:  clamp(22px, 1.25rem + 1.5vw, 28px);
+  --fs-5:  clamp(28px, 1.5rem + 2vw, 36px);
+
+  --space-1: clamp(6px, 0.25rem + 0.3vw, 10px);
+  --space-2: clamp(10px, 0.5rem + 0.4vw, 14px);
+  --space-3: clamp(14px, 0.75rem + 0.6vw, 20px);
+  --space-4: clamp(20px, 1rem + 0.8vw, 28px);
+  --space-5: clamp(28px, 1.25rem + 1vw, 36px);
+
+  --container-xs: 640px;
+  --container-sm: 768px;
+  --container-md: 1024px;
+  --container-lg: 1280px;
+  --container-xl: 1536px;
+
+  --radius: clamp(6px, 0.4rem + 0.5vw, 14px);
+  --elev-1: 0 4px 16px rgba(0,0,0,.12);
+  --elev-2: 0 8px 24px rgba(0,0,0,.16);
+}
+
+body { font-size: var(--fs-1); line-height: 1.4; }
+.h1{ font-size: var(--fs-5); line-height: 1.1; }
+.h2{ font-size: var(--fs-4); line-height: 1.15; }
+.h3{ font-size: var(--fs-3); line-height: 1.2; }
+
+/* ============================= */
+/* CONTAINERS                    */
+/* ============================= */
+.container{ width: min(100% - 2rem, var(--container-lg)); margin-inline: auto; }
+.container--xl{ width: min(100% - 2rem, var(--container-xl)); }
+.container--md{ width: min(100% - 2rem, var(--container-md)); }
+
+/* ============================= */
+/* GRID & FLEX UTILITIES         */
+/* ============================= */
+.grid{ display: grid; gap: var(--space-3); }
+.grid--auto{
+  grid-template-columns: repeat(auto-fit, minmax(clamp(220px, 40vw, 420px), 1fr));
+}
+.flex{ display:flex; gap:var(--space-2); }
+.flex-wrap{ flex-wrap: wrap; }
+.stack>*+*{ margin-top: var(--space-3); }
+
+/* ============================= */
+/* TABLES / CARDS                */
+/* ============================= */
+.table-wrap{
+  overflow: auto;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  border-radius: var(--radius);
+  box-shadow: inset 0 0 0 rgba(0,0,0,0);
+}
+.table{ width: 100%; border-collapse: collapse; }
+.table th, .table td{ padding: var(--space-2); }
+
+@media (max-width: 700px){
+  .table--stack tr{
+    display: grid;
+    grid-template-columns: 1fr;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: var(--radius);
+    margin-bottom: var(--space-2);
+  }
+  .table--stack thead{ display:none; }
+  .table--stack td[data-label]{
+    display:grid;
+    grid-template-columns: 10ch 1fr;
+    gap: var(--space-1);
+  }
+}
+
+/* ============================= */
+/* NAV LAYOUT                    */
+/* ============================= */
+.site{
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: 280px 1fr;
+}
+@media (max-width: 1024px){
+  .site{ grid-template-columns: 1fr; }
+  .sidebar{
+    position: fixed; inset: 0 auto 0 0; width: min(88vw, 320px);
+    transform: translateX(-100%); transition: transform .25s ease;
+  }
+  .sidebar.is-open{ transform: translateX(0); }
+  .content{ padding-left: 0; }
+}
+
+/* ============================= */
+/* CONTAINER QUERIES             */
+/* ============================= */
+.card, .panel{ container-type: inline-size; }
+@container (max-width: 520px){
+  .card .title{ font-size: var(--fs-2); }
+  .actions{ flex-wrap: wrap; }
+}
+
+/* ============================= */
+/* MEDIA BLOCKS                  */
+/* ============================= */
+.media{
+  width: 100%; aspect-ratio: 16/9; object-fit: cover;
+  border-radius: var(--radius); box-shadow: var(--elev-1);
+}
+
+/* ============================= */
+/* ACCESSIBILITY & MOTION        */
+/* ============================= */
+@media (prefers-reduced-motion: reduce){
+  *{ animation: none !important; transition-duration: .01ms !important; }
+}
+.button{ min-height: 40px; padding-inline: var(--space-2); }
+
+/* ===================================== */
+/* SIDEBAR: SHOW GREEN THUMB ONLY WHILE SCROLLING */
+/* ===================================== */
+.sidebar,
+.sidebar-scroll {
+  overflow: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  scrollbar-gutter: auto;
+}
+.sidebar::-webkit-scrollbar,
+.sidebar-scroll::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+.sidebar::-webkit-scrollbar-button,
+.sidebar-scroll::-webkit-scrollbar-button {
+  width: 0;
+  height: 0;
+  display: none;
+}
+.sidebar.is-scrolling,
+.sidebar-scroll.is-scrolling {
+  scrollbar-width: thin;
+  scrollbar-color: #6a7257 transparent;
+}
+.sidebar.is-scrolling::-webkit-scrollbar,
+.sidebar-scroll.is-scrolling::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.sidebar.is-scrolling::-webkit-scrollbar-track,
+.sidebar-scroll.is-scrolling::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.sidebar.is-scrolling::-webkit-scrollbar-thumb,
+.sidebar-scroll.is-scrolling::-webkit-scrollbar-thumb {
+  background-color: #6a7257;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.sidebar.is-scrolling::-webkit-scrollbar-thumb:hover,
+.sidebar-scroll.is-scrolling::-webkit-scrollbar-thumb:hover {
+  background-color: #8ea07a;
+}
+
+/* ===================================== */
+/* SIDEBAR GAP OVERRIDE                  */
+/* ===================================== */
+.app-sidebar { gap: 0 !important; }
+.app-sidebar .flex { gap: 0 !important; }

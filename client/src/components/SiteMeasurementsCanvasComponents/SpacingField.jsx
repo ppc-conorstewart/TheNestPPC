@@ -1,46 +1,51 @@
-import React from "react";
-import { Group, Rect, Text } from "react-konva";
+// ==============================
+// File: SpacingField.jsx
+// ==============================
 
+import { Group, Rect, Text } from 'react-konva';
+
+// ==============================
+// ======= CONSTANTS ============
+// ==============================
+const BOX_W = 240;
+const BOX_H = 30;
+const FONT = 12;
+
+// ==============================
+// ======= COMPONENT ============
+// ==============================
 export default function SpacingField({
   x,
   y,
-  value,
-  unit,
-  onClick,
-  UNIT_OPTIONS
+  feet = 0,
+  inches = 0,
+  onRequestEdit
 }) {
-  // Bar dimensions
-  const width = 120;
-  const height = 36;
   return (
     <Group
-      x={x - width / 2}
-      y={y - height / 2}
+      x={x - BOX_W / 2}
+      y={y - BOX_H / 2}
       onClick={e => {
         e.cancelBubble = true;
-        onClick && onClick();
+        onRequestEdit && onRequestEdit();
       }}
-      style={{ cursor: "pointer" }}
+      onTap={e => {
+        e.cancelBubble = true;
+        onRequestEdit && onRequestEdit();
+      }}
+      listening
     >
-      <Rect
-        width={width}
-        height={height}
-        fill="#fff"
-        stroke="#888"
-        strokeWidth={2}
-        cornerRadius={10}
-        shadowBlur={5}
-        shadowColor="#0001"
-      />
+      <Rect width={BOX_W} height={BOX_H} fill='#ffffff' cornerRadius={10} stroke='#6a7257' strokeWidth={2} shadowBlur={4} />
       <Text
-        text={`Spacing: ${value || "___"} ${unit}`}
-        width={width}
-        height={height}
-        align="center"
-        verticalAlign="middle"
-        fontSize={15}
-        fontStyle="bold"
-        fill="#363b28"
+        text={`Spacing: ${Number(feet).toFixed(1)} [Feet]  ${Number(inches).toFixed(1)} [Inches]`}
+        width={BOX_W}
+        height={BOX_H}
+        align='center'
+        verticalAlign='middle'
+        fontSize={FONT}
+        fontStyle='bold'
+        fill='#363b28'
+        listening={false}
       />
     </Group>
   );

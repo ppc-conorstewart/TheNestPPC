@@ -3,9 +3,8 @@
 // ==============================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import masterDogboneImg from '../../../assets/Master Assemblies/MasterDogbone.png';
-import masterZipperImg from '../../../assets/Master Assemblies/MasterZipper.png';
-// import GasketMaintenancePanel from '../Master Assemblies Hub Components/GasketMaintenancePanel'; // (kept intentionally commented to avoid unused-import breaks)
+import masterDogboneGif from '../../../assets/Dogbone.gif';
+import masterZipperGif from '../../../assets/Zipper.gif';
 import { tableType } from '../Support Files/maKit';
 import { STATUS_COLORS } from '../Support Files/maShared';
 
@@ -117,7 +116,7 @@ export default function ViewAssemblyPanel({ assembly = null }) {
         height:'100%',
         minHeight:0,
         overflow:'hidden',
-        background:'#000',
+        
         border:cardBorder,
         animation: mounted ? 'va-slide-in 340ms cubic-bezier(.16,1,.3,1)' : 'none'
       }}
@@ -138,7 +137,7 @@ export default function ViewAssemblyPanel({ assembly = null }) {
 
         {heroSrc ? (
           <div style={heroWrap}>
-            <img src={heroSrc} alt="assembly" style={{ ...heroImg, animation:'hero-appear 260ms ease-out' }} />
+            <img src={heroSrc} alt='assembly' style={{ ...heroImg, animation:'hero-appear 260ms ease-out' }} />
           </div>
         ) : null}
 
@@ -153,7 +152,7 @@ export default function ViewAssemblyPanel({ assembly = null }) {
             onMouseEnter={() => setShowCTip(true)}
             onMouseLeave={() => setShowCTip(false)}
           >
-            <MetaItem label="Creation Date" value={fmt(assembly?.creation_date)} />
+            <MetaItem label='Creation Date' value={fmt(assembly?.creation_date)} />
             {showCTip && creationTip && <Tip text={creationTip} />}
           </div>
 
@@ -162,7 +161,7 @@ export default function ViewAssemblyPanel({ assembly = null }) {
             onMouseEnter={() => setShowRTip(true)}
             onMouseLeave={() => setShowRTip(false)}
           >
-            <MetaItem label="Re-Cert Date" value={fmt(assembly?.recert_date)} />
+            <MetaItem label='Re-Cert Date' value={fmt(assembly?.recert_date)} />
             {showRTip && recertTip && <Tip text={recertTip} />}
           </div>
         </div>
@@ -173,7 +172,7 @@ export default function ViewAssemblyPanel({ assembly = null }) {
       {/* ============================== */}
       <div style={{ flex:'1 1 auto', minHeight:0, overflowY:'auto', overflowX:'hidden', padding:'8px' }}>
         {/* Assets Used */}
-        <div style={{ border:cardBorder, background:'#0b0c09', minHeight:0, marginBottom:8 }}>
+        <div style={{ border:cardBorder,  minHeight:0, marginBottom:8 }}>
           <div
             style={{ ...subHeader, cursor:'pointer', userSelect:'none' }}
             onClick={() => setOpenAssets(v => !v)}
@@ -223,7 +222,7 @@ export default function ViewAssemblyPanel({ assembly = null }) {
         </div>
 
         {/* Gaskets Used */}
-        <div style={{ border:cardBorder, background:'#0b0c09', minHeight:0, marginBottom:8 }}>
+        <div style={{ border:cardBorder,  minHeight:0, marginBottom:8 }}>
           <div
             style={{ ...subHeader, cursor:'pointer', userSelect:'none' }}
             onClick={() => setOpenGaskets(v => !v)}
@@ -408,22 +407,22 @@ function Donut({ percent = 0, size = 42, label = '•' }) {
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={cx} cy={cy} r={r} stroke="#222721" strokeWidth={stroke} fill="none" />
+      <circle cx={cx} cy={cy} r={r} stroke='#222721' strokeWidth={stroke} fill='none' />
       <circle
         cx={cx}
         cy={cy}
         r={r}
         stroke={color}
         strokeWidth={stroke}
-        fill="none"
+        fill='none'
         strokeDasharray={`${dash} ${c}`}
-        strokeLinecap="round"
+        strokeLinecap='round'
         transform={`rotate(-90 ${cx} ${cy})`}
         style={{ transition:'stroke-dasharray 600ms ease, stroke 300ms ease' }}
       />
       <g>
-        <circle cx={cx} cy={cy} r={11} fill="#70c12a" stroke="#0b2f16" strokeWidth="2" />
-        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fontWeight="900" fontSize="10" fill="#10110f">
+        <circle cx={cx} cy={cy} r={11} fill='#70c12a' stroke='#0b2f16' strokeWidth='2' />
+        <text x={cx} y={cy} textAnchor='middle' dominantBaseline='central' fontWeight='900' fontSize='10' fill='#10110f'>
           {label}
         </text>
       </g>
@@ -622,8 +621,8 @@ function fmt(s){ return s ? String(s).slice(0,10) : '—'; }
 
 function getHeroSrc(type){
   const t = (type || '').toLowerCase();
-  if (t === 'dogbones')   return masterDogboneImg;
-  if (t === 'zippers')    return masterZipperImg;
+  if (t === 'dogbones')   return masterDogboneGif;
+  if (t === 'zippers')    return masterZipperGif;
   if (t === 'flowcrosses')return null;
   return null;
 }

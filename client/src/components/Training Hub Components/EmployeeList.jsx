@@ -1,5 +1,5 @@
 // ==============================
-// EmployeeList.jsx — Add New Employee Button + Modal Ready
+// EmployeeList.jsx — Full-Height Employee Panel
 // ==============================
 
 import { useState } from "react";
@@ -13,13 +13,9 @@ export const LEVELS = [
   { key: 4, label: "Site Supervisor V" }
 ];
 
-// Color codes for each rank (customize as needed)
+// Color codes for each rank
 const LEVEL_COLORS = [
-  "#C7FA38",    // I - bright lime
-  "#2CCDD3",    // II - cyan
-  "#FFD943",    // III - gold (was your default)
-  "#E8842E",    // IV - orange
-  "#F14D4D"     // V - red (Site Supervisor)
+  "#C7FA38", "#2CCDD3", "#FFD943", "#E8842E", "#F14D4D"
 ];
 
 const EMPLOYEE_LOCATIONS = {
@@ -70,11 +66,11 @@ export function getCurrentLevel(employeeChecklist) {
     );
     if (total === 0 || checked < total) return lvl;
   }
-  return LEVELS.length - 1; // All complete, highest rank
+  return LEVELS.length - 1;
 }
 
 // ==============================
-// AddEmployeeModal (extracted below main component)
+// AddEmployeeModal
 // ==============================
 function AddEmployeeModal({ open, onClose, onSubmit, form, setForm }) {
   if (!open) return null;
@@ -88,7 +84,7 @@ function AddEmployeeModal({ open, onClose, onSubmit, form, setForm }) {
           aria-label="Close"
           style={{ lineHeight: 1 }}
         >✕</button>
-        <h2 className="text-xl  mb-2 text-[#b3b99a] tracking-wider font-varien">
+        <h2 className="text-xl mb-2 text-[#b3b99a] tracking-wider font-varien">
            Add New Employee
         </h2>
         <form
@@ -140,7 +136,7 @@ function AddEmployeeModal({ open, onClose, onSubmit, form, setForm }) {
           <div className="flex flex-row justify-center mt-4">
             <button
               type="submit"
-              className="px-10 py-0 rounded bg-[#949C7F] hover:bg-[#b3b99a] text-black  text-base shadow-md transition tracking-widest font-erbaum"
+              className="px-10 py-0 rounded bg-[#949C7F] hover:bg-[#b3b99a] text-black text-base shadow-md transition tracking-widest font-erbaum"
               disabled={
                 !form.firstName || !form.lastName || !form.base || !form.assessedAs
               }
@@ -162,7 +158,7 @@ export default function EmployeeList({
   selectedEmployee,
   employeeChecklists,
   onSelectEmployee,
-  onAddEmployee // <-- pass a handler from parent to add new employee
+  onAddEmployee
 }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
@@ -177,9 +173,9 @@ export default function EmployeeList({
   }
 
   return (
-    <div style={{ height: "52%", minHeight: 260, overflowY: "auto" }}>
+    <div style={{ height: "100%", minHeight: 260, overflowY: "auto" }}>
       <div
-        className="px-4 py-2 border-b-2 border-[#6a7257] font-erbaum uppercase text-white text-xs bg-black uppercase tracking-wide font-bold flex items-center justify-between"
+        className="px-4 py-2 border-b-2 border-[#6a7257] font-erbaum uppercase text-white text-xs bg-black tracking-wide font-bold flex items-center justify-between"
         style={{ fontSize: ".85rem", letterSpacing: "0.02em" }}
       >
         <span>Field Employees</span>
@@ -201,15 +197,11 @@ export default function EmployeeList({
               className={`px-5 py-2 flex items-center justify-between uppercase text-white text-[0.66rem] font-semibold font-erbaum hover:bg-[#24261f] cursor-pointer transition-all ${
                 selectedEmployee === emp ? "bg-[#24261f]" : ""
               }`}
-              style={{
-                letterSpacing: "0.01em",
-                userSelect: "none"
-              }}
+              style={{ letterSpacing: "0.01em", userSelect: "none" }}
               tabIndex={0}
               role="button"
               onClick={() => onSelectEmployee(emp)}
             >
-              {/* Name + Location */}
               <span
                 style={{
                   flex: 2,
@@ -232,7 +224,6 @@ export default function EmployeeList({
                   {location ? `[${location}]` : ""}
                 </span>
               </span>
-              {/* Rank */}
               <span
                 className="font-erbaum font-bold text-[0.6rem] ml-2"
                 style={{
@@ -257,12 +248,7 @@ export default function EmployeeList({
         form={form}
         setForm={setForm}
         onSubmit={() => {
-          if (
-            form.firstName &&
-            form.lastName &&
-            form.base &&
-            form.assessedAs
-          ) {
+          if (form.firstName && form.lastName && form.base && form.assessedAs) {
             if (onAddEmployee) onAddEmployee(form);
             setShowModal(false);
             setForm({ firstName: "", lastName: "", base: "", assessedAs: "" });

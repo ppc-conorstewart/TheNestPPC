@@ -1,16 +1,17 @@
-// ==============================
-// components/Overwatch Components/LastShiftUpdateCard.jsx — Live Notes (Context-Friendly)
-// ==============================
+// =====================================================
+// Overwatch • LastShiftUpdateCard.jsx — Glass Morphism
+// Sections: Imports • Styles • Helpers • Component
+// =====================================================
 
 import { useMemo } from 'react';
 
-// ==============================
+// -----------------------------
 // Styles
-// ==============================
+// -----------------------------
 const cardStyle = {
-  background: '#10110f',
-  borderRadius: 0,
-  border: '1.5px solid #949C7F',
+  background: 'rgba(24,28,20,0.58)',
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.12)',
   padding: 0,
   minHeight: 152,
   display: 'flex',
@@ -21,13 +22,16 @@ const cardStyle = {
   boxSizing: 'border-box',
   minWidth: 0,
   minHeight: 0,
-  overflow: 'hidden'
+  overflow: 'hidden',
+  backdropFilter: 'blur(14px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+  boxShadow: '0 4px 24px rgba(0,0,0,0.45)'
 };
 
 const cardHeaderStyle = {
-  background: '#000',
+  background: 'rgba(0,0,0,0.55)',
   color: '#b0b79f',
-  borderBottom: '2.5px solid #35392e',
+  borderBottom: '1px solid rgba(255,255,255,0.08)',
   padding: '13px 0 8px 0',
   fontSize: '1.17rem',
   textTransform: 'uppercase',
@@ -36,8 +40,7 @@ const cardHeaderStyle = {
   margin: 0,
   textAlign: 'center',
   width: '100%',
-  lineHeight: 1.1,
-  boxShadow: '0 2px 10px #22291e25'
+  lineHeight: 1.1
 };
 
 const updateBox = {
@@ -51,54 +54,46 @@ const updateBox = {
   textAlign: 'left',
   whiteSpace: 'pre-line',
   letterSpacing: '0.02em',
-  lineHeight: 1.45
+  lineHeight: 1.45,
+  background: 'rgba(24,26,25,0.5)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: 8,
+  backdropFilter: 'blur(4px)',
+  WebkitBackdropFilter: 'blur(4px)'
 };
 
-// ==============================
+// -----------------------------
 // Helpers
-// ==============================
+// -----------------------------
 function fmt(sectionTitle, text) {
   const t = (text || '').toString().trim();
   if (!t) return '';
   return `\n${sectionTitle}:\n${t}\n`;
 }
 
-// ==============================
+// -----------------------------
 // Component
-// ==============================
+// -----------------------------
 export default function LastShiftUpdateCard({ job, notes }) {
   const fromJobJson = job?.job_update_json || {};
-
   const resolvedNotes = useMemo(() => {
     const src = notes || job?.lastShiftNotes || {};
     const operational = src.operational ?? fromJobJson.operationalNotes ?? '';
     const paloma = src.paloma ?? fromJobJson.palomaNotes ?? '';
     const crossShift = src.crossShift ?? fromJobJson.crossShiftNotes ?? '';
-    const submittedBy =
-      job?.updated_by ||
-      fromJobJson.updatedBy ||
-      fromJobJson.wsm1 ||
-      '';
-
+    const submittedBy = job?.updated_by || fromJobJson.updatedBy || fromJobJson.wsm1 || '';
     let body = '';
-    if (submittedBy) {
-      body += `👤 Submitted by: ${submittedBy}\n`;
-    }
+    if (submittedBy) body += `👤 Submitted by: ${submittedBy}\n`;
     body += fmt('PALOMA NOTES', paloma);
     body += fmt('OPERATIONAL NOTES', operational);
     body += fmt('CROSS-SHIFT NOTES', crossShift);
-
     return body.trim() || 'No notes submitted yet.';
   }, [job, notes]);
 
   return (
     <div style={cardStyle}>
-      <div style={cardHeaderStyle}>
-        Last Shift Update
-      </div>
-      <div style={updateBox}>
-        {resolvedNotes}
-      </div>
+      <div style={cardHeaderStyle}>Last Shift Update</div>
+      <div style={updateBox}>{resolvedNotes}</div>
     </div>
   );
 }

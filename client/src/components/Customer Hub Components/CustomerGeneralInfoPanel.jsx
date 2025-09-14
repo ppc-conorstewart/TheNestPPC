@@ -1,6 +1,7 @@
-// ==============================
-// CustomerGeneralInfoPanel.jsx — Customer Hub Subcomponent
-// ==============================
+// =====================================================
+// CustomerGeneralInfoPanel.jsx — Customer Hub General Information Panel • Glass
+// Sections: Component
+// =====================================================
 
 export default function CustomerGeneralInfoPanel({
   selected,
@@ -9,7 +10,7 @@ export default function CustomerGeneralInfoPanel({
   onFormChange
 }) {
   return (
-    <div className="flex flex-col flex-1 gap-3 p-2 min-w-[240px]">
+    <div className="glass-card p-4 flex flex-col flex-1 gap-3 min-w-[240px]">
       <h2 className="text-xl font-bold text-[#949C7F] mb-2">
         General Information
       </h2>

@@ -83,9 +83,9 @@ export default function Header() {
           padding: 0,
           border: 'none',
           borderRadius: 0,
-          borderBottom: '2px solid #6a7257',
+          
           boxShadow: 'none',
-          background: '#000',                // Solid black, covers border
+          background: 'transparent',                // Solid black, covers border
           boxSizing: 'border-box',           // Border is inside the height
         }}
       >
@@ -98,7 +98,7 @@ export default function Header() {
             <img
               src="/assets/headerlogo.png"
               alt="Header Logo"
-              className="h-[1.6rem] object-contain"
+              className="h-[1rem] object-contain"
               style={{
                 maxHeight: '1.6rem',
                 minHeight: '1.2rem',

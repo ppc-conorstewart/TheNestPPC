@@ -1,9 +1,17 @@
-import React, { useEffect, useState, useRef } from 'react';
+// =====================================================
+// Overwatch • LiveBodyPressureCard.jsx — Glass Morphism
+// Sections: Imports • Styles • Helpers • Component
+// =====================================================
 
+import { useEffect, useRef, useState } from 'react';
+
+// -----------------------------
+// Styles
+// -----------------------------
 const cardStyle = {
-  background: '#10110f',
-  borderRadius: 0,
-  border: '1.5px solid #949C7F',
+  background: 'rgba(24,28,20,0.58)',
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.12)',
   padding: 0,
   minHeight: 152,
   display: 'flex',
@@ -14,13 +22,16 @@ const cardStyle = {
   boxSizing: 'border-box',
   minWidth: 0,
   minHeight: 0,
-  overflow: 'hidden'
+  overflow: 'hidden',
+  backdropFilter: 'blur(14px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+  boxShadow: '0 4px 24px rgba(0,0,0,0.45)'
 };
 
 const cardHeaderStyle = {
-  background: '#000',
+  background: 'rgba(0,0,0,0.55)',
   color: '#b0b79f',
-  borderBottom: '2.5px solid #35392e',
+  borderBottom: '1px solid rgba(255,255,255,0.08)',
   padding: '13px 0 8px 0',
   fontSize: '1.17rem',
   textTransform: 'uppercase',
@@ -29,14 +40,13 @@ const cardHeaderStyle = {
   margin: 0,
   textAlign: 'center',
   width: '100%',
-  lineHeight: 1.1,
-  boxShadow: '0 2px 10px #22291e25'
+  lineHeight: 1.1
 };
 
 const livePressureTable = {
-  background: '#181a19',
-  border: '1.2px solid #949C7F',
-  borderRadius: '6px',
+  background: 'rgba(24,26,25,0.6)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  borderRadius: 8,
   width: '100%',
   color: '#E6E8DF',
   fontFamily: 'monospace',
@@ -47,13 +57,15 @@ const livePressureTable = {
   minHeight: 100,
   display: 'flex',
   flexDirection: 'column',
-  justifyContent: 'flex-start'
+  justifyContent: 'flex-start',
+  backdropFilter: 'blur(4px)',
+  WebkitBackdropFilter: 'blur(4px)'
 };
 
 const tableHeaderRow = {
   display: 'flex',
   fontWeight: 700,
-  borderBottom: '1px solid #949C7F',
+  borderBottom: '1px solid #949C7F55',
   marginBottom: 2,
   paddingBottom: 2,
   color: '#6a7257',
@@ -81,60 +93,39 @@ const tableDescCell = {
   overflowWrap: 'break-word'
 };
 
-// Default placeholder data
+// -----------------------------
+// Helpers
+// -----------------------------
 const defaultTransducers = [
-  ["Transducer1", "[PPC # 12341 Alpha Upper Zipper]", 1149],
-  ["Transducer2", "[PPC # 12342 Alpha Lower Zipper]", 2134],
-  ["Transducer3", "[PPC # 12343 Bravo Upper Zipper]", 578],
-  ["Transducer4", "[PPC # 12344 Bravo Lower Zipper]", 8765],
-  ["Transducer5", "[PPC # 12345 Charlie Upper Zipper]", 13149]
+  ['Transducer1', '[PPC # 12341 Alpha Upper Zipper]', 1149],
+  ['Transducer2', '[PPC # 12342 Alpha Lower Zipper]', 2134],
+  ['Transducer3', '[PPC # 12343 Bravo Upper Zipper]', 578],
+  ['Transducer4', '[PPC # 12344 Bravo Lower Zipper]', 8765],
+  ['Transducer5', '[PPC # 12345 Charlie Upper Zipper]', 13149]
 ];
 
-// Palette matches chart lines
-const lineColors = [
-  '#A8FFA8', // green
-  '#7AC8FF', // blue
-  '#FFE57A', // gold
-  '#FF7A7A', // red
-  '#B07AFF', // purple
-  '#7AFFCC', // aqua
-];
-function getLineColor(idx) {
-  return lineColors[idx % lineColors.length];
-}
+const lineColors = ['#A8FFA8','#7AC8FF','#FFE57A','#FF7A7A','#B07AFF','#7AFFCC'];
+function getLineColor(idx){return lineColors[idx % lineColors.length];}
+function getRandomPressure(base){const min=Math.max(0,base-200);const max=base+200;return Math.round(Math.random()*(max-min)+min);}
 
-function getRandomPressure(base) {
-  // Clamp to >= 0, round to int, vary ±200
-  const min = Math.max(0, base - 200);
-  const max = base + 200;
-  return Math.round(Math.random() * (max - min) + min);
-}
-
+// -----------------------------
+// Component
+// -----------------------------
 export default function LiveBodyPressureCard({ job }) {
-  const initialTransducers = Array.isArray(job?.transducers) && job.transducers.length > 0
-    ? job.transducers
-    : defaultTransducers;
+  const initialTransducers =
+    Array.isArray(job?.transducers) && job.transducers.length > 0
+      ? job.transducers
+      : defaultTransducers;
 
-  // Keep [name, desc, pressure]
   const [pressures, setPressures] = useState(
     initialTransducers.map(([name, desc, val]) => ({ name, desc, value: val }))
   );
+  const baseValues = useRef(initialTransducers.map(([, , val]) => val));
 
-  // Stable reference to initial values for randomizing around them
-  const baseValues = useRef(
-    initialTransducers.map(([name, desc, val]) => val)
-  );
-
-  // Simulate pressure updates every 1 second
   useEffect(() => {
     const interval = setInterval(() => {
-      setPressures(current =>
-        current.map((tr, i) => {
-          // always bounce around the LATEST value, not original static
-          const lastVal = tr.value;
-          let newVal = getRandomPressure(lastVal);
-          return { ...tr, value: newVal };
-        })
+      setPressures(cur =>
+        cur.map(tr => ({ ...tr, value: getRandomPressure(tr.value) }))
       );
     }, 1000);
     return () => clearInterval(interval);
@@ -142,15 +133,13 @@ export default function LiveBodyPressureCard({ job }) {
 
   return (
     <div style={cardStyle}>
-      <div style={cardHeaderStyle}>
-        Body Pressure Live Data
-      </div>
+      <div style={cardHeaderStyle}>Body Pressure Live Data</div>
       <div style={livePressureTable}>
         <div style={tableHeaderRow}>
           <span style={{ width: 28 }}></span>
-          <span style={tableCell(115, 'center', false)}>Transducer</span>
+          <span style={tableCell(115,'center',false)}>Transducer</span>
           <span style={tableDescCell}>Description</span>
-          <span style={tableCell(90, 'center', false)}>Pressure</span>
+          <span style={tableCell(90,'center',false)}>Pressure</span>
         </div>
         {pressures.map(({ name, desc, value }, i) => (
           <div
@@ -158,34 +147,18 @@ export default function LiveBodyPressureCard({ job }) {
             style={{
               display: 'flex',
               alignItems: 'center',
-              borderBottom: i !== (pressures.length - 1) ? `1px dashed #343A2D` : 'none',
+              borderBottom: i !== pressures.length - 1 ? '1px dashed #343A2D80' : 'none',
               padding: '2.5px 0'
             }}
           >
-            {/* Colored horizontal line ("—") */}
-            <span
-              style={{
-                display: 'inline-block',
-                width: 18,
-                minWidth: 18,
-                marginRight: 7,
-                textAlign: 'center',
-                color: getLineColor(i),
-                fontWeight: 900,
-                fontSize: '1.29rem',
-                lineHeight: '1'
-              }}
-            >—</span>
-            <span style={{ ...tableCell(115, 'center', false), fontWeight: 900, color: '#fff' }}>{name}</span>
+            <span style={{display:'inline-block',width:18,minWidth:18,marginRight:7,textAlign:'center',color:getLineColor(i),fontWeight:900,fontSize:'1.29rem',lineHeight:'1'}}>—</span>
+            <span style={{ ...tableCell(115,'center',false), fontWeight:900, color:'#fff' }}>{name}</span>
             <span style={tableDescCell}>{desc}</span>
-            <span style={{ ...tableCell(90, 'center', false), fontWeight: 700 }}>
-              <span style={{
-                color: value >= 9000 ? '#ff3b4e' : '#69e05a', // red if >=9000, green otherwise
-                fontWeight: 700
-              }}>
+            <span style={{ ...tableCell(90,'center',false), fontWeight:700 }}>
+              <span style={{ color: value >= 9000 ? '#ff3b4e' : '#69e05a', fontWeight:700 }}>
                 {value.toLocaleString()}
               </span>
-              <span style={{ color: '#fff', marginLeft: 3 }}> PSI</span>
+              <span style={{ color:'#fff', marginLeft:3 }}> PSI</span>
             </span>
           </div>
         ))}

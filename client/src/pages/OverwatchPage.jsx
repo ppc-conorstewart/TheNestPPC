@@ -25,14 +25,14 @@ export default function OverwatchPage() {
   const { jobs, loading, activeJob } = context;
   const activeJobs = Array.isArray(jobs) ? jobs : [];
 
-  // Keep list selection in sync with context's activeJob when it changes
+  // Sync list selection with context.activeJob
   useEffect(() => {
     if (!activeJob) return;
     const idx = activeJobs.findIndex(j => j.id === activeJob.id);
     if (idx >= 0) setSelectedIndex(idx);
   }, [activeJob, activeJobs]);
 
-  // Choose the job to render: selected from list, else activeJob, else first
+  // Pick job to render
   const jobToRender = useMemo(() => {
     return activeJobs[selectedIndex] || activeJob || activeJobs[0] || null;
   }, [activeJobs, selectedIndex, activeJob]);
@@ -51,12 +51,15 @@ export default function OverwatchPage() {
         margin: 0,
         padding: 12,
         boxSizing: "border-box",
-        background: 'rgba(0,0,0,0.86)',
+        backgroundImage: `url(${process.env.PUBLIC_URL}/assets/AnalyticsBG.png)`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
       }}
     >
       {/* Main content block: PadsNav + Grid */}
       <div
-        className="main-content-block rounded-xl mt-0 shadow-xl flex flex-row"
+        className="main-content-block rounded-xl mt-0  flex flex-row"
         style={{
           width: "100%",
           maxWidth: "100%",
@@ -65,11 +68,11 @@ export default function OverwatchPage() {
           minHeight: "0",
           marginTop: "0",
           marginBottom: 100,
-          background: 'rgba(0,0,0,0.86)',
+          background: 'rgba(0,0,0,0.65)',
           boxShadow: '0 4px 42px 0 #2229',
           alignItems: "stretch",
-          border: '2px solid #6a7257',
-          boxSizing: "border-box",
+          
+          boxSizing: "border-box"
         }}
       >
         {/* LEFT: PadsNav */}
@@ -79,8 +82,8 @@ export default function OverwatchPage() {
             maxWidth: 320,
             width: 320,
             height: '100%',
-            background: '#181f17',
-            borderRight: '2px solid #7b8660',
+            
+           
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'stretch',
@@ -98,7 +101,7 @@ export default function OverwatchPage() {
           />
         </div>
 
-        {/* Main Grid Content */}
+        {/* RIGHT: Header + Grid */}
         <div
           className="flex-1 flex flex-col min-w-0"
           style={{
@@ -112,7 +115,7 @@ export default function OverwatchPage() {
             overflow: 'hidden',
             padding: 0,
             margin: 0,
-            background: 'none',
+            background: 'transparent',
             zIndex: 5
           }}>
           <OverwatchHeader
@@ -121,7 +124,6 @@ export default function OverwatchPage() {
           />
           <OverwatchDashboardGrid
             job={jobToRender}
-            // zoneProgress & requiredItems are derived from job_update_json when omitted
           />
         </div>
       </div>

@@ -1,3 +1,7 @@
+// ==============================
+// FLY-HQ JOB PLANNER — PAGE
+// ==============================
+
 import { useEffect, useRef, useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -7,8 +11,6 @@ import CalendarView from '../components/JobPlannerComponents/CalendarView';
 import BOMPage from '../components/Workorder Components/BOMPage';
 
 import JobModal from '../components/JobPlannerComponents/JobModal';
-// REMOVED: Right panel import
-// import JobPlannerRightPanel from '../components/JobPlannerComponents/JobPlannerRightPanel';
 import SourcingModal from '../components/JobPlannerComponents/SourcingModal';
 import TableView from '../components/JobPlannerComponents/TableView';
 import { showPalomaToast } from '../utils/toastUtils';
@@ -45,11 +47,8 @@ export default function JobPlanner() {
   const [selectedBOMJob, setSelectedBOMJob] = useState(null);
   const [selectedBOMObj, setSelectedBOMObj] = useState(null);
   const [rowStatus, setRowStatus] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('jobPlanner_rowStatus')) || {};
-    } catch {
-      return {};
-    }
+    try { return JSON.parse(localStorage.getItem('jobPlanner_rowStatus')) || {}; }
+    catch { return {}; }
   });
   const [unlockedMonths, setUnlockedMonths] = useState({});
   const [showSourcingModal, setShowSourcingModal] = useState(false);
@@ -62,22 +61,10 @@ export default function JobPlanner() {
   const [showDocHubModal, setShowDocHubModal] = useState(false);
   const [selectedDocHubJob, setSelectedDocHubJob] = useState(null);
 
-  const unlockMonth = (monthKey) => {
-    setUnlockedMonths((prev) => ({ ...prev, [monthKey]: true }));
-  };
+  const unlockMonth = (monthKey) => setUnlockedMonths((prev) => ({ ...prev, [monthKey]: true }));
+  const lockMonth = (monthKey) => setUnlockedMonths((prev) => { const copy = { ...prev }; delete copy[monthKey]; return copy; });
 
-  const lockMonth = (monthKey) => {
-    setUnlockedMonths((prev) => {
-      const copy = { ...prev };
-      delete copy[monthKey];
-      return copy;
-    });
-  };
-
-  const handleOpenDocHub = (job) => {
-    setSelectedDocHubJob(job);
-    setShowDocHubModal(true);
-  };
+  const handleOpenDocHub = (job) => { setSelectedDocHubJob(job); setShowDocHubModal(true); };
 
   const formatValue = (val) => {
     if (val === null || val === undefined || val === '') return '-';
@@ -85,20 +72,13 @@ export default function JobPlanner() {
     return isNaN(num) ? '-' : num.toFixed(0);
   };
 
-  useEffect(() => {
-    fetchJobs();
-  }, []);
+  useEffect(() => { fetchJobs(); }, []);
 
   const fetchJobs = async () => {
     try {
-      const res = await fetch(`${API}/api/jobs`, {
-        credentials: 'include',
-      });
+      const res = await fetch(`${API}/api/jobs`, { credentials: 'include' });
       const data = await res.json();
-      let jobsData = data.map((job) => ({
-        ...job,
-        customer: job.customer?.trim().toUpperCase() || '',
-      }));
+      let jobsData = data.map((job) => ({ ...job, customer: job.customer?.trim().toUpperCase() || '' }));
       const seen = new Set();
       jobsData = jobsData.filter((job) => {
         const key = `${job.customer}-${job.rig_in_date}-${job.surface_lsd}`;
@@ -106,28 +86,18 @@ export default function JobPlanner() {
         seen.add(key);
         return true;
       });
-
-      jobsData = jobsData.filter((job) => {
-        const rigDate = new Date(job.rig_in_date);
-        return rigDate.getFullYear() === currentYear;
-      });
-
-      jobsData.sort((a, b) =>
-        new Date(a.rig_in_date) - new Date(b.rig_in_date)
-      );
-
+      const currentYear = new Date().getFullYear();
+      jobsData = jobsData.filter((job) => new Date(job.rig_in_date).getFullYear() === currentYear);
+      jobsData.sort((a, b) => new Date(a.rig_in_date) - new Date(b.rig_in_date));
       setJobs(jobsData);
     } catch (err) {
       console.error('❌ [JobPlanner] fetch error:', err);
     }
   };
 
-  // --- TOASTS ---
   const handleCreateOrUpdate = async (jobData) => {
     const method = editMode ? 'PUT' : 'POST';
-    const endpoint = editMode
-      ? `${API}/api/jobs/${editingJobId}`
-      : `${API}/api/jobs`;
+    const endpoint = editMode ? `${API}/api/jobs/${editingJobId}` : `${API}/api/jobs`;
     const payload = { ...jobData };
     if (!editMode) delete payload.id;
 
@@ -207,19 +177,9 @@ export default function JobPlanner() {
   const handleDeleteAudit = async (jobId) => {
     if (window.confirm('Are you sure you want to delete this audit file?')) {
       try {
-        const res = await fetch(
-          `${API}/api/jobs/${jobId}/audit-checklist`,
-          {
-            method: 'DELETE',
-            credentials: 'include',
-          }
-        );
+        const res = await fetch(`${API}/api/jobs/${jobId}/audit-checklist`, { method: 'DELETE', credentials: 'include' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        setJobs((prev) =>
-          prev.map((j) =>
-            j.id === jobId ? { ...j, auditChecklistUrl: null } : j
-          )
-        );
+        setJobs((prev) => prev.map((j) => (j.id === jobId ? { ...j, auditChecklistUrl: null } : j)));
         showPalomaToast({
           message: "Audit File Deleted",
           detail: "The audit checklist file was removed.",
@@ -269,11 +229,7 @@ export default function JobPlanner() {
     setSelectedBOMObj(bomObj);
     setShowBOMModal(true);
   };
-  const handleCloseBOM = () => {
-    setSelectedBOMJob(null);
-    setSelectedBOMObj(null);
-    setShowBOMModal(false);
-  };
+  const handleCloseBOM = () => { setSelectedBOMJob(null); setSelectedBOMObj(null); setShowBOMModal(false); };
 
   const updateJobStatus = async (jobId, newStatus) => {
     const currentStatus = rowStatus[jobId] || '';
@@ -287,12 +243,7 @@ export default function JobPlanner() {
     setRowStatus(newRowStatus);
     localStorage.setItem('jobPlanner_rowStatus', JSON.stringify(newRowStatus));
 
-    const logEntry = {
-      jobId,
-      oldStatus: currentStatus,
-      newStatus: statusToSend,
-      timestamp: new Date().toISOString(),
-    };
+    const logEntry = { jobId, oldStatus: currentStatus, newStatus: statusToSend, timestamp: new Date().toISOString() };
     const prevLog = JSON.parse(localStorage.getItem('jobPlanner_statusLog') || '[]');
     prevLog.push(logEntry);
     localStorage.setItem('jobPlanner_statusLog', JSON.stringify(prevLog));
@@ -306,9 +257,7 @@ export default function JobPlanner() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const updatedJob = await res.json();
-      setJobs((prev) =>
-        prev.map((job) => (job.id === jobId ? updatedJob : job))
-      );
+      setJobs((prev) => prev.map((job) => (job.id === jobId ? updatedJob : job)));
       showPalomaToast({
         message: "Job Status Updated",
         detail: `Job status set to "${newStatus}".`,
@@ -326,46 +275,9 @@ export default function JobPlanner() {
     }
   };
 
-  const handleSubmitSourcing = async (jobId, ticketInfo) => {
-    try {
-      for (let it of ticketInfo.items) {
-        const payload = {
-          base: ticketInfo.base,
-          neededBy: ticketInfo.neededBy,
-          project: ticketInfo.project,
-          vendor: ticketInfo.vendor,
-          category: ticketInfo.category,
-          priority: ticketInfo.priority,
-          status: ticketInfo.status,
-          itemDescription: it.description,
-          quantity: it.quantity,
-        };
-        const res = await fetch(`${API}/api/sourcing`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => ({}));
-          throw new Error(errBody.error || `HTTP ${res.status}`);
-        }
-      }
-      setShowSourcingModal(false);
-      setSourcingJob(null);
-      showPalomaToast({
-        message: "Sourcing Ticket Submitted",
-        detail: "Sourcing ticket(s) submitted successfully.",
-        type: "success",
-      });
-    } catch (err) {
-      console.error('Failed to submit sourcing ticket:', err);
-      showPalomaToast({
-        message: "Sourcing Submission Failed",
-        detail: err.message,
-        type: "error",
-      });
-    }
+  const handleSubmitSourcing = async (job) => {
+    setShowSourcingModal(true);
+    setSourcingJob(job);
   };
 
   const groupByMonth = (entries) => {
@@ -373,10 +285,7 @@ export default function JobPlanner() {
     entries.forEach((job) => {
       const date = new Date(job.rig_in_date);
       if (!isNaN(date)) {
-        const key = date.toLocaleString('default', {
-          month: 'long',
-          year: 'numeric',
-        });
+        const key = date.toLocaleString('default', { month: 'long', year: 'numeric' });
         if (!map.has(key)) map.set(key, []);
         map.get(key).push(job);
       }
@@ -386,17 +295,11 @@ export default function JobPlanner() {
   const monthGroups = groupByMonth(jobs);
 
   const monthKeys = Array.from(monthGroups.keys());
-  const topMonthKey = monthKeys[0] || '';
-  const months = [
-    'January','February','March','April','May','June',
-    'July','August','September','October','November','December',
-  ];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
   const parseMonthKey = (key) => {
     if (!key || key === "Full Year") return null;
     const [monthName, yearString] = key.trim().split(' ');
-    const fixedMonth =
-      monthName.charAt(0).toUpperCase() +
-      monthName.slice(1).toLowerCase();
+    const fixedMonth = monthName.charAt(0).toUpperCase() + monthName.slice(1).toLowerCase();
     const yearNum = Number(yearString);
     const monthIndex = months.findIndex((m) => m === fixedMonth);
     if (monthIndex < 0 || isNaN(yearNum)) return null;
@@ -407,64 +310,50 @@ export default function JobPlanner() {
 
   const filteredJobs = jobs.filter(job => {
     const jobMonth = new Date(job.rig_in_date).toLocaleString('default', { month: 'long', year: 'numeric' });
-    return (!selectedCustomer || job.customer === selectedCustomer) && (selectedMonthKey === "Full Year" || !selectedMonthKey || selectedMonthKey === jobMonth);
+    return (!selectedCustomer || job.customer === selectedCustomer) &&
+           (selectedMonthKey === "Full Year" || !selectedMonthKey || selectedMonthKey === jobMonth);
   });
 
   const customers = [...new Set(jobs.map(j => j.customer))].sort();
 
-  const renderMonthTabs = () => {
-    return (
-      <div className="flex items-center justify-between overflow-x-auto space-x-1 scrollbar-hide w-full">
-        {/* Left: Month tabs */}
-        <div className="flex items-center space-x-1">
-          <button
-            key="full-year"
-            className={`px-4 py-1.5 rounded-t-lg font-semibold transition-all text-xs whitespace-nowrap
-              ${selectedMonthKey === "Full Year"
-                ? 'border-b-4 border-[#6a7257] text-[#6a7257] bg-black'
-                : 'text-white bg-zinc-900 hover:bg-zinc-800'
-              }`}
-            onClick={() => setSelectedMonthKey("Full Year")}
-            style={{
-              minWidth: 120,
-              outline: 'none',
-            }}
-          >
-            Full Year
-          </button>
-          {monthKeys.map(key => (
-            <button
-              key={key}
-              className={`px-4 py-1.5 rounded-t-lg font-semibold transition-all text-xs whitespace-nowrap
-                ${
-                  key === selectedMonthKey
-                    ? 'border-b-4 border-[#6a7257] text-[#6a7257] bg-black'
-                    : 'text-white bg-zinc-900 hover:bg-zinc-800'
-                }`}
-              onClick={() => setSelectedMonthKey(key)}
-              style={{
-                minWidth: 120,
-                outline: 'none',
-              }}
-            >
-              {key}
-            </button>
-          ))}
-        </div>
-
-        {/* Right: Add button moved to far right with full label */}
+  const renderMonthTabs = () => (
+    <div className="flex items-center justify-between overflow-x-auto space-x-1 scrollbar-hide w-full">
+      {/* Left: Month tabs */}
+      <div className="flex items-center space-x-1">
         <button
-          onClick={() => setShowModal(true)}
-          aria-label="Add New Job"
-          title="Add New Job"
-          className="ml-auto px-4 py-1 rounded-md border-2 border-green-400  text-green-400 bg-transparent hover:bg-[#6a7257] hover:text-black font-bold text-xs whitespace-nowrap"
-          style={{ lineHeight: 1 }}
+          key="full-year"
+          className={`px-4 py-1.5 rounded-t-lg font-semibold transition-all text-xs whitespace-nowrap
+            ${selectedMonthKey === "Full Year" ? 'border-b-4 border-[#6a7257] text-[#6a7257] bg-black' : 'text-white bg-zinc-900 hover:bg-zinc-800'}`}
+          onClick={() => setSelectedMonthKey("Full Year")}
+          style={{ minWidth: 120, outline: 'none' }}
         >
-          + Add New Job
+          Full Year
         </button>
+        {monthKeys.map(key => (
+          <button
+            key={key}
+            className={`px-4 py-1.5 rounded-t-lg font-semibold transition-all text-xs whitespace-nowrap
+              ${key === selectedMonthKey ? 'border-b-4 border-[#6a7257] text-[#6a7257] bg-black' : 'text-white bg-zinc-900 hover:bg-zinc-800'}`}
+            onClick={() => setSelectedMonthKey(key)}
+            style={{ minWidth: 120, outline: 'none' }}
+          >
+            {key}
+          </button>
+        ))}
       </div>
-    );
-  };
+
+      {/* Right: Global add (kept) */}
+      <button
+        onClick={() => setShowModal(true)}
+        aria-label="Add New Job"
+        title="Add New Job"
+        className="ml-auto px-4 py-1 rounded-md border-2 border-green-400 text-green-400 bg-transparent hover:bg-[#6a7257] hover:text-black font-bold text-xs whitespace-nowrap"
+        style={{ lineHeight: 1 }}
+      >
+        + Add New Job
+      </button>
+    </div>
+  );
 
   const singleMonth = parseMonthKey(selectedMonthKey);
 
@@ -517,7 +406,7 @@ export default function JobPlanner() {
             boxSizing: "border-box",
           }}
         >
-          {/* LEFT: Main table/calendar content ONLY (right panel removed) */}
+          {/* LEFT: Main table/calendar content */}
           <div
             className="flex-1 flex flex-col min-w-0"
             style={{
@@ -553,7 +442,7 @@ export default function JobPlanner() {
                 lockMonth={lockMonth}
                 handleEdit={handleEdit}
                 handleDelete={handleDelete}
-                handleSubmitSourcing={(job) => { setSourcingJob(job); setShowSourcingModal(true); }}
+                handleSubmitSourcing={handleSubmitSourcing}
                 handleStatusChange={updateJobStatus}
                 handleDeleteAudit={handleDeleteAudit}
                 formatValue={formatValue}
@@ -565,6 +454,8 @@ export default function JobPlanner() {
                 onShowBOM={handleShowBOM}
                 handleOpenDocHub={handleOpenDocHub}
                 onDiscordIdUpdated={fetchJobs}
+                /* >>> per-month buttons open the same JobModal <<< */
+                onAddJob={() => setShowModal(true)}
               />
             </div>
 
@@ -585,12 +476,6 @@ export default function JobPlanner() {
               />
             </div>
           </div>
-
-          {/* REMOVED divider and right panel */}
-          {/*
-          <div className="hidden md:block" ... />
-          <JobPlannerRightPanel onAddJob={() => setShowModal(true)}></JobPlannerRightPanel>
-          */}
         </div>
       </div>
 
@@ -605,11 +490,48 @@ export default function JobPlanner() {
 
       <SourcingModal
         isOpen={showSourcingModal}
-        onClose={() => {
-          setShowSourcingModal(false);
-          setSourcingJob(null);
+        onClose={() => { setShowSourcingModal(false); setSourcingJob(null); }}
+        onSubmit={async (ticketInfo) => {
+          try {
+            for (let it of ticketInfo.items) {
+              const payload = {
+                base: ticketInfo.base,
+                neededBy: ticketInfo.neededBy,
+                project: ticketInfo.project,
+                vendor: ticketInfo.vendor,
+                category: ticketInfo.category,
+                priority: ticketInfo.priority,
+                status: ticketInfo.status,
+                itemDescription: it.description,
+                quantity: it.quantity,
+              };
+              const res = await fetch(`${API}/api/sourcing`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+              });
+              if (!res.ok) {
+                const errBody = await res.json().catch(() => ({}));
+                throw new Error(errBody.error || `HTTP ${res.status}`);
+              }
+            }
+            setShowSourcingModal(false);
+            setSourcingJob(null);
+            showPalomaToast({
+              message: "Sourcing Ticket Submitted",
+              detail: "Sourcing ticket(s) submitted successfully.",
+              type: "success",
+            });
+          } catch (err) {
+            console.error('Failed to submit sourcing ticket:', err);
+            showPalomaToast({
+              message: "Sourcing Submission Failed",
+              detail: err.message,
+              type: "error",
+            });
+          }
         }}
-        onSubmit={handleSubmitSourcing}
         job={sourcingJob}
       />
 

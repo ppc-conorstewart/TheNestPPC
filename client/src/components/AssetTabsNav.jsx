@@ -1,7 +1,11 @@
 // ==============================
 // src/components/AssetTabsNav.jsx
 // ==============================
+import { useEffect, useRef } from 'react';
 
+// ==============================
+// TABS — BASE STYLE
+// ==============================
 const tabBase = {
   padding: '7px 28px 7px 28px',
   fontWeight: 700,
@@ -15,12 +19,15 @@ const tabBase = {
   textTransform: 'uppercase',
   background: 'transparent',
   borderBottom: '4px solid transparent',
-  transition: 'background 0.18s, color 0.18s, border-bottom 0.18s, box-shadow 180ms ease, transform 160ms ease',
+  transition: 'background 0.18s, color 0.18s, border-bottom 0.18s, box-shadow 180ms ease, transform 160ms ease, opacity 160ms ease',
   position: 'relative',
   WebkitFontSmoothing: 'antialiased',
   MozOsxFontSmoothing: 'grayscale'
 };
 
+// ==============================
+// TABS — COMPONENT
+// ==============================
 export default function AssetTabsNav({
   activeTab,
   setActiveTab,
@@ -32,41 +39,52 @@ export default function AssetTabsNav({
 }) {
   const railAccent = '#6a7257';
   const railText = '#ffffffff';
-  const railMuted = '#b0b79f';
+
+  const tabsWrapRef = useRef(null);
+  const indicatorRef = useRef(null);
+
+  const tabRefs = {
+    assets: useRef(null),
+    assemblies: useRef(null),
+    ma_db: useRef(null),
+    analytics: useRef(null),
+    downed: useRef(null)
+  };
 
   // ==============================
-  // TAB FACTORY (Keeps size, upgrades visuals)
+  // BOTTOM INDICATOR — POSITIONING
+  // ==============================
+  const positionIndicator = () => {
+    const wrap = tabsWrapRef.current;
+    const indicator = indicatorRef.current;
+    const btn = tabRefs[activeTab]?.current;
+    if (!wrap || !indicator || !btn) return;
+    const left = btn.offsetLeft;
+    const width = btn.clientWidth;
+    indicator.style.transform = `translateX(${left}px)`;
+    indicator.style.width = `${width}px`;
+  };
+
+  useEffect(() => {
+    positionIndicator();
+    const onResize = () => positionIndicator();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // ==============================
+  // TABS — STYLE FACTORY
   // ==============================
   const getTabStyle = (isActive) => ({
     ...tabBase,
-    color: isActive ? '#6a7257' : railMuted,
-    background: isActive
-      ? 'linear-gradient(180deg, #121310 0%, #0f100e 55%, #0b0c0a 100%)'
-      : 'linear-gradient(180deg, rgba(20,22,18,.35) 0%, rgba(14,15,13,.15) 100%)',
-    boxShadow: isActive
-      ? `inset 0 2px 0 0 rgba(255,255,255,.08),
-         inset 0 -1px 0 0 rgba(0,0,0,.55),
-         0 4px 10px rgba(0,0,0,.35),
-         0 0 0 1px rgba(106,114,87,.22)`
-      : `inset 0 1px 0 0 rgba(255,255,255,.05),
-         0 0 0 1px rgba(106,114,87,.15)`,
-    borderTop: `2px solid rgba(255,255,255,.06)`,
-    borderLeft: `2px solid rgba(106,114,87,.25)`,
-    borderRight: `2px solid rgba(106,114,87,.25)`,
-  });
-
-  const underline = (isActive) => ({
-    position: 'absolute',
-    bottom: -6,
-    left: 0,
-    width: '100%',
-    height: 4,
-    background: isActive
-      ? `linear-gradient(90deg, transparent 0%, ${railAccent} 10%, ${railText} 50%, ${railAccent} 90%, transparent 100%)`
-      : 'transparent',
-    boxShadow: isActive ? '0 0 14px rgba(106,114,87,.55)' : 'none',
-    transition: 'opacity 160ms ease',
-    opacity: isActive ? 1 : 0
+    color: isActive ? '#687257' : 'rgba(255,255,255,.68)',
+    borderTop: `2px solid ${isActive ? railAccent : 'rgba(255,255,255,.22)'}`,
+    borderLeft: `2px solid ${isActive ? railAccent : 'rgba(255,255,255,.22)'}`,
+    borderRight: `2px solid ${isActive ? railAccent : 'rgba(255,255,255,.22)'}`,
+    borderTopLeftRadius: 8,
+    borderTopRightRadius: 8,
+    opacity: isActive ? 1 : 0.9
   });
 
   const topGlow = (isActive) => ({
@@ -75,17 +93,16 @@ export default function AssetTabsNav({
     left: 10,
     right: 10,
     height: 2,
-    background: isActive ? 'linear-gradient(90deg, transparent, rgba(255,255,255,.28), transparent)' : 'transparent',
     filter: 'blur(.2px)'
   });
 
   // ==============================
-  // RIGHT PANEL OPEN TOGGLE (ASSETS TAB)
+  // RIGHT PANEL — OPEN TOGGLE
   // ==============================
   const OpenToggle = (
     <button
       onClick={() => setShowRightPanelAssets(true)}
-      title="Open panel"
+      title='Open panel'
       style={{
         position: 'relative',
         minHeight: 42,
@@ -104,8 +121,8 @@ export default function AssetTabsNav({
         transition: 'transform 220ms cubic-bezier(.16,1,.3,1), box-shadow 200ms ease',
         boxShadow: '0 4px 12px rgba(0,0,0,.35)'
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px) scale(1.02)'; e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,.45)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.35)'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px) scale(1.02)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,.45)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.35)'; }}
     >
       <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
         <span style={{ color: railText, fontWeight: 900, fontSize: 10, textTransform: 'uppercase', letterSpacing: '.09em' }}>Asset Summary</span>
@@ -139,12 +156,12 @@ export default function AssetTabsNav({
   );
 
   // ==============================
-  // RIGHT PANEL CLOSE TOGGLE (ASSETS TAB)
+  // RIGHT PANEL — CLOSE TOGGLE
   // ==============================
   const CloseToggle = (
     <button
       onClick={() => setShowRightPanelAssets(false)}
-      title="Close panel"
+      title='Close panel'
       style={{
         height: 42,
         width: 42,
@@ -158,8 +175,8 @@ export default function AssetTabsNav({
         transition: 'transform 220ms cubic-bezier(.16,1,.3,1), box-shadow 200ms ease',
         boxShadow: '0 4px 12px rgba(0,0,0,.35)'
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px) scale(1.04)'; e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,.45)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.35)'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px) scale(1.04)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,.45)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.35)'; }}
     >
       <div
         style={{
@@ -174,12 +191,12 @@ export default function AssetTabsNav({
   );
 
   // ==============================
-  // MASTER HISTORY LOG TOGGLE (ASSEMBLIES TAB)
+  // MASTER HISTORY — TOGGLE
   // ==============================
   const MasterHistoryToggle = (
     <button
       onClick={onToggleMasterHistory}
-      title="Master History Log"
+      title='Master History Log'
       style={{
         minHeight: 42,
         padding: '8px 14px',
@@ -191,17 +208,16 @@ export default function AssetTabsNav({
           ? 'linear-gradient(180deg,#2a3026,#1a1f18)'
           : 'linear-gradient(180deg, rgba(17,18,16,.92), rgba(17,18,16,.82))',
         border: `2px solid ${railAccent}`,
-        color: '#e6e8df',
+        color: '#ffffffff',
         fontWeight: 900,
         letterSpacing: '.08em',
         cursor: 'pointer',
         userSelect: 'none',
         textTransform: 'uppercase',
-        transition: 'transform 220ms cubic-bezier(.16,1,.3,1), box-shadow 200ms ease',
-        boxShadow: '0 4px 12px rgba(0,0,0,.35)'
+        transition: 'transform 220ms cubic-bezier(.16,1,.3,1), box-shadow 200ms ease'
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px) scale(1.02)'; e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,.45)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,.35)'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px) scale(1.02)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(0,0,0,.45)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform = 'none'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,.35)'; }}
     >
       {masterHistoryOpen ? 'Close Master History' : 'Master History Log'}
     </button>
@@ -212,7 +228,7 @@ export default function AssetTabsNav({
   // ==============================
   return (
     <div
-      className="flex items-center"
+      className='flex items-center'
       style={{
         width: '100%',
         background: 'linear-gradient(180deg, #0b0c0a 0%, #050605 100%)',
@@ -225,25 +241,17 @@ export default function AssetTabsNav({
         marginBottom: '-2px',
         justifyContent: 'space-between',
         gap: 8,
-        borderBottom: '1px solid rgba(106,114,87,.35)',
-        boxShadow: 'inset 0 -1px 0 rgba(255,255,255,.04)'
+        borderBottom: '1px solid rgba(106,114,87,.35)'
       }}
     >
       {/* ============================== LEFT: TABS ============================== */}
-      <div className="flex justify-start gap-1" style={{ position: 'relative' }}>
-        {/* subtle rail behind tabs */}
-        <div
-          aria-hidden
-          style={{
-            position: 'absolute',
-            left: -8,
-            right: 0,
-            bottom: 0,
-            height: 26,
-            background: 'linear-gradient(180deg, rgba(255,255,255,.03), rgba(0,0,0,0))'
-          }}
-        />
+      <div
+        className='flex justify-start gap-1'
+        style={{ position: 'relative' }}
+        ref={tabsWrapRef}
+      >
         <button
+          ref={tabRefs.assets}
           style={getTabStyle(activeTab === 'assets')}
           onClick={() => setActiveTab('assets')}
           onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
@@ -251,10 +259,10 @@ export default function AssetTabsNav({
         >
           <span style={{ position: 'relative', zIndex: 2 }}>Assets Main</span>
           <span style={topGlow(activeTab === 'assets')} />
-          <span style={underline(activeTab === 'assets')} />
         </button>
 
         <button
+          ref={tabRefs.assemblies}
           style={getTabStyle(activeTab === 'assemblies')}
           onClick={() => setActiveTab('assemblies')}
           onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
@@ -262,10 +270,10 @@ export default function AssetTabsNav({
         >
           <span style={{ position: 'relative', zIndex: 2 }}>Master Assemblies Hub</span>
           <span style={topGlow(activeTab === 'assemblies')} />
-          <span style={underline(activeTab === 'assemblies')} />
         </button>
 
         <button
+          ref={tabRefs.ma_db}
           style={getTabStyle(activeTab === 'ma_db')}
           onClick={() => setActiveTab('ma_db')}
           onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
@@ -273,10 +281,10 @@ export default function AssetTabsNav({
         >
           <span style={{ position: 'relative', zIndex: 2 }}>Master Assemblies DB</span>
           <span style={topGlow(activeTab === 'ma_db')} />
-          <span style={underline(activeTab === 'ma_db')} />
         </button>
 
         <button
+          ref={tabRefs.analytics}
           style={getTabStyle(activeTab === 'analytics')}
           onClick={() => setActiveTab('analytics')}
           onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
@@ -284,29 +292,41 @@ export default function AssetTabsNav({
         >
           <span style={{ position: 'relative', zIndex: 2 }}>Analytics</span>
           <span style={topGlow(activeTab === 'analytics')} />
-          <span style={underline(activeTab === 'analytics')} />
         </button>
+
+        <button
+          ref={tabRefs.downed}
+          style={getTabStyle(activeTab === 'downed')}
+          onClick={() => setActiveTab('downed')}
+          onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-1px)')}
+          onMouseLeave={(e) => (e.currentTarget.style.transform = 'none')}
+        >
+          <span style={{ position: 'relative', zIndex: 2 }}>Downed Assets</span>
+          <span style={topGlow(activeTab === 'downed')} />
+        </button>
+
+        {/* ============================== SLIDING BOTTOM INDICATOR ============================== */}
+        <span
+          ref={indicatorRef}
+          style={{
+            position: 'absolute',
+            bottom: -6,
+            left: 0,
+            height: 4,
+            width: 0,
+            background: 'linear-gradient(90deg, transparent 0%, #6a7257 10%, #ffffffff 50%, #6a7257 90%, transparent 100%)',
+            boxShadow: '0 0 14px rgba(106,114,87,.55)',
+            transition: 'transform 240ms cubic-bezier(.22,.61,.36,1), width 240ms cubic-bezier(.22,.61,.36,1)',
+            pointerEvents: 'none'
+          }}
+        />
       </div>
 
-      {/* ============================== RIGHT: CONTEXTUAL ACTIONS ============================== */}
-      <div style={{ display: 'flex,', alignItems: 'center', gap: 8 }}>
-        {activeTab === 'assets' ? (!showRightPanelAssets ? OpenToggle : CloseToggle) : null}
-        {activeTab === 'assemblies' ? MasterHistoryToggle : null}
+      {/* ============================== RIGHT: PANEL TOGGLES ============================== */}
+      <div className='flex items-center gap-2'>
+        {activeTab === 'assets' && (!showRightPanelAssets ? OpenToggle : CloseToggle)}
+        {activeTab === 'assemblies' && MasterHistoryToggle}
       </div>
-
-      {/* ============================== KEYFRAMES ============================== */}
-      <style>{`
-        @keyframes palomaPulse {
-          0% { transform: scale(1); opacity: .8; }
-          50% { transform: scale(1.4); opacity: .35; }
-          100% { transform: scale(1); opacity: .8; }
-        }
-        @keyframes glideUnderline {
-          0% { transform: translateX(-10%); opacity: .2; }
-          50% { transform: translateX(0%); opacity: 1; }
-          100% { transform: translateX(10%); opacity: .2; }
-        }
-      `}</style>
     </div>
   );
 }

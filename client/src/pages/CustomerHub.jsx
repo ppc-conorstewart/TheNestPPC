@@ -1,9 +1,13 @@
 // ==============================
-// CustomerHub.jsx — Missile Customers Show Assigned Missiles Panel
+// CustomerHub.jsx — Customer Hub • Full-Page Glass Conversion
+// Sections: Imports • Constants • State • Effects • Handlers • Render
 // ==============================
 
+// ===== IMPORTS =====
 import { useEffect, useRef, useState } from 'react';
 import Sidebar from '../components/Sidebar';
+import GlassBackdrop from '../components/ui/GlassBackdrop';
+import '../styles/glass.css';
 
 import AddCustomerModal from '../components/Customer Hub Components/AddCustomerModal';
 import CustomerFieldContacts from '../components/Customer Hub Components/CustomerFieldContacts';
@@ -12,13 +16,16 @@ import CustomerListPanel from '../components/Customer Hub Components/CustomerLis
 import CustomerLogoCard from '../components/Customer Hub Components/CustomerLogoCard';
 import CustomerProgramInfo from '../components/Customer Hub Components/CustomerProgramInfo';
 
+// ===== CONSTANTS =====
 const API_URL = '/api/customers';
 const IMG_BASE =
   process.env.NODE_ENV === 'development'
     ? 'http://localhost:3001'
     : '';
 
+// ===== COMPONENT =====
 export default function CustomerHub() {
+  // ----- STATE -----
   const [customers, setCustomers] = useState([]);
   const [selected, setSelected] = useState(null);
   const [editMode, setEditMode] = useState(false);
@@ -31,11 +38,13 @@ export default function CustomerHub() {
   });
   const logoInputRef = useRef(null);
 
+  // ----- EFFECTS -----
   useEffect(() => {
     fetchCustomers();
     // eslint-disable-next-line
   }, []);
 
+  // ----- HANDLERS -----
   const fetchCustomers = async () => {
     setLoading(true);
     try {
@@ -61,9 +70,9 @@ export default function CustomerHub() {
       logo_url: customer.logo_url,
       logoFile: null,
       category: customer.category || '',
-      head_office_address: customer.head_office_address || "",
-      head_of_completions: customer.head_of_completions || "",
-      head_office_phone: customer.head_office_phone || ""
+      head_office_address: customer.head_office_address || '',
+      head_of_completions: customer.head_of_completions || '',
+      head_office_phone: customer.head_office_phone || ''
     });
   };
 
@@ -74,9 +83,9 @@ export default function CustomerHub() {
       logo_url: selected.logo_url,
       logoFile: null,
       category: selected.category || '',
-      head_office_address: selected.head_office_address || "",
-      head_of_completions: selected.head_of_completions || "",
-      head_office_phone: selected.head_office_phone || ""
+      head_office_address: selected.head_office_address || '',
+      head_of_completions: selected.head_of_completions || '',
+      head_office_phone: selected.head_office_phone || ''
     });
   };
 
@@ -87,9 +96,9 @@ export default function CustomerHub() {
       logo_url: selected.logo_url,
       logoFile: null,
       category: selected.category || '',
-      head_office_address: selected.head_office_address || "",
-      head_of_completions: selected.head_of_completions || "",
-      head_office_phone: selected.head_office_phone || ""
+      head_office_address: selected.head_office_address || '',
+      head_of_completions: selected.head_of_completions || '',
+      head_office_phone: selected.head_office_phone || ''
     });
   };
 
@@ -196,7 +205,6 @@ export default function CustomerHub() {
     };
   };
 
-  // Only 1 add button now, category is chosen in modal
   const handleShowAddModal = () => {
     setShowAdd(true);
     setPendingCategory('');
@@ -211,78 +219,90 @@ export default function CustomerHub() {
     });
   };
 
+  // ----- RENDER -----
   return (
-    <div className="w-2050px h-full flex flex-row bg-black ml-10 text-white" style={{ fontFamily: 'Erbaum, sans-serif' }}>
-      <Sidebar />
-      <div className="flex-1 flex flex-col" style={{ padding: 24 }}>
-        <div className="flex flex-row gap-4 h-full">
-          {/* Left: Customer List */}
-          <CustomerListPanel
-            customers={customers.map(c => ({
-              ...c,
-              logo_url: c.logo_url
-                ? (c.logo_url.startsWith('http')
-                    ? c.logo_url
-                    : IMG_BASE + c.logo_url)
-                : null
-            }))}
-            selected={selected}
-            loading={loading}
-            onSelect={handleSelect}
-            onAdd={handleShowAddModal}
-          />
+    <div className='relative h-full min-h-screen w-full text-white' style={{ fontFamily: 'Erbaum, sans-serif' }}>
+      <GlassBackdrop blur={6} opacity={0.08} />
+      <div className='w-full h-full flex flex-row ml-10 relative z-10'>
+        <Sidebar />
+        <div className='flex-1 flex flex-col p-6'>
+          <div className='flex flex-row gap-4 h-full'>
+            {/* Left: Customer List */}
+            <CustomerListPanel
+              customers={customers.map(c => ({
+                ...c,
+                logo_url: c.logo_url
+                  ? (c.logo_url.startsWith('http')
+                      ? c.logo_url
+                      : IMG_BASE + c.logo_url)
+                  : null
+              }))}
+              selected={selected}
+              loading={loading}
+              onSelect={handleSelect}
+              onAdd={handleShowAddModal}
+            />
 
-          {/* Right: Customer Info + Program Info */}
-          <div className="flex flex-col flex-1 gap-4">
-            <div className="flex flex-row gap-4">
-              <div className="flex-1 bg-[#18181b] border border-[#949C7F] rounded-lg p-6 flex flex-row items-start min-h-[210px] justify-start relative">
-                <CustomerLogoCard
-                  selected={getSelectedCard()}
-                  form={form}
-                  editMode={editMode}
-                  onEdit={startEdit}
-                  onSave={saveEdit}
-                  onCancel={cancelEdit}
-                  onDelete={deleteCustomer}
-                  onLogoChange={handleLogoChange}
-                  onLogoDelete={handleLogoDelete}
-                />
-                <div className="mx-6 w-[2px] bg-[#949C7F] h-full opacity-40 rounded"></div>
-                <CustomerGeneralInfoPanel
-                  selected={selected}
-                  editMode={editMode}
-                  form={form}
-                  onFormChange={handleFormChange}
-                />
+            {/* Right: Customer Info + Program Info */}
+            <div className='flex flex-col flex-1 gap-4'>
+              <div className='flex flex-row gap-4'>
+                <div className='glass-card p-6 flex flex-row items-start min-h-[210px] justify-start relative w-full'>
+                  <CustomerLogoCard
+                    selected={getSelectedCard()}
+                    form={form}
+                    editMode={editMode}
+                    onEdit={startEdit}
+                    onSave={saveEdit}
+                    onCancel={cancelEdit}
+                    onDelete={deleteCustomer}
+                    onLogoChange={handleLogoChange}
+                    onLogoDelete={handleLogoDelete}
+                  />
+                  <div className='mx-6 w-[2px] bg-[#949C7F] h-full opacity-40 rounded' />
+                  <CustomerGeneralInfoPanel
+                    selected={selected}
+                    editMode={editMode}
+                    form={form}
+                    onFormChange={handleFormChange}
+                  />
+                </div>
+              </div>
+
+              <div className='flex flex-row gap-4 flex-1'>
+                {/* If missile, show assigned missiles; else show field contacts */}
+                {selected && selected.category === 'missile' ? (
+                  <div className='glass-card p-6 min-h-[210px] flex-1'>
+                    <div className='text-xl text-center mb-4 text-[#b3b99a]' style={{ fontFamily: 'var(--font-varien, varien, sans-serif)' }}>
+                      Assigned Missile/s
+                    </div>
+                    <div className='text-base text-[#e6e8df] opacity-70'>
+                      [Coming soon: List of assigned missiles for this customer]
+                    </div>
+                  </div>
+                ) : (
+                  <div className='flex-1'>
+                    <div className='glass-card p-4 h-full'>
+                      <CustomerFieldContacts />
+                    </div>
+                  </div>
+                )}
+                <CustomerProgramInfo />
               </div>
             </div>
-            <div className="flex flex-row gap-4 flex-1">
-              {/* If missile, show assigned missiles; else show field contacts */}
-              {selected && selected.category === "missile" ? (
-                <div className="flex-1 bg-[#18181b] border border-[#949C7F] rounded-lg p-6 min-h-[210px]">
-                  <div className="text-xl text-center  mb-4 text-[#b3b99a] font-varien">Assigned Missile/s</div>
-                  <div className="text-base text-[#e6e8df] opacity-70">
-                    [Coming soon: List of assigned missiles for this customer]
-                  </div>
-                </div>
-              ) : (
-                <CustomerFieldContacts />
-              )}
-              <CustomerProgramInfo />
-            </div>
           </div>
+
+          <AddCustomerModal
+            open={showAdd}
+            onClose={() => setShowAdd(false)}
+            onSubmit={addCustomer}
+            form={form}
+            setForm={setForm}
+            logoInputRef={logoInputRef}
+            handleLogoChange={handleLogoChange}
+            pendingCategory={pendingCategory}
+            setPendingCategory={setPendingCategory}
+          />
         </div>
-        <AddCustomerModal
-          open={showAdd}
-          onClose={() => setShowAdd(false)}
-          onSubmit={addCustomer}
-          form={form}
-          setForm={setForm}
-          logoInputRef={logoInputRef}
-          handleLogoChange={handleLogoChange}
-          pendingCategory={pendingCategory}
-          setPendingCategory={setPendingCategory}
-        />
       </div>
     </div>
   );

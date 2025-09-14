@@ -1,11 +1,11 @@
-// src/components/PageRenderer.jsx
+// ==============================
+// FILE: src/components/PageRenderer.jsx
+// ==============================
 
-import React from 'react';
-
-import WOInfoPage from './WOInfoPage';
+import AssemblyPage from './AssemblyPage';
 import BOMPage from './BOMPage';
 import SiteMeasurementsPage from './SiteMeasurementsPage';
-import AssemblyPage from './AssemblyPage';
+import WOInfoPage from './WOInfoPage';
 
 export default function PageRenderer({
   index,
@@ -75,7 +75,8 @@ export default function PageRenderer({
   baseColors,
   addConsumable,
 }) {
-  // Map from page index to config for AssemblyPage
+  const buildingBase = metadata?.buildingBase || '';
+
   const assemblyConfigs = [
     {
       pageTitle: 'DFIT ASSEMBLY',
@@ -91,7 +92,7 @@ export default function PageRenderer({
       modelStates: dfitModelStates,
       panelSpecs: dfitPanelSpecs,
       addConsumable: (n, q) => addConsumable(n, q, 'DFIT', dfitActiveTab),
-      assets, baseColors,
+      assets, baseColors, buildingBase,
     },
     {
       pageTitle: 'UPPER MASTER ASSEMBLY',
@@ -107,7 +108,7 @@ export default function PageRenderer({
       modelStates: umaModelStates,
       panelSpecs: umaPanelSpecs,
       addConsumable: (n, q) => addConsumable(n, q, 'UMA', umaActiveTab),
-      assets, baseColors,
+      assets, baseColors, buildingBase,
     },
     {
       pageTitle: 'FLOW CROSS ASSEMBLY',
@@ -123,7 +124,7 @@ export default function PageRenderer({
       modelStates: fcaModelStates,
       panelSpecs: fcaPanelSpecs,
       addConsumable: (n, q) => addConsumable(n, q, 'FCA', fcaActiveTab),
-      assets, baseColors,
+      assets, baseColors, buildingBase,
     },
     {
       pageTitle: 'SWAB VALVE ASSEMBLY',
@@ -139,7 +140,7 @@ export default function PageRenderer({
       modelStates: svaModelStates,
       panelSpecs: svaPanelSpecs,
       addConsumable: (n, q) => addConsumable(n, q, 'SVA', svaActiveTab),
-      assets, baseColors,
+      assets, baseColors, buildingBase,
     },
     {
       pageTitle: 'DOGBONES ASSEMBLY',
@@ -155,7 +156,7 @@ export default function PageRenderer({
       modelStates: dogbonesModelStates,
       panelSpecs: dogbonesPanelSpecs,
       addConsumable: (n, q) => addConsumable(n, q, 'Dogbones', dogbonesActiveTab),
-      assets, baseColors,
+      assets, baseColors, buildingBase,
     },
     {
       pageTitle: 'ZIPPERS ASSEMBLY',
@@ -171,7 +172,7 @@ export default function PageRenderer({
       modelStates: zippersModelStates,
       panelSpecs: zippersPanelSpecs,
       addConsumable: (n, q) => addConsumable(n, q, 'Zippers', zippersActiveTab),
-      assets, baseColors,
+      assets, baseColors, buildingBase,
     },
     {
       pageTitle: 'PPL ASSEMBLY',
@@ -187,9 +188,12 @@ export default function PageRenderer({
       modelStates: pplModelStates,
       panelSpecs: pplPanelSpecs,
       addConsumable: (n, q) => addConsumable(n, q, 'PPL', pplActiveTab),
-      assets, baseColors,
+      assets, baseColors, buildingBase,
     },
   ];
+
+  const assemblyStart = 3;
+  const isAssembly = index >= assemblyStart && index < assemblyStart + assemblyConfigs.length;
 
   let PageComponent;
   switch (index) {
@@ -243,16 +247,19 @@ export default function PageRenderer({
         />
       );
       break;
-    // All assemblies (pages 3-9)
     default:
-      if (index >= 3 && index <= 9) {
-        const config = assemblyConfigs[index - 3];
+      if (isAssembly) {
+        const cfgIndex = index - assemblyStart;
+        const config = assemblyConfigs[cfgIndex];
+        const priorConfigs = assemblyConfigs.slice(0, cfgIndex);
+
         const modelState = config.modelStates[config.activeTab] || {};
         const specs = config.panelSpecs[config.activeTab] || {};
+
         PageComponent = (
           <AssemblyPage
-            pageTitle={config.pageTitle}
-            woPrefix={config.woPrefix}
+            title={config.pageTitle}
+            woNumber={config.woPrefix}
             selections={config.selections[config.activeTab]}
             allSelections={config.selections}
             buildQtys={config.buildQtys}
@@ -276,6 +283,9 @@ export default function PageRenderer({
             labels={modelState.labels}
             setLabels={modelState.setLabels}
             specs={specs}
+            buildingBase={config.buildingBase}
+            priorSelectionsList={priorConfigs.map(p => p.selections)}
+            priorBuildQtysList={priorConfigs.map(p => p.buildQtys)}
           />
         );
       } else {

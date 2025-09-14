@@ -1,12 +1,17 @@
-import React from 'react';
+// =====================================================
+// Overwatch • ZonesCompletedCard.jsx — Glass Morphism
+// Sections: Imports • Styles • Component
+// =====================================================
 
-// Update the import path as needed for your environment:
-import ZonesCompletedImg from '../../assets/whitelogo.png';
 
+
+// -----------------------------
+// Styles
+// -----------------------------
 const cardStyle = {
-  background: '#10110f',
-  borderRadius: 0,
-  border: '1.5px solid #949C7F',
+  background: 'rgba(24,28,20,0.58)',
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.12)',
   padding: 0,
   minHeight: 152,
   display: 'flex',
@@ -17,13 +22,16 @@ const cardStyle = {
   boxSizing: 'border-box',
   minWidth: 0,
   minHeight: 0,
-  overflow: 'hidden'
+  overflow: 'hidden',
+  backdropFilter: 'blur(14px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+  boxShadow: '0 4px 24px rgba(0,0,0,0.45)'
 };
 
 const cardHeaderStyle = {
-  background: '#000',
+  background: 'rgba(0,0,0,0.55)',
   color: '#b0b79f',
-  borderBottom: '2.5px solid #35392e',
+  borderBottom: '1px solid rgba(255,255,255,0.08)',
   padding: '13px 0 8px 0',
   fontSize: '1.17rem',
   textTransform: 'uppercase',
@@ -32,8 +40,7 @@ const cardHeaderStyle = {
   margin: 0,
   textAlign: 'center',
   width: '100%',
-  lineHeight: 1.1,
-  boxShadow: '0 2px 10px #22291e25'
+  lineHeight: 1.1
 };
 
 const chartImage = {
@@ -42,8 +49,11 @@ const chartImage = {
   minHeight: 210,
   objectFit: 'cover',
   borderRadius: 8,
-  background: '#191c16',
-  margin: 0
+  background: 'rgba(25,28,22,0.5)',
+  margin: 0,
+  border: '1px solid rgba(255,255,255,0.08)',
+  backdropFilter: 'blur(4px)',
+  WebkitBackdropFilter: 'blur(4px)'
 };
 
 const mutedText = {
@@ -54,19 +64,16 @@ const mutedText = {
   width: '100%'
 };
 
+// -----------------------------
+// Component
+// -----------------------------
 export default function ZonesCompletedCard({ job }) {
-  // Show expected date if available, otherwise a placeholder
   const expectedDate = job?.expected_completion_date || 'Expected Date of Job Completion:';
-
   return (
     <div style={cardStyle}>
-      <div style={cardHeaderStyle}>
-        Zones Completed (24/hr Average) Chart
-      </div>
-      <img src={ZonesCompletedImg} alt="Zones Completed Chart" style={chartImage} />
-      <div style={mutedText}>
-        {expectedDate}
-      </div>
+      <div style={cardHeaderStyle}>Zones Completed (24/hr Average) Chart</div>
+      
+      <div style={mutedText}>{expectedDate}</div>
     </div>
   );
 }

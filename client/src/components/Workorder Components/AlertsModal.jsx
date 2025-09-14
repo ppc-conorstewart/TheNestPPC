@@ -1,9 +1,12 @@
-// src/components/AlertsModal.jsx
+// ==============================
+// FILE: src/components/AlertsModal.jsx
+// ==============================
 
-import React from 'react';
 
 export default function AlertsModal({ alerts, onClose }) {
-  // Categories to ignore entirely
+  // ==============================
+  // SECTION: FILTER CONFIG
+  // ==============================
   const categorySet = new Set([
     'Valves',
     'Adapters',
@@ -13,44 +16,53 @@ export default function AlertsModal({ alerts, onClose }) {
     'Other',
   ]);
 
-  // Turn raw alert messages into structured data
-  const filteredAlerts = alerts
-    .map(item => {
-      const msg = typeof item === 'object' && item.message ? item.message : item;
-      const pageInfo = typeof item === 'object' && item.page ? item.page : null;
+  // ==============================
+  // SECTION: PARSE & NORMALIZE ALERTS
+  // ==============================
+  const normalized = [];
+  const seen = new Set();
 
-      // original msg example:
-      // Insufficient "Manual Valve | 5-1/8" 15K" in Nisku for DFIT tab #1, location location1: need 4, have 3
-      const m = msg.match(
-        /Insufficient\s+"(.+?)"\s+in\s+(.+?)\s+for\s+([^:]+):\s+need\s+([\d.]+),\s+have\s+([\d.]+)/
-      );
-      if (!m) return null;
-      const [_, asset, base, rawPageDesc, needRaw, haveRaw] = m;
+  (alerts || []).forEach((item) => {
+    const msg = typeof item === 'object' && item.message ? item.message : item;
+    const pageInfo = typeof item === 'object' && item.page ? item.page : null;
+    if (typeof msg !== 'string') return;
 
-      if (categorySet.has(asset)) return null;
+    // Match with or without "have"
+    const m = msg.match(
+      /Insufficient\s+"?(.+?)"?\s+in\s+(.+?)\s+for\s+([^:]+):\s+need\s+([\d.]+)(?:,\s*have\s+([\d.]+))?/i
+    );
+    if (!m) return;
 
-      // Derive a nice page label: DFIT tab #N → DFIT-A, B, C...
-      let pageLabel = '';
-      const pd = (pageInfo || rawPageDesc).split(',')[0].trim(); // drop everything after comma
-      const tabMatch = pd.match(/DFIT\s*tab\s*#(\d+)/i);
-      if (tabMatch) {
-        const idx = parseInt(tabMatch[1], 10);
-        const letter = String.fromCharCode(64 + idx); // 1→A, 2→B, etc.
-        pageLabel = `DFIT-${letter}`;
-      } else {
-        pageLabel = pd;
-      }
+    let [, asset, base, rawPageDesc, needRaw] = m;
 
-      return {
-        asset: asset.trim(),
-        base: base.trim(),
-        page: pageLabel,
-        need: Math.floor(parseFloat(needRaw)) || 0,
-        have: Math.floor(parseFloat(haveRaw)) || 0,
-      };
-    })
-    .filter(Boolean);
+    // Ignore category-only lines and numeric/nameless artifacts like "2 in Grand Prairie"
+    const cleanAsset = (asset || '').trim();
+    if (!cleanAsset || categorySet.has(cleanAsset) || !/[A-Za-z]/.test(cleanAsset)) return;
 
+    const pd = (pageInfo || rawPageDesc || '').split(',')[0].trim();
+    let pageLabel = pd;
+    const dfitTab = pd.match(/DFIT\s*tab\s*#(\d+)/i);
+    if (dfitTab) {
+      const idx = parseInt(dfitTab[1], 10);
+      pageLabel = `DFIT-${String.fromCharCode(64 + idx)}`;
+    }
+
+    const entry = {
+      asset: cleanAsset,
+      base: (base || '').trim(),
+      page: pageLabel,
+      need: Math.floor(parseFloat(needRaw)) || 0,
+    };
+
+    const key = `${entry.asset}|${entry.base}|${entry.page}|${entry.need}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    normalized.push(entry);
+  });
+
+  // ==============================
+  // SECTION: RENDER
+  // ==============================
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60"
@@ -58,9 +70,9 @@ export default function AlertsModal({ alerts, onClose }) {
     >
       <div
         className="bg-black text-white w-11/12 max-w-md p-2 rounded-lg border border-[#6a7257]"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* ===== Header ===== */}
         <div className="flex items-center justify-between mb-1 pb-1 border-b border-gray-700">
           <h2 className="text-lg font-bold uppercase text-white">Asset Alerts</h2>
           <button
@@ -72,47 +84,37 @@ export default function AlertsModal({ alerts, onClose }) {
           </button>
         </div>
 
-        {/* No alerts */}
-        {filteredAlerts.length === 0 && (
+        {/* ===== No alerts ===== */}
+        {normalized.length === 0 && (
           <p className="text-center text-gray-400 text-sm">No alerts.</p>
         )}
 
-        {/* Alert entries */}
-        {filteredAlerts.map(({ asset, base, page, need, have }, idx) => (
+        {/* ===== Alerts List ===== */}
+        {normalized.map(({ asset, base, page, need }, idx) => (
           <div
             key={idx}
             className="mb-2 p-2 bg-gray-900 rounded border border-[#6a7257] text-sm"
           >
-            {/* Page/Tab info */}
             {page && (
               <div className="text-right text-xs font-bold text-gray-400 mb-1">
                 {page}
               </div>
             )}
 
-            {/* Title */}
             <div className="font-bold text-white mb-0">Insufficient Assets</div>
 
-            {/* Asset info with Req/Have on the right */}
             <div className="flex justify-between items-start text-xs mb-1">
               <div className="leading-tight">
                 <span className="text-yellow-400">{asset}</span>
                 <span> in </span>
                 <span className="font-semibold">{base}</span>
               </div>
-              <div className="flex space-x-4 text-right">
-                <div>
-                  <span className="font-semibold text-blue-400">Req:</span>{' '}
-                  <span className="font-mono">{need}</span>
-                </div>
-                <div>
-                  <span className="font-semibold text-red-400">Have:</span>{' '}
-                  <span className="font-mono">{have}</span>
-                </div>
+              <div className="text-right">
+                <span className="font-semibold text-red-400">Short:</span>{' '}
+                <span className="font-mono text-red-400">{need}</span>
               </div>
             </div>
 
-            {/* Footer note */}
             <div className="text-center text-gray-500 text-[11px]">
               Shops to take inventory or Consider transferring assets.
             </div>

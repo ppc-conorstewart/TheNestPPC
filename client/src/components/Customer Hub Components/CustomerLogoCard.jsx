@@ -1,7 +1,8 @@
-// ==============================
-// CustomerLogoCard.jsx
-// ==============================
-import { useRef } from "react";
+// =====================================================
+// CustomerLogoCard.jsx — Customer Hub Logo & Identity Card • Glass
+// Sections: Imports • Component
+// =====================================================
+import { useRef } from 'react';
 import { FiEdit2 } from 'react-icons/fi';
 
 export default function CustomerLogoCard({
@@ -19,8 +20,7 @@ export default function CustomerLogoCard({
   const logoInputRef = useRef(null);
 
   return (
-    <div className="flex flex-col items-center w-[250px] min-w-[200px] max-w-[290px]">
-      {/* Logo container with relative for positioning edit icon */}
+    <div className="glass-card px-4 py-4 flex flex-col items-center w-[250px] min-w-[200px] max-w-[290px]">
       <div className="relative w-[180px] h-[180px] bg-white rounded-full mb-2 flex items-center justify-center shadow-lg overflow-hidden mt-1">
         {selected && selected.logo_url ? (
           <>
@@ -50,14 +50,13 @@ export default function CustomerLogoCard({
         />
       </div>
 
-      {/* Editable customer name input with relative for positioning edit icon */}
       <div className="relative w-full flex flex-col items-center">
         {editMode ? (
           <>
             <input
               className="text-2xl font-bold text-[#949C7F] mb-2 text-center w-full bg-transparent border-b border-[#949C7F] focus:outline-none"
               style={{
-                fontFamily: "Erbaum, sans-serif",
+                fontFamily: 'Erbaum, sans-serif',
                 maxWidth: 200
               }}
               value={form.name}
@@ -72,8 +71,8 @@ export default function CustomerLogoCard({
           </>
         ) : (
           <div
-            className="text-2xl  text-white mt-1 mb-2 text-center w-full"
-            style={{ fontFamily: "Varien, sans-serif" }}
+            className="text-2xl text-white mt-1 mb-2 text-center w-full"
+            style={{ fontFamily: 'Varien, sans-serif' }}
           >
             {selected?.name}
           </div>
@@ -87,7 +86,7 @@ export default function CustomerLogoCard({
             type="button"
             onClick={() => logoInputRef.current && logoInputRef.current.click()}
           >
-            {form.logo_url ? "Change Logo" : "Add Logo"}
+            {form.logo_url ? 'Change Logo' : 'Add Logo'}
           </button>
           {form.logo_url && (
             <button

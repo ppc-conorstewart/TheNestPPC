@@ -90,25 +90,25 @@ function ColumnChart({ title, series, categories, accent = THEME.accentSpool, un
     <div style={{ border:`1px solid ${THEME.border}`, background:THEME.bgCard, borderRadius:8, width:'fit-content', position:'relative' }}>
       <div style={{ padding:10, borderBottom:`1px solid ${THEME.grid}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ fontSize:18, fontWeight:800, color:THEME.text, letterSpacing:'.12em' }}>{title}</div>
-        <button onClick={onFullscreen} title="Fullscreen" style={{ background:'transparent', border:`1px solid ${THEME.border}`, color:THEME.textLow, padding:'4px 8px', fontSize:11, borderRadius:4, cursor:'pointer' }}>FULL</button>
+        <button onClick={onFullscreen} title='Fullscreen' style={{ background:'transparent', border:`1px solid ${THEME.border}`, color:THEME.textLow, padding:'4px 8px', fontSize:11, borderRadius:4, cursor:'pointer' }}>FULL</button>
       </div>
       <div style={{ padding:10 }}>
         <svg width={width} height={height} style={{ display:'block' }}>
           <defs>
-            <linearGradient id="barGrad" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor={accent} stopOpacity="1.0" />
-              <stop offset="100%" stopColor={accent} stopOpacity="0.65" />
+            <linearGradient id='barGrad' x1='0' x2='0' y1='0' y2='1'>
+              <stop offset='0%' stopColor={accent} stopOpacity='1.0' />
+              <stop offset='100%' stopColor={accent} stopOpacity='0.65' />
             </linearGradient>
           </defs>
-          <rect x="0" y="0" width={width} height={height} fill="transparent" />
-          {[0,0.25,0.5,0.75,1].map((p,i)=>{ const y=padT+(height-padT-padB)*p; return <line key={i} x1={padL} y1={y} x2={width-padR} y2={y} stroke={THEME.grid} strokeWidth="1" />; })}
+          <rect x='0' y='0' width={width} height={height} fill='transparent' />
+          {[0,0.25,0.5,0.75,1].map((p,i)=>{ const y=padT+(height-padT-padB)*p; return <line key={i} x1={padL} y1={y} x2={width-padR} y2={y} stroke={THEME.grid} strokeWidth='1' />; })}
           {bars.map((b,i)=>(
             <g key={i}>
-              <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="url(#barGrad)" stroke={accent} strokeOpacity="0.6">
+              <rect x={b.x} y={b.y} width={b.w} height={b.h} fill='url(#barGrad)' stroke={accent} strokeOpacity='0.6'>
                 <title>{categories[i]}: {b.v.toLocaleString('en-US')} {unit}</title>
               </rect>
-              <text x={b.x+b.w/2} y={b.y-8} textAnchor="middle" style={{ fill:THEME.text, fontSize:18, fontWeight:900 }}>{b.v.toLocaleString('en-US')} {unit}</text>
-              <text x={b.x+b.w/2} y={height-padB+18} textAnchor="middle" style={{ fill:THEME.textLow, fontSize:11 }}>{categories[i]}</text>
+              <text x={b.x+b.w/2} y={b.y-8} textAnchor='middle' style={{ fill:THEME.text, fontSize:18, fontWeight:900 }}>{b.v.toLocaleString('en-US')} {unit}</text>
+              <text x={b.x+b.w/2} y={height-padB+18} textAnchor='middle' style={{ fill:THEME.textLow, fontSize:11 }}>{categories[i]}</text>
             </g>
           ))}
           <text x={10} y={18} style={{ fill:THEME.textLow, fontSize:11 }}>Max: {maxVal.toLocaleString('en-US')} {unit}</text>
@@ -141,7 +141,6 @@ function RingChart({ title, percent, accent = THEME.accentSpool, modelSrc, glow 
   const ready = useModelViewerReady();
   const ref = useRef(null);
 
-  // Force-tint all materials to amplify green (works even if the model base is pale/white)
   useEffect(() => {
     if (!ref.current) return;
     const el = ref.current;
@@ -182,10 +181,10 @@ function RingChart({ title, percent, accent = THEME.accentSpool, modelSrc, glow 
     <div style={{ border:`1px solid ${THEME.border}`, background:THEME.bgCard, borderRadius:10, padding:10, display:'flex', alignItems:'center', gap:14, width:'fit-content' }}>
       <div style={{ position:'relative', width:size, height:size }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform:'rotate(-90deg)' }}>
-          <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={THEME.ringTrack} strokeWidth={stroke} />
+          <circle cx={size/2} cy={size/2} r={r} fill='none' stroke={THEME.ringTrack} strokeWidth={stroke} />
           <circle
-            cx={size/2} cy={size/2} r={r} fill="none" stroke={accent} strokeWidth={stroke}
-            strokeDasharray={`${c} ${c}`} strokeDashoffset={offset} strokeLinecap="round"
+            cx={size/2} cy={size/2} r={r} fill='none' stroke={accent} strokeWidth={stroke}
+            strokeDasharray={`${c} ${c}`} strokeDashoffset={offset} strokeLinecap='round'
             style={{ filter: glow }}
           />
         </svg>
@@ -198,15 +197,15 @@ function RingChart({ title, percent, accent = THEME.accentSpool, modelSrc, glow 
                 src={modelSrc}
                 autoplay
                 auto-rotate
-                rotation-per-second="25deg"
+                rotation-per-second='25deg'
                 camera-controls
                 disable-zoom
-                interaction-prompt="none"
-                tone-mapping="neutral"
-                exposure="1.25"
-                shadow-intensity="0.5"
-                shadow-softness="0.9"
-                environment-image="neutral"
+                interaction-prompt='none'
+                tone-mapping='neutral'
+                exposure='1.25'
+                shadow-intensity='0.5'
+                shadow-softness='0.9'
+                environment-image='neutral'
                 style={{ width:'100%', height:'100%', background:'transparent', filter: THEME.modelFilter }}
               />
             ) : (
@@ -257,16 +256,80 @@ function TrendBadge({ delta, unit='' }){
 }
 
 // ==============================
-// SECTION FRAME
+// SECTION (ANIMATED EXPAND/COLLAPSE + WIDE)
 // ==============================
-function Section({ title, accent=THEME.accentSpool, children, dense=false }){
+function Section({
+  id,
+  title,
+  accent = THEME.accentSpool,
+  children,
+  dense = false,
+  collapsed = false,
+  expanded = false,
+  onToggleCollapse = ()=>{},
+  onToggleExpand = ()=>{}
+}){
+  const bodyRef = useRef(null);
+  const [h, setH] = useState('auto');
+  const [ready, setReady] = useState(false);
+
+  useEffect(()=>{
+    const el = bodyRef.current;
+    if(!el) return;
+    const measure = () => setH(collapsed ? 0 : el.scrollHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    setReady(true);
+    return () => ro.disconnect();
+  }, [collapsed, children]);
+
+  const cardStyle = {
+    border:`1px solid ${THEME.border}`,
+    background:THEME.bgCard,
+    borderRadius:10,
+    padding: dense?10:12,
+    gridColumn: expanded ? '1 / -1' : 'auto',
+    transition: 'transform 220ms ease, box-shadow 220ms ease, grid-column 220ms ease',
+    transform: collapsed ? 'scale(0.99)' : 'scale(1)',
+    boxShadow: collapsed ? '0 0 0 rgba(0,0,0,0)' : '0 8px 28px rgba(0,0,0,.25)'
+  };
+
+  const bodyStyle = {
+    overflow: 'hidden',
+    height: typeof h === 'number' ? `${h}px` : h,
+    opacity: collapsed ? 0 : 1,
+    transform: collapsed ? 'translateY(-6px)' : 'translateY(0)',
+    transition: ready ? 'height 300ms ease, opacity 220ms ease, transform 220ms ease' : 'none'
+  };
+
   return (
-    <div style={{ border:`1px solid ${THEME.border}`, background:THEME.bgCard, borderRadius:10, padding: dense?10:12 }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10, paddingBottom:8, marginBottom:10, borderBottom:`1px solid ${THEME.grid}` }}>
-        <div style={{ width:6, height:24, background:accent, borderRadius:3 }} />
-        <div style={{ fontSize:16, fontWeight:900, color:THEME.text, letterSpacing:'.16em' }}>{title}</div>
+    <div style={cardStyle}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', paddingBottom:8, marginBottom:10, borderBottom:`1px solid ${THEME.grid}` }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ width:6, height:24, background:accent, borderRadius:3 }} />
+          <div style={{ fontSize:16, fontWeight:900, color:THEME.text, letterSpacing:'.16em' }}>{title}</div>
+        </div>
+        <div style={{ display:'flex', gap:8 }}>
+          <button
+            onClick={()=>onToggleExpand(id)}
+            style={{ background:'transparent', border:`1px solid ${THEME.border}`, color:THEME.textLow, padding:'4px 8px', fontSize:11, borderRadius:4, cursor:'pointer' }}
+            title={expanded ? 'Shrink width' : 'Expand to full row'}
+          >
+            {expanded ? 'SHRINK' : 'WIDE'}
+          </button>
+          <button
+            onClick={()=>onToggleCollapse(id)}
+            style={{ background:'transparent', border:`1px solid ${THEME.border}`, color:THEME.textLow, padding:'4px 8px', fontSize:11, borderRadius:4, cursor:'pointer' }}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            {collapsed ? 'EXPAND' : 'COLLAPSE'}
+          </button>
+        </div>
       </div>
-      {children}
+      <div ref={bodyRef} style={bodyStyle}>
+        {children}
+      </div>
     </div>
   );
 }
@@ -281,6 +344,12 @@ export default function AssetAnalytics({ assets = [] }) {
   const [oemRows, setOemRows] = useState([]);
   const [dense, setDense] = useState(true);
   const [full, setFull] = useState(null);
+
+  const [collapsed, setCollapsed] = useState({});
+  const [expanded, setExpanded] = useState({});
+
+  const toggleCollapse = (id) => setCollapsed(s => ({ ...s, [id]: !s[id] }));
+  const toggleExpand = (id) => setExpanded(s => ({ ...s, [id]: !s[id] }));
 
   useEffect(()=>{ let alive=true;
     fetch(VALVE_MFV_CSV_URL, { cache:'no-store' }).then(r=>r.ok?r.text():'').then(t=>t?parseCSV(t):[])
@@ -378,18 +447,14 @@ export default function AssetAnalytics({ assets = [] }) {
   });
 
   const bgStyle = {
-    width:'100%', height:'100%', display:'flex', flexDirection:'column', position:'relative',
-    backgroundImage:"url('/assets/AnalyticsBG.png')", backgroundRepeat:'no-repeat', backgroundSize:'cover',
-    backgroundPosition:'center center', backgroundAttachment:'fixed'
+    width:'100%', height:'100%', display:'flex', flexDirection:'column', position:'relative', background:'transparent'
   };
-  const overlayStyle = { position:'absolute', inset:0, background:THEME.bgAppOverlay, pointerEvents:'none', zIndex:0 };
   const contentStyle = { position:'relative', zIndex:1 };
   const gap = 10;
   const pad = 10;
 
   return (
     <div style={bgStyle}>
-      <div style={overlayStyle} />
       <div style={{ padding:'12px 14px', borderBottom:`1px solid ${THEME.border}`, background:THEME.bgHeader, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
         <div style={{ display:'flex', alignItems:'baseline', gap:12 }}>
           <div style={{ fontSize:18, fontWeight:900, letterSpacing:'.14em', color:THEME.text }}>Analytics</div>
@@ -405,27 +470,45 @@ export default function AssetAnalytics({ assets = [] }) {
       <div style={{ ...contentStyle, flex:1, overflow:'auto', padding: pad }}>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap, alignItems:'start' }}>
-          <Section title="SPOOLING — TOTAL FEET BY SIZE" accent={THEME.accentSpool} dense>
+          <Section
+            id='spool'
+            title='SPOOLING — TOTAL FEET BY SIZE'
+            accent={THEME.accentSpool}
+            dense
+            collapsed={!!collapsed['spool']}
+            expanded={!!expanded['spool']}
+            onToggleCollapse={toggleCollapse}
+            onToggleExpand={toggleExpand}
+          >
             <div style={{ display:'flex', justifyContent:'center' }}>
               <ColumnChart
-                title="SPOOLING — TOTAL FEET BY SIZE"
+                title='SPOOLING — TOTAL FEET BY SIZE'
                 series={feet}
                 categories={sizes}
                 accent={THEME.accentSpool}
-                unit="ft"
+                unit='ft'
                 onFullscreen={()=>setFull('spool')}
               />
             </div>
           </Section>
 
-          <Section title="VALVES — MFV VS OEM (COUNTS)" accent={THEME.accentValve} dense>
+          <Section
+            id='valveCounts'
+            title='VALVES — MFV VS OEM (COUNTS)'
+            accent={THEME.accentValve}
+            dense
+            collapsed={!!collapsed['valveCounts']}
+            expanded={!!expanded['valveCounts']}
+            onToggleCollapse={toggleCollapse}
+            onToggleExpand={toggleExpand}
+          >
             <div style={{ display:'flex', justifyContent:'center' }}>
               <ColumnChart
-                title="VALVES — MFV vs OEM (Counts)"
+                title='VALVES — MFV vs OEM (Counts)'
                 series={valveSeries}
                 categories={valveCats}
                 accent={THEME.accentValve}
-                unit="valves"
+                unit='valves'
                 onFullscreen={()=>setFull('valve')}
               />
             </div>
@@ -433,7 +516,16 @@ export default function AssetAnalytics({ assets = [] }) {
         </div>
 
         <div style={{ marginTop: gap }}>
-          <Section title="KEY METRICS — 8 UP" accent={THEME.accentSpool} dense>
+          <Section
+            id='metrics'
+            title='KEY METRICS — 8 UP'
+            accent={THEME.accentSpool}
+            dense
+            collapsed={!!collapsed['metrics']}
+            expanded={!!expanded['metrics']}
+            onToggleCollapse={toggleCollapse}
+            onToggleExpand={toggleExpand}
+          >
             <div style={{ display:'grid', gridTemplateColumns:'repeat(8, minmax(120px, 1fr))', gap }}>
               {[
                 ['TOTAL FT — 5-1/8 15K', fmtFeet(stats.spoolFeet['5-1/8 15K'])+' ft', trends.ft_5?.delta, 'ft'],
@@ -458,15 +550,24 @@ export default function AssetAnalytics({ assets = [] }) {
         </div>
 
         <div style={{ marginTop: gap, display:'grid', gridTemplateColumns:'repeat(2, minmax(360px, 1fr))', gap }}>
-          <Section title="VALVES — MFV SHARE (7-1/16)" accent={THEME.accentSpool} dense>
+          <Section
+            id='mfv7'
+            title='VALVES — MFV SHARE (7-1/16)'
+            accent={THEME.accentSpool}
+            dense
+            collapsed={!!collapsed['mfv7']}
+            expanded={!!expanded['mfv7']}
+            onToggleCollapse={toggleCollapse}
+            onToggleExpand={toggleExpand}
+          >
             <div style={{ display:'flex', gap, alignItems:'stretch', flexWrap:'wrap' }}>
               <RingChart
-                title="% 7-1/16 MFV"
+                title='% 7-1/16 MFV'
                 percent={pct7}
                 accent={THEME.accentSpool}
                 glow={THEME.ringGlow}
-                modelSrc="/assets/Asset%202.gltf"
-                tint="#6adf7a"
+                modelSrc='/assets/Asset%202.gltf'
+                tint='#6adf7a'
                 boost={1.55}
               />
               <div style={{ minWidth:220, border:`1px solid ${THEME.border}`, background:THEME.bgCard, borderRadius:8, padding: pad }}>
@@ -482,10 +583,19 @@ export default function AssetAnalytics({ assets = [] }) {
             </div>
           </Section>
 
-          <Section title="VALVES — MFV SHARE (5-1/8)" accent={THEME.accentValve} dense>
+          <Section
+            id='mfv5'
+            title='VALVES — MFV SHARE (5-1/8)'
+            accent={THEME.accentValve}
+            dense
+            collapsed={!!collapsed['mfv5']}
+            expanded={!!expanded['mfv5']}
+            onToggleCollapse={toggleCollapse}
+            onToggleExpand={toggleExpand}
+          >
             <div style={{ display:'flex', gap, alignItems:'center', flexWrap:'wrap' }}>
               <RingChart
-                title="% 5-1/8 MFV"
+                title='% 5-1/8 MFV'
                 percent={pct5}
                 accent={THEME.accentValve}
                 glow={THEME.ringGlowValve}
@@ -508,10 +618,10 @@ export default function AssetAnalytics({ assets = [] }) {
       {full && (
         <div onClick={()=>setFull(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,.85)', zIndex:99, display:'flex', alignItems:'center', justifyContent:'center', cursor:'zoom-out' }}>
           {full==='spool' && (
-            <ColumnChart title="SPOOLING — TOTAL FEET BY SIZE" series={feet} categories={sizes} accent={THEME.accentSpool} unit="ft" onFullscreen={()=>setFull(null)} />
+            <ColumnChart title='SPOOLING — TOTAL FEET BY SIZE' series={feet} categories={sizes} accent={THEME.accentSpool} unit='ft' onFullscreen={()=>setFull(null)} />
           )}
           {full==='valve' && (
-            <ColumnChart title="VALVES — MFV vs OEM (Counts)" series={valveSeries} categories={valveCats} accent={THEME.accentValve} unit="valves" onFullscreen={()=>setFull(null)} />
+            <ColumnChart title='VALVES — MFV vs OEM (Counts)' series={valveSeries} categories={valveCats} accent={THEME.accentValve} unit='valves' onFullscreen={()=>setFull(null)} />
           )}
         </div>
       )}

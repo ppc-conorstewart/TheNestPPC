@@ -1,18 +1,16 @@
 // ==============================
-// UI/Visual • GlassBackdrop.jsx
-// Full-page cosmic image background with subtle vignette & parallax
+// FILE: client/src/components/GlassBackdrop.jsx
 // ==============================
 import { useEffect, useRef } from 'react';
 
 export default function GlassBackdrop({
-  image = '/assets/dark-bg.png', // updated to match public assets path
-  blur = 0,                                  // no blur on the bg itself (glass lives above)
-  opacity = 0.82,                            // darkness overlay
+  
+  blur = 0,
+  opacity = 0,           // transparent overlay so particles are visible
 }) {
   const ref = useRef(null);
 
   useEffect(() => {
-    // lightweight parallax
     const el = ref.current;
     if (!el) return;
     const onMove = (e) => {
@@ -26,14 +24,7 @@ export default function GlassBackdrop({
 
   return (
     <>
-      <div
-        ref={ref}
-        className="glass-bg"
-        style={{
-          '--glass-bg-url': `url("${process.env.PUBLIC_URL}/assets/dark-bg.png")`,
-          '--glass-bg-blur': `${blur}px`,
-        }}
-      />
+      
       <div className="glass-vignette" style={{ '--glass-vignette-opacity': opacity }} />
     </>
   );

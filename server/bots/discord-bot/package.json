@@ -1,7 +1,7 @@
 {
   "name": "paloma-discord-bot",
-  "version": "1.0.0",
-  "description": "Paloma NEST Discord file-collector bot",
+  "version": "1.1.0",
+  "description": "Paloma NEST Discord bot (file collector + control API)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -9,6 +9,8 @@
   "dependencies": {
     "discord.js": "^14.0.0",
     "dotenv": "^16.0.0",
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
     "form-data": "^4.0.0",
     "node-fetch": "^2.6.9"
   }

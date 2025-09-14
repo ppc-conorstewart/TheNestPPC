@@ -140,16 +140,13 @@ async function fetchAssetsAll() {
 function normalizePpcId(input) {
   const cleaned = String(input || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (!cleaned) return '';
-  // Expect patterns like PPC000123, PPC00123A, PPC123, etc.
   const m = cleaned.match(/^PPC(\d+)([A-Z]*)$/);
   if (m) {
-    const digits = String(parseInt(m[1], 10)); // drop leading zeros
+    const digits = String(parseInt(m[1], 10));
     const suffix = m[2] || '';
     return `PPC${digits}${suffix}`;
   }
-  // If it already equals something like PPCABC123, fall back to cleaned
   if (cleaned.startsWith('PPC')) return cleaned;
-  // If digits only, treat as PPC + digits
   const d = cleaned.match(/(\d+)/);
   if (d) return `PPC${parseInt(d[1], 10)}`;
   return cleaned;
@@ -278,7 +275,6 @@ export default function MFVPageWrapper() {
   useEffect(() => {
     const sources = tablesConfig.map(t => ({ ...t }));
     Promise.all([
-      // Pull CSV sources
       ...sources.map(t =>
         fetch(t.url)
           .then(res => res.text())
@@ -291,7 +287,6 @@ export default function MFVPageWrapper() {
           })
           .catch(() => ({ key: t.key, headers: [], rows: [] }))
       ),
-      // Pull pad data
       ...pads.map(async pad => {
         const result = await fetchPadRows(pad.key);
         if (result?.headers && result?.rows) {
@@ -515,7 +510,7 @@ export default function MFVPageWrapper() {
 
   // ==============================
   // Section: Latest Qualification Join (Assets × MFV Summary)
-  // ==============================
+// ==============================
   useEffect(() => {
     const H = summarySheet.headers || [];
     const R = summarySheet.rows || [];
@@ -554,7 +549,6 @@ export default function MFVPageWrapper() {
     }
 
     const counts = { MFV: 0, HFV: 0, EMU: 0, UNKNOWN: 0 };
-    // Initialize unknown for all asset PPCs; then overwrite with known quals
     const allPpcs = Array.from(assetPpcs);
     const seen = new Set();
     for (const p of allPpcs) {
@@ -823,7 +817,7 @@ export default function MFVPageWrapper() {
                         <button
                           className={`px-3 py-1 rounded-r font-bold border border-[#b0b79f] transition-all
                           ${viewMode === "table"
-                            ? "bg-black text-[#e6e8df] shadow"
+                            ? "bg黑 text-[#e6e8df] shadow"
                             : "bg-[#23281c70] text-[#b0b79f] hover:bg-[#23281c]"}`}
                           style={{
                             borderLeft: "none",
@@ -896,7 +890,7 @@ export default function MFVPageWrapper() {
                       >
                         <MFVBodyPressureTable
                           displayHeaders={displayHeaders}
-                          paginatedRows={paginatedRows}
+                          paginatedRows={activeTab === 'body' ? displayRows : paginatedRows}
                           COLUMN_MIN_WIDTHS={[]}
                           currentPage={currentPage}
                           totalPages={totalPages}

@@ -1,3 +1,7 @@
+// =====================================================
+// Overwatch • ActivePadsNav.jsx — Glass Morphism Side Panel
+// Sections: Styles • Component
+// =====================================================
 
 // Pulser CSS for card border (add to your CSS file if not already present)
 /*
@@ -20,9 +24,10 @@
 const navPanelTitle = {
   fontSize: '1.16rem',
   fontWeight: 700,
-  color: '#4ade80',
+  color: '#e9ddddff',
   letterSpacing: '1.09px',
-  marginBottom: '4px'
+  marginBottom: '8px',
+  textAlign: 'center'
 };
 
 const jobListStyle = {
@@ -31,22 +36,23 @@ const jobListStyle = {
   fontWeight: 500,
   display: 'flex',
   flexDirection: 'column',
-  gap: '2px',
+  gap: '8px',
   width: '100%',
-  height: '100%'
+  height: '100%',
+  overflowY: 'auto',
+  paddingRight: 2
 };
 
 const jobButtonStyle = (isActive) => ({
-  background: isActive ? '#181A15' : 'transparent',
-  color: isActive ? '#6A7257' : '#E6E8DF',
+  background: isActive ? 'rgba(24,26,21,0.85)' : 'rgba(18,20,17,0.55)',
+  color: isActive ? '#E6F2D9' : '#E6E8DF',
   border: `2.5px solid #4ade80`,
   borderRadius: 13,
-  padding: '0px 6px',
+  padding: '8px 10px',
   cursor: 'pointer',
   fontWeight: 600,
   fontSize: '0.7rem',
-  marginBottom: 0,
-  transition: 'background 0.15s, color 0.12s, border-color 0.15s',
+  transition: 'background 0.15s, color 0.12s, border-color 0.15s, transform 0.12s',
   display: 'flex',
   flexDirection: 'row',
   alignItems: 'center',
@@ -54,7 +60,9 @@ const jobButtonStyle = (isActive) => ({
   gap: 15,
   minHeight: 74,
   boxShadow: '0 0 0 0 #4ade8099',
-  animation: 'pulseBorder 1.25s cubic-bezier(0.4,0,0.6,1) infinite'
+  animation: 'pulseBorder 1.25s cubic-bezier(0.4,0,0.6,1) infinite',
+  backdropFilter: 'blur(8px)',
+  WebkitBackdropFilter: 'blur(8px)'
 });
 
 const customerLogoStyle = {
@@ -83,23 +91,34 @@ const jobInfoBox = {
 };
 
 const activePadsContainer = {
-  background: '#111',
-  borderRadius: '12px 0 0 12px',
-  borderRight: `2px solid #949C7F`,
+  background: 'rgba(24,28,20,0.58)',
+  borderRadius: '14px',
+  paddingTop: 12,
+  borderTop: '1px solid rgba(255,255,255,0.12)',
+  borderBottom: '1px solid rgba(255,255,255,0.12)',
+  borderLeft: '1px solid rgba(255,255,255,0.12)',
   minWidth: 260,
   maxWidth: 320,
   width: 320,
-  height: 1000,
+  height: '100%',
   minHeight: 100,
-  padding: '0px 12px 0px 12px',
+  padding: '10px 12px 12px 12px',
   display: 'flex',
   flexDirection: 'column',
-  alignItems: 'center',
+  alignItems: 'stretch',
   flex: 1,
   boxSizing: 'border-box',
-  justifyContent: 'center'
+  justifyContent: 'flex-start',
+  backdropFilter: 'blur(14px) saturate(140%)',
+  WebkitBackdropFilter: 'blur(14px) saturate(140%)',
+  boxShadow: '0 4px 24px rgba(0,0,0,0.45)'
 };
 
+const emptyState = { color: '#4ade80', textAlign: 'center', marginTop: 0 };
+
+// ==============================
+// Component
+// ==============================
 export default function ActivePadsNav({
   jobs,
   selectedIndex,
@@ -110,15 +129,16 @@ export default function ActivePadsNav({
       <div style={navPanelTitle}>ACTIVE PADS</div>
       <div style={jobListStyle}>
         {(!jobs || jobs.length === 0) ? (
-          <div style={{ color: '#4ade80', textAlign: 'center', marginTop: 0 }}>
-            No pads in progress.
-          </div>
+          <div style={emptyState}>No pads in progress.</div>
         ) : (
           jobs.map((job, idx) => (
             <div
               key={job.id}
               style={jobButtonStyle(selectedIndex === idx)}
               onClick={() => onSelectJob(idx)}
+              onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; }}
+              onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; }}
             >
               {job.customerLogo && (
                 <img
@@ -143,6 +163,7 @@ export default function ActivePadsNav({
           ))
         )}
       </div>
+
       {/* Inject the animation CSS for the pulsing border if not present */}
       <style>
         {`
@@ -160,6 +181,12 @@ export default function ActivePadsNav({
             border-color: #4ade80;
           }
         }
+
+        /* nice, subtle scrollbar for the glass panel */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(148,156,127,0.45); border-radius: 8px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(148,156,127,0.7); }
         `}
       </style>
     </div>

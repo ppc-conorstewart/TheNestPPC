@@ -1,6 +1,7 @@
-// ==============================
-// CustomerListPanel.jsx
-// ==============================
+// =====================================================
+// CustomerListPanel.jsx — Customer Hub List Panel (Grouped) • Glass
+// Sections: Component
+// =====================================================
 
 export default function CustomerListPanel({
   customers,
@@ -9,7 +10,6 @@ export default function CustomerListPanel({
   onSelect,
   onAdd
 }) {
-  // Only group if customer has category, else default to Fracstack
   const fracstackCustomers = customers.filter(
     c => !c.category || (c.category || '').toLowerCase() === 'fracstack'
   );
@@ -18,17 +18,17 @@ export default function CustomerListPanel({
   );
 
   return (
-    <div className="bg-[#161616] border border-[#949C7F] rounded-lg p-2 min-w-[320px] max-w-[350px] flex flex-col">
+    <div className="glass-card p-2 min-w-[320px] max-w-[350px] flex flex-col">
       <div className="mb-4 flex flex-row items-center justify-between">
         <h2
           className="text-xl uppercase font-varien text-[#949C7F] text-center w-full"
-          style={{ letterSpacing: "0.14em" }}
+          style={{ letterSpacing: '0.14em' }}
         >
           Customer List
         </h2>
         <button
           className="bg-[#949C7F] text-black px-3 py-1 rounded font-bold ml-2 text-lg shadow-sm hover:bg-[#b3b99a] transition"
-          style={{ height: 34, minWidth: 34, display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{ height: 34, minWidth: 34, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           onClick={onAdd}
         >
           +
@@ -38,7 +38,6 @@ export default function CustomerListPanel({
         <div className="text-gray-400">Loading...</div>
       ) : (
         <>
-          {/* Fracstack Header */}
           <div className="mb-2">
             <div
               className="w-full text-center font-bold border-b-4 rounded-lg border bg-black text-[.93rem] text-[#949C7F] tracking-wide uppercase"
@@ -57,7 +56,7 @@ export default function CustomerListPanel({
                 onClick={() => onSelect(c)}
                 className={`flex flex-row items-center gap-0
                   text-[.8rem] py-[0px] px-0 border-b  uppercase border-[#232429]/30 last:border-b-0 font-semibold cursor-pointer transition
-                  ${selected && c.id === selected.id ? "bg-[#949C7F] text-black rounded" : ""}
+                  ${selected && c.id === selected.id ? 'bg-[#949C7F] text-black rounded' : ''}
                 `}
                 style={{ fontFamily: 'Erbaum, sans-serif', minHeight: 32, lineHeight: 1.0 }}
               >
@@ -74,7 +73,6 @@ export default function CustomerListPanel({
               </li>
             ))}
           </ul>
-          {/* Missile Header */}
           <div className="mt-3 mb-2">
             <div
               className="w-full text-center font-bold border-b-4 rounded-lg border bg-black text-[.93rem] text-[#949C7F] tracking-wide uppercase"
@@ -93,7 +91,7 @@ export default function CustomerListPanel({
                 onClick={() => onSelect(c)}
                 className={`flex flex-row items-center gap-0
                   text-[.7rem] py-[0px] px-0 border-b border-[#232429]/30 last:border-b-0 font-semibold cursor-pointer transition
-                  ${selected && c.id === selected.id ? "bg-[#949C7F] text-black rounded" : ""}
+                  ${selected && c.id === selected.id ? 'bg-[#949C7F] text-black rounded' : ''}
                 `}
                 style={{ fontFamily: 'Erbaum, sans-serif', minHeight: 32, lineHeight: 1.0 }}
               >

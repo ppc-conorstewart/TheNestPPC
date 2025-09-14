@@ -1,34 +1,39 @@
 // ==============================
 // src/components/Master Assembly Components/MasterAssembliesDBTable.jsx
-// Master DB view — branding header (animated Paloma logo, two-line title),
-// ring+legend clustered at far right, stable counters; four columns below.
+// Tabbed split layout with draggable divider; preserves animated branding and text stylings
 // ==============================
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import { API } from '../../api';
-
-import DogbonesTable from './Mater Asssemblies DB Components/DogbonesTable';
-import FlowcrossesTable from './Mater Asssemblies DB Components/FlowcrossesTable';
 import ViewAssemblyPanel from './Mater Asssemblies DB Components/ViewAssemblyPanel';
-import ZippersTable from './Mater Asssemblies DB Components/ZippersTable';
 
+// ==============================
+// ===== Lazy Tables =====
+// ==============================
+const DogbonesTable = lazy(() => import('./Mater Asssemblies DB Components/DogbonesTable'));
+const ZippersTable = lazy(() => import('./Mater Asssemblies DB Components/ZippersTable'));
+const FlowcrossesTable = lazy(() => import('./Mater Asssemblies DB Components/FlowcrossesTable'));
+
+// ==============================
+// ===== Visual/Branding Consts =====
+// ==============================
 const cardBorder = '1px solid #6a7257';
-const headerBg = '#10110f';
 const palomaGreen = '#6a7257';
 const textMain = '#e6e8df';
-
 const palomaIcon = '/assets/Paloma_Icon_White_large.png';
 
+// ==============================
+// ===== Helpers =====
+// ==============================
 const range = (n) => Array.from({ length: n }, (_, i) => i + 1);
 const mode = (arr) => {
   const m = new Map();
   for (const v of arr.filter(Boolean)) m.set(v, (m.get(v) || 0) + 1);
-  let best = null, bestC = 0;
+  let best = null; let bestC = 0;
   for (const [k, c] of m) if (c > bestC) { best = k; bestC = c; }
   return best || '—';
 };
 const toTitle = (s) => s.replace(/-/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase());
-const fmtDate = (s) => (s ? String(s).slice(0, 10) : '—');
 const numToLetter = (n) => String.fromCharCode('A'.charCodeAt(0) + (n - 1));
 const tryLetterVariant = (name) => {
   const m = /(Dogbone|Zipper|Flowcross)-(\d+)$/i.exec(name || '');
@@ -36,9 +41,7 @@ const tryLetterVariant = (name) => {
   const base = m[1][0].toUpperCase() + m[1].slice(1).toLowerCase();
   const n = parseInt(m[2], 10);
   if (!Number.isFinite(n) || n < 1) return null;
-  return base === 'Zipper'
-    ? `Zipper - ${numToLetter(n)}`
-    : `${base}-${numToLetter(n)}`;
+  return base === 'Zipper' ? `Zipper - ${numToLetter(n)}` : `${base}-${numToLetter(n)}`;
 };
 const typeToAssemblyTitle = (type) => {
   switch ((type || '').toLowerCase()) {
@@ -50,7 +53,7 @@ const typeToAssemblyTitle = (type) => {
 };
 
 // ==============================
-// Assignments / Assets Join
+// ===== Assignments / Assets Join =====
 // ==============================
 function useAssignments() {
   const [rows, setRows] = useState([]);
@@ -76,7 +79,7 @@ function useAssignments() {
         if (!alive) return;
         setRows(assignments || []);
         setAssets(Array.isArray(assetsJson) ? assetsJson : []);
-      } catch { /* noop */ }
+      } catch {}
     })();
     return () => { alive = false; };
   }, []);
@@ -122,7 +125,7 @@ function useAssignments() {
 }
 
 // ==============================
-// Master Meta
+// ===== Master Meta =====
 // ==============================
 function useMasterMeta(groups) {
   const [metaMap, setMetaMap] = useState({});
@@ -193,7 +196,7 @@ async function saveMeta(assemblyTitle, child, patch) {
 }
 
 // ==============================
-// Gaskets
+// ===== Gaskets =====
 // ==============================
 async function fetchGaskets(assemblyTitle, child) {
   try {
@@ -204,7 +207,7 @@ async function fetchGaskets(assemblyTitle, child) {
 }
 
 // ==============================
-// Animated Number (used by counters)
+// ===== Animated Number =====
 // ==============================
 function useAnimatedNumber(value, duration = 600) {
   const [n, setN] = useState(0);
@@ -213,7 +216,7 @@ function useAnimatedNumber(value, duration = 600) {
   const toRef = useRef(value);
 
   useEffect(() => {
-    if (value === toRef.current) return; // avoid redundant anims (prevents twitch)
+    if (value === toRef.current) return;
     fromRef.current = n;
     toRef.current = value;
     startRef.current = performance.now();
@@ -232,7 +235,7 @@ function useAnimatedNumber(value, duration = 600) {
 }
 
 // ==============================
-// Donut + Legend + Counters
+// ===== Donut + Legend + Counters (kept defined) =====
 // ==============================
 function DonutChart({ data, colors, size = 64, stroke = 10, label = '' }) {
   const total = Math.max(1, data.reduce((a, b) => a + b, 0));
@@ -241,14 +244,14 @@ function DonutChart({ data, colors, size = 64, stroke = 10, label = '' }) {
   const center = size / 2;
 
   return (
-    <svg width={size} height={size} role="img" aria-label={label}>
+    <svg width={size} height={size} role='img' aria-label={label}>
       <g transform={`translate(${center},${center})`}>
         {data.map((v, i) => {
           const a0 = (start / total) * 2 * Math.PI;
           const a1 = ((start + v) / total) * 2 * Math.PI;
           start += v;
-          const x0 = Math.cos(a0) * radius, y0 = Math.sin(a0) * radius;
-          const x1 = Math.cos(a1) * radius, y1 = Math.sin(a1) * radius;
+          const x0 = Math.cos(a0) * radius; const y0 = Math.sin(a0) * radius;
+          const x1 = Math.cos(a1) * radius; const y1 = Math.sin(a1) * radius;
           const largeArc = v / total > 0.5 ? 1 : 0;
           return (
             <path
@@ -256,19 +259,18 @@ function DonutChart({ data, colors, size = 64, stroke = 10, label = '' }) {
               d={`M ${x0} ${y0} A ${radius} ${radius} 0 ${largeArc} 1 ${x1} ${y1}`}
               stroke={colors[i]}
               strokeWidth={stroke}
-              fill="none"
+              fill='none'
             />
           );
         })}
-        <circle r={radius} fill="transparent" />
+        <circle r={radius} fill='transparent' />
       </g>
-      <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" style={{ fill:'#e6e8df', fontWeight:800, fontSize:9, letterSpacing:'.06em' }}>
+      <text x='50%' y='50%' textAnchor='middle' dominantBaseline='middle' style={{ fill:'#e6e8df', fontWeight:800, fontSize:9, letterSpacing:'.06em' }}>
         {label}
       </text>
     </svg>
   );
 }
-
 function Counter({ label, value, bg, fg }) {
   return (
     <div style={{
@@ -285,7 +287,6 @@ function Counter({ label, value, bg, fg }) {
     </div>
   );
 }
-
 function Legend() {
   const item = (c, t) => (
     <div style={{ display:'flex', alignItems:'center', gap:6 }}>
@@ -304,8 +305,7 @@ function Legend() {
 }
 
 // ==============================
-// Branding Title (logo + two-line title with dynamic width)
-// (Scaled up; DATABASE stays larger; removed polling to avoid twitch)
+// ===== Branding Title =====
 // ==============================
 function BrandingTitle() {
   const wrapRef = useRef(null);
@@ -314,7 +314,6 @@ function BrandingTitle() {
   const imgRef = useRef(null);
   const [dbLetterSpacing, setDbLetterSpacing] = useState(0);
 
-  // Inject keyframes (once) for the logo animation
   useEffect(() => {
     const id = '__paloma_anim_keyframes__';
     if (typeof document !== 'undefined' && !document.getElementById(id)) {
@@ -335,51 +334,17 @@ function BrandingTitle() {
           70%  { box-shadow: 0 0 0 22px rgba(106,114,87,0), inset 0 0 0 10px rgba(106,114,87,0.15); }
           100% { box-shadow: 0 0 0 0 rgba(106,114,87,0), inset 0 0 0 0 rgba(106,114,87,0.15); }
         }
-        .paloma-anim {
-          position: relative;
-          isolation: isolate;
-          display: inline-grid;
-          place-items: center;
-          border-radius: 50%;
-          padding: 6px;
-          background: radial-gradient(120px 120px at 40% 30%, rgba(106,114,87,0.25), transparent 60%);
-          animation: paloma-radiate 2.8s ease-out infinite;
-        }
+        .paloma-anim { position: relative; isolation: isolate; display: inline-grid; place-items: center; border-radius: 50%; padding: 6px; background: radial-gradient(120px 120px at 40% 30%, rgba(106,114,87,0.25), transparent 60%); animation: paloma-radiate 2.8s ease-out infinite; }
         .paloma-anim::before,
-        .paloma-anim::after {
-          content: '';
-          position: absolute;
-          inset: -6px;
-          border-radius: 50%;
-          pointer-events: none;
-          mix-blend-mode: screen;
-        }
-        .paloma-anim::before {
-          border: 2px solid rgba(106,114,87,0.45);
-          border-top-color: rgba(106,114,87,0.95);
-          border-left-color: rgba(106,114,87,0.25);
-          animation: paloma-orbit 5.5s linear infinite;
-          filter: blur(.2px);
-        }
-        .paloma-anim::after {
-          border: 2px dashed rgba(106,114,87,0.55);
-          transform: scale(.86);
-          animation: paloma-orbit 7.5s linear infinite reverse;
-          opacity: .9;
-          filter: blur(.1px);
-        }
-        .paloma-anim img {
-          display:block;
-          height:auto;
-          transform-origin: 50% 50%;
-          animation: paloma-breathe 3.8s ease-in-out infinite;
-        }
+        .paloma-anim::after { content: ''; position: absolute; inset: -6px; border-radius: 50%; pointer-events: none; mix-blend-mode: screen; }
+        .paloma-anim::before { border: 2px solid rgba(106,114,87,0.45); border-top-color: rgba(106,114,87,0.95); border-left-color: rgba(106,114,87,0.25); animation: paloma-orbit 5.5s linear infinite; filter: blur(.2px); }
+        .paloma-anim::after { border: 2px dashed rgba(106,114,87,0.55); transform: scale(.86); animation: paloma-orbit 7.5s linear infinite reverse; opacity: .9; filter: blur(.1px); }
+        .paloma-anim img { display:block; height:auto; transform-origin: 50% 50%; animation: paloma-breathe 3.8s ease-in-out infinite; }
       `;
       document.head.appendChild(style);
     }
   }, []);
 
-  // Width sync (no polling; uses ResizeObserver + window resize)
   useEffect(() => {
     const compute = () => {
       if (!topRef.current || !dbRef.current || !wrapRef.current) return;
@@ -393,7 +358,7 @@ function BrandingTitle() {
       setDbLetterSpacing(per);
       if (imgRef.current) {
         const H = wrapRef.current.getBoundingClientRect().height;
-        imgRef.current.style.height = `${Math.max(56, Math.floor(H * 1.18))}px`; // scaled up with text
+        imgRef.current.style.height = `${Math.max(56, Math.floor(H * 1.18))}px`;
       }
     };
     compute();
@@ -407,13 +372,8 @@ function BrandingTitle() {
 
   return (
     <div style={{ display:'flex', alignItems:'center', gap:24, flex:'0 0 auto' }}>
-      <div className="paloma-anim">
-        <img
-          ref={imgRef}
-          src={palomaIcon}
-          alt="Paloma"
-          style={{ filter:'drop-shadow(0 4px 8px rgba(0,0,0,.55))' }}
-        />
+      <div className='paloma-anim'>
+        <img ref={imgRef} src={palomaIcon} alt='Paloma' style={{ filter:'drop-shadow(0 4px 8px rgba(0,0,0,.55))' }} />
       </div>
       <div ref={wrapRef} style={{ display:'grid', lineHeight:1 }}>
         <div
@@ -421,7 +381,7 @@ function BrandingTitle() {
           style={{
             letterSpacing: '0.14em',
             fontWeight: 300,
-            fontSize: '1.6rem',      // ↑ scaled up
+            fontSize: '1.4rem',
             margin: 0,
             color: '#ffffffc4',
             textShadow: '0 1px 0 #000, 0 0 16px rgba(106,114,87,0.35)',
@@ -433,28 +393,94 @@ function BrandingTitle() {
           MASTER ASSEMBLIES
         </div>
         <div
-  ref={dbRef}
-  style={{
-    letterSpacing: `${dbLetterSpacing}px`,
-    fontWeight: 400,
-    fontSize: '3rem',   // doubled from ~2.3rem, remains larger
-    margin: 0,
-    color: '#6A7257',
-    textShadow: '0 1px 0 #000, 0 0 18px rgba(106,114,87,0.45)',
-    fontFamily: 'Font-cornero, sans-serif',
-    textTransform: 'uppercase',
-    whiteSpace:'nowrap',
-  }}
->
-  DATABASE
-</div>
+          ref={dbRef}
+          style={{
+            letterSpacing: `${dbLetterSpacing}px`,
+            fontWeight: 400,
+            fontSize: '2.6rem',
+            margin: 0,
+            color: '#6A7257',
+            textShadow: '0 1px 0 #000, 0 0 18px rgba(106,114,87,0.45)',
+            fontFamily: 'Font-cornero, sans-serif',
+            textTransform: 'uppercase',
+            whiteSpace:'nowrap',
+          }}
+        >
+          DATABASE
+        </div>
       </div>
     </div>
   );
 }
 
 // ==============================
-// Main
+// ===== Header Grid Pattern =====
+// ==============================
+const headerGrid = {
+  position: 'absolute',
+  inset: 0,
+  background:
+    'repeating-linear-gradient(0deg, rgba(106,114,87,.06) 0px, rgba(106,114,87,.06) 1px, transparent 1px, transparent 18px), repeating-linear-gradient(90deg, rgba(106,114,87,.06) 0px, rgba(106,114,87,.06) 1px, transparent 1px, transparent 18px)',
+  opacity: 0.35,
+  pointerEvents: 'none',
+};
+
+// ==============================
+// ===== Column Header Style =====
+// ==============================
+const colHeaderStyle = {
+  color: '#c7cdb8',
+  fontWeight: 900,
+  letterSpacing: '.16em',
+  textTransform: 'uppercase',
+  fontSize: 12,
+  padding: '6px 8px',
+  borderBottom: '1px solid #2a2d26',
+  background: 'linear-gradient(180deg, rgba(18,18,18,.9), rgba(10,10,10,.65))',
+  position: 'sticky',
+  top: 0,
+  zIndex: 2
+};
+
+// ==============================
+// ===== Tabs =====
+// ==============================
+function Tabs({ active, onChange }) {
+  const TabBtn = ({ id, label }) => {
+    const selected = active === id;
+    return (
+      <button
+        onClick={() => onChange(id)}
+        style={{
+          background: selected ? 'linear-gradient(180deg,#20231d,#141612)' : 'linear-gradient(180deg,#121410,#0d0f0c)',
+          color: selected ? '#e6e8df' : '#b0b79f',
+          border: selected ? '1px solid #394034' : '1px solid #2a2e26',
+          boxShadow: selected ? 'inset 0 1px 0 rgba(255,255,255,.06), 0 6px 16px rgba(0,0,0,.28)' : 'inset 0 1px 0 rgba(255,255,255,.04)',
+          fontWeight: 900,
+          letterSpacing: '.14em',
+          textTransform: 'uppercase',
+          padding: '8px 14px',
+          borderRadius: 8,
+          cursor: 'pointer',
+          minWidth: 140,
+          whiteSpace:'nowrap'
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+  return (
+    <div style={{ display:'flex', gap:10, padding:'6px', flexWrap:'wrap' }}>
+      <TabBtn id='dogbones' label='Dogbones' />
+      <TabBtn id='zippers' label='Zippers' />
+      <TabBtn id='flowcrosses' label='Flowcrosses' />
+    </div>
+  );
+}
+
+// ==============================
+// ===== Main =====
 // ==============================
 export default function MasterAssembliesDBTable() {
   const { joined } = useAssignments();
@@ -493,14 +519,14 @@ export default function MasterAssembliesDBTable() {
     if (!selected) return null;
     const rows = byAssembly.get(selected.name) || [];
     const assets = rows
-      .filter(r => (r.slot || '').toLowerCase() !== '__meta__')
-      .map(r => ({ meta: r.slot ? r.slot.toUpperCase() : '—', id: r.ppc, name: r.name, status: r.status }));
-    const gList = (gasketMap[selected.name] || []).map(g => ({ name: g.gasket_slot, id: g.gasket_id || '—', meta: g.gasket_date || '' }));
+      .filter((r) => (r.slot || '').toLowerCase() !== '__meta__')
+      .map((r) => ({ meta: r.slot ? r.slot.toUpperCase() : '—', id: r.ppc, name: r.name, status: r.status }));
+    const gList = (gasketMap[selected.name] || []).map((g) => ({ name: g.gasket_slot, id: g.gasket_id || '—', meta: g.gasket_date || '' }));
     return {
       type: selected.type,
       name: toTitle(selected.name),
       status: (metaMap[selected.name]?.status || '—'),
-      location: mode(rows.map(r => r.location)),
+      location: mode(rows.map((r) => r.location)),
       creation_date: metaMap[selected.name]?.creation_date || '',
       recert_date: metaMap[selected.name]?.recert_date || '',
       assets,
@@ -508,10 +534,10 @@ export default function MasterAssembliesDBTable() {
     };
   }, [selected, metaMap, gasketMap, byAssembly]);
 
-  // Status counters
+  // ===== Status counters (kept for potential future header visuals) =====
   const statusCounts = useMemo(() => {
     const all = [...groups.Dogbones, ...groups.Zippers, ...groups.Flowcrosses];
-    const norm = (s='') => s.toString().trim().toLowerCase();
+    const norm = (s = '') => s.toString().trim().toLowerCase();
     const counts = { active:0, inactive:0, offline:0, torn:0 };
     for (const name of all) {
       const s = norm(metaMap[name]?.status || localStatus[name] || 'in-active');
@@ -525,54 +551,61 @@ export default function MasterAssembliesDBTable() {
     return { total: all.length, counts };
   }, [metaMap, localStatus, groups]);
 
-  const nActive = useAnimatedNumber(statusCounts.counts.active);
-  const nInactive = useAnimatedNumber(statusCounts.counts.inactive);
-  const nOffline = useAnimatedNumber(statusCounts.counts.offline);
-  const nTorn = useAnimatedNumber(statusCounts.counts.torn);
+  useAnimatedNumber(statusCounts.counts.active);
+  useAnimatedNumber(statusCounts.counts.inactive);
+  useAnimatedNumber(statusCounts.counts.offline);
+  useAnimatedNumber(statusCounts.counts.torn);
 
-  const donutData = [statusCounts.counts.active, statusCounts.counts.inactive, statusCounts.counts.torn, statusCounts.counts.offline];
-  const donutCols = ['#5fe08b','#ff6a6a','#ff7ad1','#e9e174'];
+  // ===== Tabs state =====
+  const [activeTab, setActiveTab] = useState('dogbones');
 
+  // ===== Splitter State & Handlers =====
+  const containerRef = useRef(null);
+  const [split, setSplit] = useState(0.55);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    const onMove = (e) => {
+      if (!dragging || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const next = Math.min(0.72, Math.max(0.34, x / rect.width));
+      setSplit(next);
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [dragging]);
+
+  const gridTemplate = `${Math.round(split*100)}% 10px calc(100% - ${Math.round(split*100)}% - 10px)`;
+
+  // ==============================
+  // ===== Render =====
+  // ==============================
   return (
-    <div style={{ position: 'relative', height: 'calc(89vh - 26px)', display: 'flex', flexDirection: 'column', border: cardBorder, background: '#000', color: textMain, boxShadow: '0 2px 12px #111a', overflow: 'hidden' }}>
-      {/* HEADER */}
+    <div style={{ position: 'relative', height: 'calc(89vh - 26px)', display: 'flex', flexDirection: 'column', border: cardBorder, color: textMain, boxShadow: '0 2px 12px #111a', overflow: 'hidden' }}>
+      {/* ===== Header ===== */}
       <div style={{ position:'relative', borderBottom:'1px solid #2a2d26', background: 'linear-gradient(180deg, rgba(12,12,12,0.92) 0%, rgba(10,10,10,0.6) 100%)', flex:'0 0 auto' }}>
         <div aria-hidden style={headerGrid} />
-        <div
-          style={{
-            display:'flex',
-            alignItems:'center',
-            gap:12,
-            padding:'8px 10px',
-            overflowX:'auto',
-            whiteSpace:'nowrap',
-          }}
-        >
-          {/* Left: Branding Title (animated logo + two-line text) */}
+        <div style={{ display:'grid', gridTemplateColumns:'auto 1fr', alignItems:'center', gap:10, padding:'8px 10px', overflow:'hidden' }}>
           <BrandingTitle />
-
-          {/* Right: cluster ring+legend and counters together on the far right */}
-          <div style={{ display:'flex', marginLeft:'auto', alignItems:'center', gap:14 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <DonutChart data={donutData} colors={donutCols} label={`${statusCounts.total || 0} TOTAL`} />
-              <Legend />
-            </div>
-            <div style={{ display:'flex', gap:10 }}>
-              <Counter label="ACTIVE" value={nActive} fg="#0f120e" bg="#5fe08b" />
-              <Counter label="IN-ACTIVE" value={nInactive} fg="#0f120e" bg="#ff6a6a" />
-              <Counter label="OFFLINE" value={nOffline} fg="#0f120e" bg="#e9e174" />
-              <Counter label="TORN" value={nTorn} fg="#0f120e" bg="#ff7ad1" />
-            </div>
+          <div style={{ display:'flex', justifyContent:'flex-end' }}>
+            <Tabs active={activeTab} onChange={setActiveTab} />
           </div>
         </div>
       </div>
 
-      {/* FOUR COLUMNS */}
+      {/* ===== Split Grid: [Table | Handle | Details] ===== */}
       <div
+        ref={containerRef}
         style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr 1fr',
-          gap: 8,
+          gridTemplateColumns: gridTemplate,
+          gap: 0,
           padding: 6,
           position:'relative',
           zIndex:1,
@@ -581,175 +614,90 @@ export default function MasterAssembliesDBTable() {
           overflow: 'hidden',
         }}
       >
-        {/* DOGBONES */}
-        <div style={{ border: cardBorder, background: '#0b0c09', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <div style={colHeaderStyle}>DOG BONES</div>
+        {/* ===== Active Table Pane ===== */}
+        <div style={{ border: cardBorder, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          <div style={colHeaderStyle}>{activeTab === 'dogbones' ? 'DOG BONES' : activeTab === 'zippers' ? 'ZIPPERS' : 'FLOWCROSSES'}</div>
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-            <DogbonesTable
-              names={groups.Dogbones}
-              byAssembly={byAssembly}
-              metaMap={metaMap}
-              localStatus={localStatus}
-              selected={selected}
-              setSelected={setSelected}
-              onView={(type, name) => onView('Dogbones', name)}
-            />
+            <Suspense fallback={<div style={{ padding: 12 }}>Loading…</div>}>
+              {activeTab === 'dogbones' && (
+                <DogbonesTable
+                  names={groups.Dogbones}
+                  byAssembly={byAssembly}
+                  metaMap={metaMap}
+                  localStatus={localStatus}
+                  selected={selected}
+                  setSelected={setSelected}
+                  onView={(type, name) => onView('Dogbones', name)}
+                />
+              )}
+              {activeTab === 'zippers' && (
+                <ZippersTable
+                  names={groups.Zippers}
+                  byAssembly={byAssembly}
+                  metaMap={metaMap}
+                  localStatus={localStatus}
+                  selected={selected}
+                  setSelected={setSelected}
+                  onView={(type, name) => onView('Zippers', name)}
+                />
+              )}
+              {activeTab === 'flowcrosses' && (
+                <FlowcrossesTable
+                  names={groups.Flowcrosses}
+                  byAssembly={byAssembly}
+                  metaMap={metaMap}
+                  localStatus={localStatus}
+                  selected={selected}
+                  setSelected={setSelected}
+                  onView={(type, name) => onView('Flowcrosses', name)}
+                />
+              )}
+            </Suspense>
           </div>
         </div>
 
-        {/* ZIPPERS */}
-        <div style={{ border: cardBorder, background: '#0b0c09', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <div style={colHeaderStyle}>ZIPPERS</div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-            <ZippersTable
-              names={groups.Zippers}
-              byAssembly={byAssembly}
-              metaMap={metaMap}
-              localStatus={localStatus}
-              selected={selected}
-              setSelected={setSelected}
-              onView={(type, name) => onView('Zippers', name)}
-            />
-          </div>
+        {/* ===== Splitter Handle ===== */}
+        <div
+          onMouseDown={() => setDragging(true)}
+          title='Drag to resize'
+          style={{
+            cursor:'col-resize',
+            position:'relative',
+            display:'grid',
+            placeItems:'center',
+            margin:'0 4px',
+            userSelect:'none'
+          }}
+        >
+          <div style={{
+            width: 4,
+            height: '96%',
+            borderRadius: 4,
+            background: 'linear-gradient(180deg, rgba(106,114,87,.65), rgba(106,114,87,.25))',
+            boxShadow:'0 0 0 1px rgba(0,0,0,.6), 0 10px 18px rgba(0,0,0,.35), inset 0 0 6px rgba(106,114,87,.25)'
+          }} />
         </div>
 
-        {/* FLOWCROSSES */}
-        <div style={{ border: cardBorder, background: '#0b0c09', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <div style={colHeaderStyle}>FLOWCROSSES</div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-            <FlowcrossesTable
-              names={groups.Flowcrosses}
-              byAssembly={byAssembly}
-              metaMap={metaMap}
-              localStatus={localStatus}
-              selected={selected}
-              setSelected={setSelected}
-              onView={(type, name) => onView('Flowcrosses', name)}
-            />
-          </div>
-        </div>
-
-        {/* DETAILS */}
-        <div style={{ border: cardBorder, background: '#0b0c09', display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        {/* ===== Details Pane ===== */}
+        <div style={{ border: cardBorder, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
           <div style={colHeaderStyle}>DETAILS</div>
           <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 6 }}>
-            <ViewAssemblyPanel assembly={selectedAssembly} />
+            <ViewAssemblyPanel
+              assembly={selectedAssembly}
+              setLocalStatus={(name, status) => setLocalStatus((m) => ({ ...m, [name]: status }))}
+              onUpdateMeta={(patch) => {
+                if (!selected) return;
+                updateMeta(selected.type, selected.name, patch);
+              }}
+            />
+            {!selectedAssembly && (
+              <div style={{ opacity:.6, fontWeight:800, letterSpacing:'.12em', textTransform:'uppercase', fontSize:12, padding:'18px 8px' }}>
+                Select an assembly on the left to view details.
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
-}
-
-// ==============================
-// Styles
-// ==============================
-const headerGrid = {
-  position:'absolute',
-  inset:0,
-  backgroundImage: `
-    radial-gradient(ellipse at top left, rgba(106,114,87,.10), rgba(0,0,0,0)),
-    repeating-linear-gradient(0deg, rgba(87,96,70,.08) 0px, rgba(87,96,70,.08) 1px, transparent 1px, transparent 18px),
-    repeating-linear-gradient(90deg, rgba(87,96,70,.08) 0px, rgba(87,96,70,.08) 1px, transparent 1px, transparent 18px)
-  `,
-  backgroundColor: 'transparent',
-  pointerEvents:'none',
-  animation: 'grid-pan 18s linear infinite',
-};
-const styleSheetId = '__ma_db_grid_keyframes__';
-if (typeof document !== 'undefined' && !document.getElementById(styleSheetId)) {
-  const style = document.createElement('style');
-  style.id = styleSheetId;
-  style.textContent = `
-    @keyframes grid-pan {
-      0% { background-position: 0 0, 0 0, 0 0; }
-      100% { background-position: 0 0, 0 40px, 40px 0; }
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-const colHeaderStyle = {
-  background: headerBg,
-  color: 'white',
-  padding: '10px 10px',
-  fontWeight: 900,
-  letterSpacing: '0.12em',
-  borderBottom: cardBorder,
-  textTransform: 'uppercase',
-  position: 'sticky',
-  top: 0,
-  zIndex: 3,
-  textAlign: 'center',
-  fontFamily: 'Font-cornero, sans-serif',
-  fontSize: '1.25rem',
-};
-
-// ==============================
-// Export (unchanged helper)
-// ==============================
-function buildExportHTML(type, name, rows, gaskets = []) {
-  const date = new Date().toLocaleString();
-  const style = `
-    <style>
-      body { font-family: Arial, sans-serif; color: #111; }
-      h1 { margin: 0 0 8px 0; font-size: 22px; }
-      h2 { margin: 18px 0 8px 0; font-size: 16px; }
-      .meta { margin-bottom: 12px; color: #444; }
-      table { width: 100%; border-collapse: collapse; }
-      th, td { border: 1px solid  #444; padding: 6px 8px; font-size: 12px; text-align: left; }
-      th { background: #eee; }
-    </style>
-  `;
-  const rowsHtml = rows
-    .filter(r => (r.slot || '').toLowerCase() !== '__meta__')
-    .map(r => `
-    <tr>
-      <td>${r.slot ? r.slot.toUpperCase() : '—'}</td>
-      <td>${r.ppc}</td>
-      <td>${escapeHTML(r.name)}</td>
-      <td>${escapeHTML(r.status || '')}</td>
-      <td>${escapeHTML(r.location || '')}</td>
-    </tr>
-  `).join('');
-
-  const gHtml = (gaskets || []).length
-    ? gaskets.map(g => `
-      <tr>
-        <td>${escapeHTML(g.gasket_slot)}</td>
-        <td>${escapeHTML(g.gasket_id || '—')}</td>
-        <td>${escapeHTML(fmtDate(g.gasket_date))}</td>
-      </tr>
-    `).join('')
-    : `<tr><td colspan="3">No gaskets set.</td></tr>`;
-
-  return `
-    <!doctype html>
-    <html>
-      <head><meta charset="utf-8" />${style}<title>${name} — Export</title></head>
-      <body>
-        <h1>${type} — ${name}</h1>
-        <div class="meta">Exported ${date}</div>
-
-        <h2>Assets Used</h2>
-        <table>
-          <thead>
-            <tr><th>Slot</th><th>PPC #</th><th>Name</th><th>Status</th><th>Location</th></tr>
-          </thead>
-          <tbody>${rowsHtml || `<tr><td colspan="5">No assets assigned.</td></tr>`}</tbody>
-        </table>
-
-        <h2>Gaskets Used</h2>
-        <table>
-          <thead>
-            <tr><th>Slot</th><th>Gasket ID</th><th>Date</th></tr>
-          </thead>
-          <tbody>${gHtml}</tbody>
-        </table>
-      </body>
-    </html>
-  `;
-}
-function escapeHTML(s) {
-  return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 }

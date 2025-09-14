@@ -1,72 +1,87 @@
-/* FlyHQTools.css */
+/* ===========================================
+   FILE: client/src/pages/FlyHQTools.css
+   ===========================================
+   Sections:
+   • Root Vars
+   • Grid (Gaps/Margins)
+   • Panels (Margins)
+   • Existing Styles
+   • Dragula Classes
+*/
 
-/* ========= Responsive scaling for all major sizes ========= */
+/* ========== Root Vars ========== */
 :root {
   --base-font-size: 16px;
   --base-padding: 24px;
   --base-margin: 40px;
   --base-gap: 36px;
   --base-max-width: 2400px;
+
+  --fhq-accent: #6a7257;
+  --fhq-accent-2: #7CFF02;
+  --fhq-muted: #8a8f85;
+  --fhq-ring: rgba(106,114,87,0.45);
+  --fhq-chip-bg: rgba(0,0,0,0.5);
+  --fhq-chip-ring: rgba(106,114,87,0.35);
+  --fhq-chip-text: #e6e8df;
+
+  --glass-blur: 10px;
+  --glass-shadow: 0 8px 28px rgba(0,0,0,.45);
+  --glass-ring: 1px solid rgba(106,114,87,.28);
+  --glass-tint: rgba(0,0,0,0.65);
+
+  --panel-gap: 48px;
+  --panel-margin: 18px;
 }
 
+/* ========== Grid (Gaps/Margins) ========== */
 html {
   font-size: var(--base-font-size);
   --responsive-padding: var(--base-padding);
   --responsive-margin: var(--base-margin);
   --responsive-gap: var(--base-gap);
   --responsive-max-width: var(--base-max-width);
-  font-family: 'MyFont', 'erbaum', 'Inter', 'Arial', sans-serif; /* NEW: MyFont as global default */
+  font-family: 'MyFont', 'erbaum', 'Inter', 'Arial', sans-serif;
 }
 
-@media (min-width: 1440px) {
-  :root {
-    --base-font-size: 17px;
-    --base-padding: 28px;
-    --base-margin: 48px;
-    --base-gap: 42px;
-    --base-max-width: 2600px;
-  }
-}
-@media (min-width: 1920px) {
-  :root {
-    --base-font-size: 18px;
-    --base-padding: 32px;
-    --base-margin: 54px;
-    --base-gap: 48px;
-    --base-max-width: 2800px;
-  }
-}
-@media (min-width: 2560px) {
-  :root {
-    --base-font-size: 19.5px;
-    --base-padding: 40px;
-    --base-margin: 64px;
-    --base-gap: 56px;
-    --base-max-width: 3200px;
-  }
-}
-
-/* --------- Dashboard Card Grid & Card Styles --------- */
 .dashboard-cards-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
-  gap: var(--responsive-gap);
+  grid-auto-rows: minmax(0, auto);
+  row-gap: var(--panel-gap);
+  column-gap: var(--panel-gap);
   width: 100%;
-  max-width: min(var(--responsive-max-width), 100vw); /* Scales on all screens */
-  margin: var(--responsive-margin) auto var(--responsive-gap) auto;
+  max-width: min(var(--responsive-max-width), 100vw);
+  margin: 0 auto var(--responsive-gap) auto;
   padding: 0 var(--responsive-padding);
   justify-items: stretch;
-  align-items: stretch;
+  align-items: start;
   box-sizing: border-box;
-  overflow-x: auto;
+  overflow-x: hidden;
 }
 
-/* ==== GLASS CARDS (frosted) ==== */
+/* Force breathing room around grid children */
+.dashboard-cards-grid > * {
+  margin: var(--panel-margin) !important;
+}
+
+/* ========== Panels (Margins) ========== */
+.fhq-panel {
+ 
+  position: relative;
+  transition: transform 160ms ease, opacity 160ms ease, outline-color 120ms ease, background-color 160ms ease, box-shadow 160ms ease;
+  background-clip: padding-box;
+  isolation: isolate;
+  margin: var(--panel-margin) !important;
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+}
+
+/* ========== Existing Styles (kept) ========== */
 .dashboard-card-shell {
-  background: var(--glass-tint);                   /* frosted tint */
+  background: var(--glass-tint);
   -webkit-backdrop-filter: blur(var(--glass-blur));
-  backdrop-filter: blur(var(--glass-blur));        /* glass blur */
+  backdrop-filter: blur(var(--glass-blur));
   border-radius: 18px;
   min-height: 340px;
   min-width: 0;
@@ -74,88 +89,63 @@ html {
   display: flex;
   flex-direction: column;
   justify-content: stretch;
-  box-shadow: var(--glass-shadow);                 /* depth */
-  border: var(--glass-ring);                       /* subtle ring */
+  box-shadow: var(--glass-shadow);
+  border: var(--glass-ring);
   transition: box-shadow 0.18s, transform 0.16s, border-color 0.18s;
   overflow: visible;
-  font-size: 1rem; /* Will scale with html */
+  font-size: 1rem;
   padding: var(--responsive-padding);
-  margin-bottom: var(--responsive-gap);
+  margin-bottom: var(--panel-gap);
 }
 
-/* Optional: glass headers inside cards if used */
-.dashboard-card-shell .glass-header {
-  padding: 10px 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-}
+.dashboard-card-shell .glass-header { padding: 20px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); }
 
-/* Show ALL slides at full opacity (no fade effect) */
-.swiper-slide {
-  opacity: 1 !important;
-  transition: opacity 0.4s ease-in-out;
-}
+.fhq-panel.fhq-dragging { opacity: 0.75; outline: 2px dashed var(--fhq-accent); }
+.fhq-panel.fhq-preview { outline: 2px solid rgba(124,255,2,0.45); background-image: linear-gradient(90deg, rgba(124,255,2,0.05), transparent 40%); }
+.fhq-drag-handle { color: #cfd3c3; }
 
-/* Swiper containers use default overflow, to allow mousewheel events */
-.swiper,
-.swiper-wrapper {
-  /* Remove any !important overflow overrides. */
-}
+.fhq-panel-header:hover { background: rgba(106,114,87,0.15); color: #ffffff; transition: background 0.2s ease, color 0.2s ease; }
 
-/* --- HOVER (NO SCALE/NO TRANSFORM!) --- */
-.dashboard-card-shell:hover,
-.dashboard-card-shell:focus,
-.dashboard-card-shell:active {
-  box-shadow: 0 10px 36px 0 rgba(106,114,87,0.25), 0 1.5px 3px 0 rgba(20,20,20,0.20);
-  border-color: rgba(255,255,255,0.12);
-  /* NO transform or scaling */
-}
+.fhq-topbar { position: sticky; top: 2px; display: flex; justify-content: flex-end; align-items: center; z-index: 2; padding: 2px 0 6px 0; margin: 0 var(--responsive-padding) 6px; }
 
-/* Extra: summary cards or other dashboard elements with scaling—stop all movement */
-.dashboard-summary-card:hover,
-.dashboard-summary-card:focus,
-.dashboard-summary-card:active {
-  box-shadow: 0 8px 30px 0 rgba(106,114,87,0.2), 0 1.5px 3px 0 rgba(20,20,20,0.16);
-  border-color: rgba(124, 255, 2, 0.658);
-  /* NO transform or scaling */
-}
+.fhq-btn-group { display: inline-flex; gap: 8px; background: rgba(0,0,0,0.35); border: 1px solid var(--fhq-ring); border-radius: 10px; padding: 4px; box-shadow: 0 4px 18px rgba(0,0,0,0.25); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 
-.dashboard-card-shell > * {
-  flex: 1 1 0%;
-  display: flex;
-  flex-direction: column;
-}
+.fhq-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--fhq-chip-ring); background: var(--fhq-chip-bg); color: var(--fhq-chip-text); font-family: Erbaum, Inter, Arial, sans-serif; font-weight: 800; letter-spacing: .04em; font-size: 12px; cursor: pointer; transition: background .18s ease, border-color .18s ease, transform .12s ease, box-shadow .18s ease; }
+.fhq-chip:hover { background: rgba(106,114,87,0.25); border-color: rgba(106,114,87,0.55); box-shadow: 0 0 0 1px rgba(106,114,87,0.35) inset; }
+.fhq-chip:active { transform: translateY(1px); }
+.fhq-chip .fhq-chip-icon { font-weight: 900; font-size: 12px; line-height: 1; }
+.fhq-chip-positive { box-shadow: 0 0 0 1px rgba(124,255,2,0.25) inset; }
+.fhq-chip-neutral  { box-shadow: 0 0 0 1px rgba(200,200,200,0.22) inset; }
 
 @media (max-width: 1100px) {
   .dashboard-cards-grid {
     grid-template-columns: 1fr !important;
-    grid-template-rows: repeat(4, 1fr) !important;
-    max-width: 99vw !important;
-    gap: 22px !important;
+    grid-auto-rows: auto !important;
+    row-gap: 12px !important;
+    column-gap: 18px !important;
     padding: 0 4px !important;
+    margin: 8px auto 10px auto !important;
   }
-  .dashboard-card-shell {
-    min-width: 0 !important;
-    max-width: 100vw !important;
-  }
+  .fhq-topbar { top: 0; margin: 0 6px 8px 6px; }
 }
 
 @media (max-width: 600px) {
-  .dashboard-cards-grid {
-    padding: 0 0.5vw !important;
-    max-width: 100vw !important;
-  }
-  .dashboard-card-shell {
-    min-height: 210px !important;
-    border-radius: 13px !important;
-    box-shadow: 0 2.5px 10px 0 rgba(30,32,26,0.2) !important;
-  }
+  .dashboard-cards-grid { padding: 0 0.5vw !important; }
+  .dashboard-card-shell { min-height: 210px !important; border-radius: 13px !important; box-shadow: 0 2.5px 10px 0 rgba(30,32,26,0.2) !important; }
 }
 
-.swiper {
-  z-index: 2;
-}
+.swiper { z-index: 2; }
+body, html { overflow-x: hidden; font-family: 'MyFont','erbaum','Inter','Arial',sans-serif; }
 
-body, html {
-  overflow-x: hidden;
-  font-family: 'MyFont', 'erbaum', 'Inter', 'Arial', sans-serif; /* NEW: MyFont for body/html as well */
-}
+.doc-hub .main-wrap { background: transparent !important; }
+.doc-hub .dashboard-card-shell,
+.doc-hub .doc-card { background: rgba(0,0,0,0.86) !important; -webkit-backdrop-filter: blur(var(--glass-blur)); backdrop-filter: blur(var(--glass-blur)); border: var(--glass-ring); box-shadow: var(--glass-shadow); }
+.doc-hub .cards-grid { display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: minmax(0, 1fr); gap: var(--responsive-gap); width: 100%; height: calc(100vh - 40px); padding: 0 var(--responsive-padding) var(--responsive-gap); }
+.doc-hub .cards-grid > * { min-height: 0; min-width: 0; }
+.doc-hub .bg-\[\#191e15\] { background: rgba(0,0,0,0.86) !important; }
+
+/* ========== Dragula Classes (inline copy) ========== */
+.gu-mirror { position: fixed !important; margin: 0 !important; z-index: 9999 !important; opacity: .8; }
+.gu-hide { display: none !important; }
+.gu-unselectable { -webkit-user-select: none !important; -moz-user-select: none !important; -ms-user-select: none !important; user-select: none !important; }
+.gu-transit { opacity: .2; }

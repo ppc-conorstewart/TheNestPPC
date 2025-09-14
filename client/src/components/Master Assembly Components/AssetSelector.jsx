@@ -121,6 +121,7 @@ function AssetSelector({
   asset,
   onChange,
   assetOptions = [],
+  excludedIds = new Set(),
   accentColor,
   style,
 }) {
@@ -128,61 +129,30 @@ function AssetSelector({
   const instanceIdRef = useRef(`asset-select-${Math.random().toString(36).slice(2)}`);
   const rootRef = useRef(null);
 
-  // ---------- Menu open state (hard-locked against polling) ----------
+  // ---------- Outside click control for menu ----------
   const [menuIsOpen, setMenuIsOpen] = useState(false);
-  const openRef = useRef(false);
   const allowCloseNextRef = useRef(false);
-  const selectionCloseNextRef = useRef(false);
 
-  const setOpen = useCallback((v) => {
-    openRef.current = v;
-    setMenuIsOpen(v);
-  }, []);
-
-  const handleMenuOpen = useCallback(() => setOpen(true), [setOpen]);
-
-  const handleMenuClose = useCallback(() => {
-    if (selectionCloseNextRef.current || allowCloseNextRef.current) {
-      selectionCloseNextRef.current = false;
+  const openMenu = useCallback(() => setMenuIsOpen(true), []);
+  const closeMenu = useCallback(() => setMenuIsOpen(false), []);
+  const onMenuClose = useCallback(() => {
+    if (allowCloseNextRef.current) {
       allowCloseNextRef.current = false;
-      setOpen(false);
-      return;
+      setMenuIsOpen(false);
+    } else {
+      setTimeout(() => setMenuIsOpen(true), 0);
     }
-    setOpen(true); // block auto-close from re-render/polling/scroll
-  }, [setOpen]);
+  }, []);
+  const onMenuOpen = useCallback(() => setMenuIsOpen(true), []);
 
-  const handleInputChange = useCallback((val, meta) => {
-    if (meta.action === 'input-change') setOpen(true);
-    return val;
-  }, [setOpen]);
-
-  const handleChange = useCallback((opt) => {
-    selectionCloseNextRef.current = true;
-    onChange(opt ? opt.value : '');
-    // ----- Ensure close on first click (controlled menu) -----
-    // close immediately so we don't rely on react-select's internal close
-    setTimeout(() => setOpen(false), 0);
-  }, [onChange, setOpen]);
-
-  // ---------- Global "any menu open" reference counter (pauses polling app-wide) ----------
-  const countedRef = useRef(false);
+  // ---------- Focus the input when opening ----------
   useEffect(() => {
-    const g = typeof window !== 'undefined' ? window : globalThis;
-    if (!g.__palomaMenuOpenAny) g.__palomaMenuOpenAny = 0;
-    if (menuIsOpen && !countedRef.current) {
-      g.__palomaMenuOpenAny = Number(g.__palomaMenuOpenAny) + 1;
-      countedRef.current = true;
-    } else if (!menuIsOpen && countedRef.current) {
-      g.__palomaMenuOpenAny = Math.max(0, Number(g.__palomaMenuOpenAny) - 1);
-      countedRef.current = false;
+    if (!menuIsOpen) return;
+    const root = rootRef.current;
+    const input = root && root.querySelector('input');
+    if (input) {
+      requestAnimationFrame(() => { try { input.focus(); } catch {} });
     }
-    return () => {
-      if (countedRef.current) {
-        const gg = typeof window !== 'undefined' ? window : globalThis;
-        gg.__palomaMenuOpenAny = Math.max(0, Number(gg.__palomaMenuOpenAny) - 1);
-        countedRef.current = false;
-      }
-    };
   }, [menuIsOpen]);
 
   // ---------- Suppress true outside clicks only ----------
@@ -213,7 +183,12 @@ function AssetSelector({
     return assetOptions;
   }, [assetOptions]);
 
-  const options = useMemo(() => normalizeOptions(stableAssetOptions), [stableAssetOptions]);
+  const options = useMemo(() => {
+    const all = normalizeOptions(stableAssetOptions);
+    const has = excludedIds && typeof excludedIds.has === 'function';
+    const sel = asset || '';
+    return has ? all.filter((opt) => opt.value === sel || !excludedIds.has(opt.value)) : all;
+  }, [stableAssetOptions, excludedIds, asset]);
 
   const selectedOption = useMemo(
     () => options.find((opt) => opt.value === asset) || null,
@@ -227,126 +202,74 @@ function AssetSelector({
       ref={rootRef}
       style={{
         marginBottom: 0,
-        fontSize: 12,
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 6,
-        minWidth: 0,
         ...(style || {}),
       }}
+      onClick={openMenu}
     >
-      <label
-        style={{
-          fontWeight: 300,
-          fontSize: 11,
-          color: palomaGreen,
-          whiteSpace: 'nowrap',
-          flex: '0 0 auto',
+      <Select
+        instanceId={instanceIdRef.current}
+        classNamePrefix="rs"
+        isClearable={false}
+        isSearchable
+        options={options}
+        value={selectedOption}
+        filterOption={filterOption}
+        onChange={(opt) => onChange && onChange((opt && opt.value) || '')}
+        onMenuOpen={onMenuOpen}
+        onMenuClose={onMenuClose}
+        menuIsOpen={menuIsOpen}
+        components={{ MenuList, Option, SingleValue }}
+        menuPortalTarget={document.body}
+        __accentColor={borderColor}
+        styles={{
+          control: (provided, state) => ({
+            ...provided,
+            backgroundColor: '#181818',
+            borderColor: borderColor,
+            color: '#ffffff',
+            borderRadius: 6,
+            minHeight: 36,
+            height: 30,
+            fontWeight: 500,
+            fontSize: 12,
+            width: '100%',
+            minWidth: 0,
+            boxShadow: state.isFocused ? `0 0 0 1px ${borderColor}` : 'none',
+            ':hover': { borderColor: borderColor },
+            transition: 'box-shadow .18s, border-color .18s',
+          }),
+          valueContainer: (p) => ({ ...p, paddingTop: 2, paddingBottom: 2 }),
+          menu: (p) => ({
+            ...p,
+            backgroundColor: '#222',
+            color: '#ffffff',
+            fontSize: 12,
+            zIndex: 3000,
+          }),
+          menuPortal: (b) => ({ ...b, zIndex: 9999 }),
+          menuList: (p) => ({
+            ...p,
+            paddingTop: 0,
+            paddingBottom: 0,
+          }),
+          option: (p, state) => ({
+            ...p,
+            height: ROW_HEIGHT,
+            lineHeight: ROW_HEIGHT + 'px',
+            paddingTop: 0,
+            paddingBottom: 0,
+            color: '#eaeaea',
+            backgroundColor: state.isFocused ? '#2a2a2a' : 'transparent',
+            cursor: 'pointer',
+          }),
+          singleValue: (p) => ({ ...p, margin: 0 }),
+          indicatorsContainer: (p) => ({ ...p, height: 30 }),
+          dropdownIndicator: (p) => ({ ...p, paddingTop: 2, paddingBottom: 2 }),
+          clearIndicator: (p) => ({ ...p, paddingTop: 2, paddingBottom: 2 }),
+          input: (p) => ({ ...p, color: '#fff' }),
+          placeholder: (p) => ({ ...p, color: '#999' }),
         }}
-      >
-        {label}:
-      </label>
-
-      <div style={{ flex: '1 1 auto', minWidth: 0 }}>
-        <Select
-          instanceId={instanceIdRef.current}
-          inputId={`${instanceIdRef.current}-input`}
-          classNamePrefix="rs"
-          value={selectedOption}
-          onChange={handleChange}
-          onInputChange={handleInputChange}
-          options={options}
-          isClearable
-          isSearchable
-          placeholder="Select Asset..."
-          menuPlacement="auto"
-          menuPosition="fixed"
-          filterOption={filterOption}
-          hideSelectedOptions={false}
-          maxMenuHeight={ROW_HEIGHT * MAX_VISIBLE_ROWS}
-          menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
-          menuShouldBlockScroll={false}
-          closeMenuOnScroll={false}
-          menuShouldScrollIntoView={false}
-          menuIsOpen={menuIsOpen}
-          onMenuOpen={handleMenuOpen}
-          onMenuClose={handleMenuClose}
-          closeMenuOnSelect
-          blurInputOnSelect={false}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              e.stopPropagation();
-              setOpen(true);
-            }
-          }}
-          components={{ Option, SingleValue, MenuList }}
-          getOptionValue={(o) => o.value}
-          getOptionLabel={(o) => (o.name ? `[${o.id}] ${o.name}` : `[${o.id}]`)}
-          __accentColor={borderColor}
-          styles={{
-            control: (provided, state) => ({
-              ...provided,
-              backgroundColor: '#181818',
-              borderColor: borderColor,
-              color: '#ffffff',
-              borderRadius: 6,
-              minHeight: 36,
-              height: 30,
-              fontWeight: 500,
-              fontSize: 12,
-              width: '100%',
-              minWidth: 0,
-              boxShadow: state.isFocused ? `0 0 0 1px ${borderColor}` : 'none',
-              ':hover': { borderColor: borderColor },
-              transition: 'box-shadow .18s, border-color .18s',
-            }),
-            valueContainer: (p) => ({ ...p, paddingTop: 2, paddingBottom: 2 }),
-            menu: (p) => ({
-              ...p,
-              backgroundColor: '#222',
-              color: '#ffffff',
-              fontSize: 12,
-              zIndex: 3000,
-            }),
-            menuPortal: (b) => ({ ...b, zIndex: 9999 }),
-            menuList: (p) => ({
-              ...p,
-              paddingTop: 0,
-              paddingBottom: 0,
-              overflowY: 'hidden',
-              maxHeight: ROW_HEIGHT * MAX_VISIBLE_ROWS,
-            }),
-            option: (p, s) => ({
-              ...p,
-              backgroundColor: s.isFocused ? '#323f2f' : '#181818',
-              color: '#ffffff',
-              fontWeight: 500,
-              fontSize: 12,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              minHeight: ROW_HEIGHT,
-              lineHeight: `${ROW_HEIGHT - 6}px`,
-            }),
-            input: (p) => ({ ...p, color: '#ffffff', fontSize: 12 }),
-            singleValue: (p) => ({
-              ...p,
-              color: '#ffffff',
-              fontSize: 12,
-              display: 'flex',
-              alignItems: 'center',
-              maxWidth: '100%',
-            }),
-            placeholder: (p) => ({ ...p, color: '#888', fontSize: 12 }),
-            indicatorsContainer: (p) => ({ ...p, height: 30 }),
-            dropdownIndicator: (p) => ({ ...p, padding: 4 }),
-            clearIndicator: (p) => ({ ...p, padding: 4 }),
-            indicatorSeparator: () => ({ display: 'none' }),
-          }}
-        />
-      </div>
+      />
     </div>
   );
 }
@@ -360,6 +283,7 @@ function areEqual(prevProps, nextProps) {
   if (prevProps.accentColor !== nextProps.accentColor) return false;
   if (prevProps.style !== nextProps.style) return false;
   if (!areAssetListsEqual(prevProps.assetOptions, nextProps.assetOptions)) return false;
+  if (prevProps.excludedIds !== nextProps.excludedIds) return false;
   return true;
 }
 

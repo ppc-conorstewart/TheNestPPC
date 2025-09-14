@@ -1,23 +1,23 @@
-// src/components/WorkorderForm.jsx
+// ==============================
+// FILE: src/components/Workorder Components/WorkorderForm.jsx
+// ==============================
 
-import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
-axios.defaults.baseURL = 'http://localhost:3001';
-import useAssets from '../../hooks/useAssets';
-import WorkorderModal from './WorkorderModal';
-import PageRenderer from './PageRenderer';
-import AlertsModal from './AlertsModal';
+import { useEffect, useMemo, useState } from 'react';
 import { sections as sectionConfigs } from '../../constants/workorderConfig';
-import { useWorkorderSection } from '../../hooks/useWorkorderSection';
-import { useUser } from '../../hooks/useUser';
-import useAssemblyModel from '../../hooks/useAssemblyModel';
 import assetSpecs from '../../data/AssetSpecifications.json';
 import torqueSpecs from '../../data/TorqueSpecs.js';
+import useAssemblyModel from '../../hooks/useAssemblyModel';
+import useAssets from '../../hooks/useAssets';
+import { useUser } from '../../hooks/useUser';
+import { useWorkorderSection } from '../../hooks/useWorkorderSection';
+import AlertsModal from './AlertsModal';
+import PageRenderer from './PageRenderer';
+import WorkorderModal from './WorkorderModal';
+axios.defaults.baseURL = 'http://localhost:3001';
 
-// Helper to ensure all props passed down are arrays
 const asArray = x => Array.isArray(x) ? x : x ? [x] : [];
 
-// Helper: convert fractions to decimals, e.g. 5-1/8 → 5.125
 function fractionToDecimal(str) {
   const match = str.match(/^(\d+)-(\d+)\/(\d+)$/);
   if (match) {
@@ -26,154 +26,93 @@ function fractionToDecimal(str) {
   }
   return str;
 }
-
-// Universal normalization: remove quotes, collapse spaces, convert fractions to decimals, lowercase
 function normalizeUniversal(name) {
   if (!name) return '';
   return name
-    .replace(/"/g, '')      // Remove double quotes
-    .replace(/'/g, '')      // Remove single quotes
-    .replace(/\s*\|\s*/g, '|') // Collapse spaces around pipe
-    .replace(/(\d+-\d+\/\d+)/g, (m) => fractionToDecimal(m)) // Convert fractions
-    .replace(/\s+/g, ' ')   // Collapse spaces
+    .replace(/"/g, '')
+    .replace(/'/g, '')
+    .replace(/\s*\|\s*/g, '|')
+    .replace(/(\d+-\d+\/\d+)/g, (m) => fractionToDecimal(m))
+    .replace(/\s+/g, ' ')
     .toLowerCase()
     .trim();
 }
-
-// Extract possible size/pressure keys for TorqueSpecs.js lookup
 function extractSizePressure(name) {
-  // Try to extract things like 5-1/8 15K or 5.125 15K or just 5.125K
-  // Returns e.g. ["5-1/8 15K", "5.125 15K"]
   const frac = name.match(/(\d+-\d+\/\d+)\s*"?\s*(\d{2,})K/i);
   if (frac) {
     const decimal = fractionToDecimal(frac[1]);
     return [ `${frac[1]} ${frac[2]}K`, `${decimal} ${frac[2]}K` ];
   }
   const dec = name.match(/(\d+\.\d+)\s*"?\s*(\d{2,})K/i);
-  if (dec) {
-    return [ `${dec[1]} ${dec[2]}K` ];
-  }
+  if (dec) return [ `${dec[1]} ${dec[2]}K` ];
   return [];
 }
 
-// Compute panel specs for a tab (selected assets, assets list)
 function computeSpecs(selectedAssets, assets, assetSpecs) {
-  let totalWeight = 0;
-  let totalVolume = 0;
-  let totalOAL = 0;
-  let torqueSpecsArr = [];
-
+  let totalWeight = 0, totalVolume = 0, totalOAL = 0, torqueSpecsArr = [];
   selectedAssets.forEach(name => {
     let spec = assetSpecs[name];
     if (!spec) {
       const normalizedRaw = normalizeUniversal(name);
-      const matchKey = Object.keys(assetSpecs).find(
-        k => normalizeUniversal(k) === normalizedRaw
-      );
+      const matchKey = Object.keys(assetSpecs).find(k => normalizeUniversal(k) === normalizedRaw);
       spec = matchKey && assetSpecs[matchKey];
     }
     if (spec) {
       totalWeight += Number(spec.weight) || 0;
       totalVolume += Number(spec.fillVolume) || 0;
       totalOAL += Number(spec.OAL) || 0;
-      if (Array.isArray(spec.torqueSpecs)) {
-        torqueSpecsArr = torqueSpecsArr.concat(spec.torqueSpecs);
-      }
+      if (Array.isArray(spec.torqueSpecs)) torqueSpecsArr = torqueSpecsArr.concat(spec.torqueSpecs);
     }
-
-    // TorqueSpecs.js mapping logic
     const possibleKeys = extractSizePressure(name);
     possibleKeys.forEach(szp => {
       if (szp && torqueSpecs[szp]) {
         const t = torqueSpecs[szp];
-        torqueSpecsArr.push({
-          connection: szp,
-          torque: t.maxFtLbs,
-          ringGasket: t.ringGasket,
-          numBolts: t.numBolts,
-          stud: t.stud,
-          wrench: t.wrench,
-        });
+        torqueSpecsArr.push({ connection: szp, torque: t.maxFtLbs, ringGasket: t.ringGasket, numBolts: t.numBolts, stud: t.stud, wrench: t.wrench });
       }
     });
   });
 
-  // --- Deduplicate torque specs by connection+torque ---
   const seen = new Set();
   const uniqueTorqueSpecs = [];
   torqueSpecsArr.forEach(t => {
     const key = t.connection + '_' + t.torque;
-    if (!seen.has(key)) {
-      seen.add(key);
-      uniqueTorqueSpecs.push(t);
-    }
+    if (!seen.has(key)) { seen.add(key); uniqueTorqueSpecs.push(t); }
   });
 
-  return {
-    totalWeight: totalWeight * 2.20462,
-    totalVolume,
-    totalOAL,
-    torqueSpecsArr: uniqueTorqueSpecs,
-  };
+  return { totalWeight: totalWeight * 2.20462, totalVolume, totalOAL, torqueSpecsArr: uniqueTorqueSpecs };
 }
 
 export default function WorkorderForm({ initialData, onClose }) {
-  // --- Corrected pages array: ---
-  // Site Measurements is now page/dot 2 (index 1)
   const pages = [
-    { title: "Customer Info" },        // 0
-    { title: "Site Measurements" },    // 1 (page 2 in UI)
-    { title: "Bill of Materials" },    // 2 (page 3 in UI)
-    { title: "DFIT Assembly" },        // 3
-    { title: "Upper Master Assembly" },// 4
-    { title: "Flow Cross Assembly" },  // 5
-    { title: "Swab Valve Assembly" },  // 6
-    { title: "Dogbones Assembly" },    // 7
-    { title: "Zippers Assembly" },     // 8
-    { title: "PPL Assembly" },         // 9
+    { title: 'Customer Info' },
+    { title: 'Site Measurements' },
+    { title: 'Bill of Materials' },
+    { title: 'DFIT Assembly' },
+    { title: 'Upper Master Assembly' },
+    { title: 'Flow Cross Assembly' },
+    { title: 'Swab Valve Assembly' },
+    { title: 'Dogbones Assembly' },
+    { title: 'Zippers Assembly' },
+    { title: 'PPL Assembly' },
   ];
 
   const {
-    logoUrl,
-    customer,
-    surfaceLSD,
-    numberOfWells,
-    rigInDate,
-    wellBankType,
-    workbookRevision,
-    buildingBase,
-    notes,
-    specWeight = 0,
-    specFillVolume = 0,
-    specAssemblyOAL = 0,
+    logoUrl, customer, surfaceLSD, numberOfWells, rigInDate, wellBankType, workbookRevision, buildingBase, notes,
+    specWeight = 0, specFillVolume = 0, specAssemblyOAL = 0,
   } = initialData;
 
   const { assets } = useAssets();
   const storageKey = `workorder_${customer.replace(/\s+/g, '-')}_${surfaceLSD}`;
   const { user } = useUser();
   const userId = user?.id || 'GUEST';
-  // Get id from any possible location, fallback to null
-  const [localWorkorderId, setLocalWorkorderId] = useState(
-    initialData.id || initialData.ID || initialData.jobId || null
-  );
+
+  const [localWorkorderId, setLocalWorkorderId] = useState(initialData.id || initialData.ID || initialData.jobId || null);
   const workorderId = localWorkorderId;
 
-  if (!workorderId) {
-    console.warn('WorkorderForm: No valid workorderId found in initialData:', initialData);
-  }
-
   const [metadata, setMetadata] = useState({
-    customer,
-    surfaceLSD,
-    numberOfWells,
-    rigInDate,
-    wellBankType,
-    workbookRevision,
-    buildingBase: buildingBase || '',
-    notes: notes || '',
+    customer, surfaceLSD, numberOfWells, rigInDate, wellBankType, workbookRevision, buildingBase: buildingBase || '', notes: notes || '',
   });
 
-  // --- Section hooks ---
   const [dfitCfg, umaCfg, fcaCfg, svaCfg, dogbonesCfg, zippersCfg, pplCfg] = sectionConfigs;
   const dfit = useWorkorderSection(dfitCfg);
   const uma = useWorkorderSection(umaCfg);
@@ -183,17 +122,15 @@ export default function WorkorderForm({ initialData, onClose }) {
   const zippers = useWorkorderSection(zippersCfg);
   const ppl = useWorkorderSection(pplCfg);
 
-  // ---- Model/Image State per Assembly/Tab ----
   const tabCount = cfg => Array.isArray(cfg.tabs) ? cfg.tabs.length : 2;
-  const dfitModels = Array.from({ length: tabCount(dfitCfg) }, (_, i) => useAssemblyModel());
-  const umaModels = Array.from({ length: tabCount(umaCfg) }, (_, i) => useAssemblyModel());
-  const fcaModels = Array.from({ length: tabCount(fcaCfg) }, (_, i) => useAssemblyModel());
-  const svaModels = Array.from({ length: tabCount(svaCfg) }, (_, i) => useAssemblyModel());
-  const dogbonesModels = Array.from({ length: tabCount(dogbonesCfg) }, (_, i) => useAssemblyModel());
-  const zippersModels = Array.from({ length: tabCount(zippersCfg) }, (_, i) => useAssemblyModel());
-  const pplModels = Array.from({ length: tabCount(pplCfg) }, (_, i) => useAssemblyModel());
+  const dfitModels = Array.from({ length: tabCount(dfitCfg) }, () => useAssemblyModel());
+  const umaModels  = Array.from({ length: tabCount(umaCfg) }, () => useAssemblyModel());
+  const fcaModels  = Array.from({ length: tabCount(fcaCfg) }, () => useAssemblyModel());
+  const svaModels  = Array.from({ length: tabCount(svaCfg) }, () => useAssemblyModel());
+  const dogbonesModels = Array.from({ length: tabCount(dogbonesCfg) }, () => useAssemblyModel());
+  const zippersModels  = Array.from({ length: tabCount(zippersCfg) }, () => useAssemblyModel());
+  const pplModels      = Array.from({ length: tabCount(pplCfg) }, () => useAssemblyModel());
 
-  // All model arrays for easy mapping
   const assemblies = [
     { key: 'dfit', section: dfit, models: dfitModels },
     { key: 'uma', section: uma, models: umaModels },
@@ -204,7 +141,6 @@ export default function WorkorderForm({ initialData, onClose }) {
     { key: 'ppl', section: ppl, models: pplModels },
   ];
 
-  // --- WOInfoPage SimpleViewer (pad layout) state ---
   const [woInfoModelUrl, setWoInfoModelUrl] = useState(null);
   const [woInfoModelLocked, setWoInfoModelLocked] = useState(false);
   const [woInfoModelLabels, setWoInfoModelLabels] = useState([]);
@@ -214,65 +150,49 @@ export default function WorkorderForm({ initialData, onClose }) {
   const [pageIndex, setPageIndex] = useState(0);
   const [showAlerts, setShowAlerts] = useState(false);
 
-  // --- Panel Specs per assembly/tab for AssemblyPage ---
-  const dfitPanelSpecs = useMemo(
-    () =>
-      asArray(dfit.selections).map(selObj => {
-        const assetNames = Object.values(selObj).filter(Boolean);
-        return computeSpecs(assetNames, assets, assetSpecs);
-      }),
-    [dfit.selections, assets]
-  );
-  const umaPanelSpecs = useMemo(
-    () =>
-      asArray(uma.selections).map(selObj => {
-        const assetNames = Object.values(selObj).filter(Boolean);
-        return computeSpecs(assetNames, assets, assetSpecs);
-      }),
-    [uma.selections, assets]
-  );
-  const fcaPanelSpecs = useMemo(
-    () =>
-      asArray(fca.selections).map(selObj => {
-        const assetNames = Object.values(selObj).filter(Boolean);
-        return computeSpecs(assetNames, assets, assetSpecs);
-      }),
-    [fca.selections, assets]
-  );
-  const svaPanelSpecs = useMemo(
-    () =>
-      asArray(sva.selections).map(selObj => {
-        const assetNames = Object.values(selObj).filter(Boolean);
-        return computeSpecs(assetNames, assets, assetSpecs);
-      }),
-    [sva.selections, assets]
-  );
-  const dogbonesPanelSpecs = useMemo(
-    () =>
-      asArray(dogbones.selections).map(selObj => {
-        const assetNames = Object.values(selObj).filter(Boolean);
-        return computeSpecs(assetNames, assets, assetSpecs);
-      }),
-    [dogbones.selections, assets]
-  );
-  const zippersPanelSpecs = useMemo(
-    () =>
-      asArray(zippers.selections).map(selObj => {
-        const assetNames = Object.values(selObj).filter(Boolean);
-        return computeSpecs(assetNames, assets, assetSpecs);
-      }),
-    [zippers.selections, assets]
-  );
-  const pplPanelSpecs = useMemo(
-    () =>
-      asArray(ppl.selections).map(selObj => {
-        const assetNames = Object.values(selObj).filter(Boolean);
-        return computeSpecs(assetNames, assets, assetSpecs);
-      }),
-    [ppl.selections, assets]
-  );
+  const dfitPanelSpecs = useMemo(() => asArray(dfit.selections).map(selObj => {
+    const assetNames = Object.entries(selObj)
+      .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
+      .map(([, v]) => v);
+    return computeSpecs(assetNames, assets, assetSpecs);
+  }), [dfit.selections, assets]);
+  const umaPanelSpecs = useMemo(() => asArray(uma.selections).map(selObj => {
+    const assetNames = Object.entries(selObj)
+      .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
+      .map(([, v]) => v);
+    return computeSpecs(assetNames, assets, assetSpecs);
+  }), [uma.selections, assets]);
+  const fcaPanelSpecs = useMemo(() => asArray(fca.selections).map(selObj => {
+    const assetNames = Object.entries(selObj)
+      .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
+      .map(([, v]) => v);
+    return computeSpecs(assetNames, assets, assetSpecs);
+  }), [fca.selections, assets]);
+  const svaPanelSpecs = useMemo(() => asArray(sva.selections).map(selObj => {
+    const assetNames = Object.entries(selObj)
+      .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
+      .map(([, v]) => v);
+    return computeSpecs(assetNames, assets, assetSpecs);
+  }), [sva.selections, assets]);
+  const dogbonesPanelSpecs = useMemo(() => asArray(dogbones.selections).map(selObj => {
+    const assetNames = Object.entries(selObj)
+      .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
+      .map(([, v]) => v);
+    return computeSpecs(assetNames, assets, assetSpecs);
+  }), [dogbones.selections, assets]);
+  const zippersPanelSpecs = useMemo(() => asArray(zippers.selections).map(selObj => {
+    const assetNames = Object.entries(selObj)
+      .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
+      .map(([, v]) => v);
+    return computeSpecs(assetNames, assets, assetSpecs);
+  }), [zippers.selections, assets]);
+  const pplPanelSpecs = useMemo(() => asArray(ppl.selections).map(selObj => {
+    const assetNames = Object.entries(selObj)
+      .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
+      .map(([, v]) => v);
+    return computeSpecs(assetNames, assets, assetSpecs);
+  }), [ppl.selections, assets]);
 
-  // ---- Draft Loader: Now loads/saves models per assembly/tab ----
   useEffect(() => {
     async function loadDraft() {
       try {
@@ -281,18 +201,15 @@ export default function WorkorderForm({ initialData, onClose }) {
         setMetadata(saved.metadata || metadata);
         setPageIndex(saved.pageIndex ?? pageIndex);
 
-        // Section values
+        const pairs = { dfit, uma, fca, sva, dogbones, zippers, ppl };
         saved.sections && Object.entries(saved.sections).forEach(([key, s]) => {
-          const lookup = { dfit, uma, fca, sva, dogbones, zippers, ppl };
-          const sec = lookup[key];
-          if (!sec) return;
+          const sec = pairs[key]; if (!sec) return;
           s.buildQtys && sec.setBuildQtys(s.buildQtys);
           s.activeTab != null && sec.setActiveTab(s.activeTab);
           s.tabConsumables && sec.setTabConsumables(s.tabConsumables);
           s.selections && sec.setSelections(s.selections);
         });
 
-        // Per assembly/tab model state
         if (saved.assemblyModels) {
           assemblies.forEach(({ key, models }) => {
             const arr = saved.assemblyModels[key] || [];
@@ -305,38 +222,38 @@ export default function WorkorderForm({ initialData, onClose }) {
           });
         }
 
-        // --- Load WOInfoPage SimpleViewer state ---
         setWoInfoModelUrl(saved.woInfoModelUrl || null);
         setWoInfoModelLocked(saved.woInfoModelLocked || false);
         setWoInfoModelLabels(saved.woInfoModelLabels || []);
-
         setConsumables(saved.consumables || consumables);
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     }
     loadDraft();
     // eslint-disable-next-line
   }, [storageKey]);
 
-  // ---- Update BOM Items ----
   useEffect(() => {
     const items = [];
     const collect = (sels, bqs) => {
-      asArray(sels).forEach((sel, ti) => {
-        const mult = asArray(bqs)[ti] || 1;
-        Object.values(sel)
-          .filter(v => v)
-          .forEach(desc => {
-            const found = items.find(i => i.description === desc);
-            if (found) found.quantity += mult;
-            else items.push({ description: desc, quantity: mult });
-          });
+      const selsArr = asArray(sels);
+      selsArr.forEach((sel, ti) => {
+        const buildMult = Number(asArray(bqs)[ti]) || 0;
+        if (!buildMult) return;
+
+        // Sum per asset slot quantity * buildMult
+        for (let i = 1; i <= 10; i++) {
+          const desc = sel['location' + i];
+          if (!desc) continue;
+          const perAssetQty = Math.max(1, Math.floor(Number(sel['qty' + i] || 1)));
+          const addQty = perAssetQty * buildMult;
+
+          const found = items.find(r => r.description === desc);
+          if (found) found.quantity += addQty;
+          else items.push({ description: desc, quantity: addQty });
+        }
       });
     };
-    [dfit, uma, fca, sva, dogbones, zippers, ppl].forEach(sec =>
-      collect(sec.selections, sec.buildQtys)
-    );
+    [dfit, uma, fca, sva, dogbones, zippers, ppl].forEach(sec => collect(sec.selections, sec.buildQtys));
     setBomItems(items);
   }, [
     dfit.selections, dfit.buildQtys,
@@ -348,20 +265,10 @@ export default function WorkorderForm({ initialData, onClose }) {
     ppl.selections, ppl.buildQtys,
   ]);
 
-  // ---- NEW: Aggregate Pad Specs for BOMPage ----
-  const [padSpecs, setPadSpecs] = useState({
-    totalFillVolume: 0,
-    fullPadOAL: 0,
-    spoolingOAL: 0,
-    fullTruckingWeight: 0,
-  });
-
+  const [padSpecs, setPadSpecs] = useState({ totalFillVolume: 0, fullPadOAL: 0, spoolingOAL: 0, fullTruckingWeight: 0 });
   useEffect(() => {
     const num = x => Number(x) || 0;
-    let totalFillVolume = 0;
-    let fullPadOAL = 0;
-    let spoolingOAL = 0;
-    let fullTruckingWeight = 0;
+    let totalFillVolume = 0, fullPadOAL = 0, spoolingOAL = 0, fullTruckingWeight = 0;
 
     const sections = [
       { sec: dfit,      buildQtys: asArray(dfit.buildQtys) },
@@ -374,7 +281,6 @@ export default function WorkorderForm({ initialData, onClose }) {
     ];
 
     for (const { sec, buildQtys } of sections) {
-      // Section specs may be sec.specs or sec.panelSpecs; support both for future-proofing
       const specsArr = asArray(sec.specs || sec.panelSpecs || []);
       asArray(sec.selections).forEach((sel, tabIdx) => {
         const bq = num(buildQtys[tabIdx]) || 0;
@@ -404,106 +310,71 @@ export default function WorkorderForm({ initialData, onClose }) {
   const handleMetaChange = (field, value) => setMetadata(m => ({ ...m, [field]: value }));
   const makeSectionChange = sec => (loc, val) => sec.onChange(loc, val);
   const handleDFITChange = makeSectionChange(dfit);
-  const handleUMAChange = makeSectionChange(uma);
-  const handleFCAChange = makeSectionChange(fca);
-  const handleSVAChange = makeSectionChange(sva);
+  const handleUMAChange  = makeSectionChange(uma);
+  const handleFCAChange  = makeSectionChange(fca);
+  const handleSVAChange  = makeSectionChange(sva);
   const handleDogbonesChange = makeSectionChange(dogbones);
-  const handleZippersChange = makeSectionChange(zippers);
-  const handlePplChange = makeSectionChange(ppl);
+  const handleZippersChange  = makeSectionChange(zippers);
+  const handlePplChange      = makeSectionChange(ppl);
   const addConsumable = (name, qty, page, tab) =>
     setConsumables(prev => [
       ...prev.filter(c => !(c.name === name && c.page === page && c.tab === tab)),
       { name, qty, page, tab }
     ]);
 
-  // ---- Save Draft (create new job if missing id, else patch/update) ----
+  const [workorderRecordId, setWorkorderRecordId] = useState(null);
+
   const handleSave = async () => {
     const payloadSections = Object.fromEntries(
       ['dfit', 'uma', 'fca', 'sva', 'dogbones', 'zippers', 'ppl'].map(key => {
         const sec = { dfit, uma, fca, sva, dogbones, zippers, ppl }[key];
-        return [key, {
-          selections: sec.selections,
-          buildQtys: sec.buildQtys,
-          activeTab: sec.activeTab,
-          tabConsumables: sec.tabConsumables,
-        }];
+        return [key, { selections: sec.selections, buildQtys: sec.buildQtys, activeTab: sec.activeTab, tabConsumables: sec.tabConsumables }];
       })
     );
 
-    // Save all model states
     const assemblyModels = {};
     assemblies.forEach(({ key, models }) => {
-      assemblyModels[key] = models.map(m => ({
-        modelUrl: m.modelUrl,
-        locked: m.locked,
-        labels: m.labels,
-      }));
+      assemblyModels[key] = models.map(m => ({ modelUrl: m.modelUrl, locked: m.locked, labels: m.labels }));
     });
 
     let safeModelUrl = dfitModels[0].modelUrl;
-    if (safeModelUrl && safeModelUrl.startsWith('data:')) {
-      safeModelUrl = null;
-    }
+    if (safeModelUrl && safeModelUrl.startsWith('data:')) safeModelUrl = null;
 
     const draftBody = {
-      metadata,
-      pageIndex,
-      dfitModelUrl: safeModelUrl,
-      dfitLocked: dfitModels[0].locked,
-      dfitLabels: dfitModels[0].labels,
-      woInfoModelUrl,
-      woInfoModelLocked,
-      woInfoModelLabels,
+      metadata, pageIndex,
+      dfitModelUrl: safeModelUrl, dfitLocked: dfitModels[0].locked, dfitLabels: dfitModels[0].labels,
+      woInfoModelUrl, woInfoModelLocked, woInfoModelLabels,
       consumables,
       sections: payloadSections,
       assemblyModels,
+      padSpecs
     };
 
     try {
       let savedJobId = workorderId;
-      let jobRes = null;
-
       if (!savedJobId) {
-        // Create new job in DB!
         const jobCreatePayload = {
-          customer,
-          surface_lsd: surfaceLSD,
-          num_wells: numberOfWells,
-          rig_in_date: rigInDate,
-          well_bank_type: wellBankType,
-          workbook_revision: workbookRevision,
-          notes: notes || "",
+          customer, surface_lsd: surfaceLSD, num_wells: numberOfWells, rig_in_date: rigInDate,
+          well_bank_type: wellBankType, workbook_revision: workbookRevision, notes: notes || ''
         };
-        jobRes = await axios.post('/api/jobs', jobCreatePayload);
+        const jobRes = await axios.post('/api/jobs', jobCreatePayload);
         savedJobId = jobRes.data?.id || jobRes.data?.jobId || jobRes.data?.ID;
-        if (!savedJobId) throw new Error("Server did not return a job id!");
+        if (!savedJobId) throw new Error('Server did not return a job id!');
         alert('New Job created! Saving full workorder...');
       } else {
-        // Existing job—update fields as needed
         await axios.patch(`/api/jobs/${savedJobId}`, {
-          customer,
-          surface_lsd: surfaceLSD,
-          num_wells: numberOfWells,
-          rig_in_date: rigInDate,
-          well_bank_type: wellBankType,
-          workbook_revision: workbookRevision,
-          notes: notes || "",
+          customer, surface_lsd: surfaceLSD, num_wells: numberOfWells, rig_in_date: rigInDate,
+          well_bank_type: wellBankType, workbook_revision: workbookRevision, notes: notes || ''
         });
       }
 
-      // Always save draft to /api/drafts (linked to job id)
-      await axios.post('/api/drafts', {
-        user_id: userId,
-        workorder_id: savedJobId,
-        page_key: storageKey,
-        payload: draftBody
-      });
+      await axios.post('/api/drafts', { user_id: userId, workorder_id: savedJobId, page_key: storageKey, payload: draftBody });
 
-      // PATCH: Update local workorderId for the next publish!
-      if (!workorderId && savedJobId) {
-        setLocalWorkorderId(savedJobId);
-        initialData.id = savedJobId;
-      }
+      const createPayload = { job_id: Number(savedJobId), revision: 'A', payload: draftBody };
+      const woRes = await axios.post('/api/workorders', createPayload);
+      if (woRes?.data?.id) setWorkorderRecordId(woRes.data.id);
+
+      if (!workorderId && savedJobId) { setLocalWorkorderId(savedJobId); initialData.id = savedJobId; }
 
       alert('Progress saved to server!');
     } catch (err) {
@@ -512,43 +383,29 @@ export default function WorkorderForm({ initialData, onClose }) {
     }
   };
 
-  // ---- PUBLISH (Publish Revision Button) ----
   const handlePublish = async () => {
     try {
-      // 1. Gather BOMPage props (same as BOMPage expects)
       const bomPayload = {
-        dfitSelections: asArray(dfit.selections),
-        dfitBuildQtys: asArray(dfit.buildQtys),
-        umaSelections: asArray(uma.selections),
-        umaBuildQtys: asArray(uma.buildQtys),
-        fcaSelections: asArray(fca.selections),
-        fcaBuildQtys: asArray(fca.buildQtys),
-        svaSelections: asArray(sva.selections),
-        svaBuildQtys: asArray(sva.buildQtys),
-        dogbonesSelections: asArray(dogbones.selections),
-        dogbonesBuildQtys: asArray(dogbones.buildQtys),
-        zippersSelections: asArray(zippers.selections),
-        zippersBuildQtys: asArray(zippers.buildQtys),
-        pplSelections: asArray(ppl.selections),
-        pplBuildQtys: asArray(ppl.buildQtys),
-        consumables,
-        padSpecs
+        dfitSelections: asArray(dfit.selections), dfitBuildQtys: asArray(dfit.buildQtys),
+        umaSelections:  asArray(uma.selections),  umaBuildQtys:  asArray(uma.buildQtys),
+        fcaSelections:  asArray(fca.selections),  fcaBuildQtys:  asArray(fca.buildQtys),
+        svaSelections:  asArray(sva.selections),  svaBuildQtys:  asArray(sva.buildQtys),
+        dogbonesSelections: asArray(dogbones.selections), dogbonesBuildQtys: asArray(dogbones.buildQtys),
+        zippersSelections:  asArray(zippers.selections),  zippersBuildQtys:  asArray(zippers.buildQtys),
+        pplSelections:      asArray(ppl.selections),      pplBuildQtys:      asArray(ppl.buildQtys),
+        consumables, padSpecs
       };
 
-      // For this first version, always use "A" as the revision (upgradeable)
-      const revision = "A";
+      const revision = 'A';
+      const workOrdersData = { revision, bom: bomPayload };
 
-      // Build the new work_orders object
-      const workOrdersData = {
-        revision,
-        bom: bomPayload
-      };
-      console.log('workorderId in handlePublish:', workorderId, typeof workorderId, initialData);
-
-      // Send to backend using PUT (update job by ID)
-      await axios.put(`/api/jobs/${workorderId}`, {
-        work_orders: JSON.stringify(workOrdersData)
-      });
+      if (workorderRecordId) {
+        await axios.put(`/api/workorders/${workorderRecordId}`, { revision, payload: workOrdersData });
+      } else {
+        const createPayload = { job_id: Number(workorderId), revision, payload: workOrdersData };
+        const woRes = await axios.post('/api/workorders', createPayload);
+        if (woRes?.data?.id) setWorkorderRecordId(woRes.data.id);
+      }
 
       alert(`Published revision REV-${revision} for this job!`);
     } catch (err) {
@@ -559,53 +416,31 @@ export default function WorkorderForm({ initialData, onClose }) {
 
   const alerts = useMemo(() => {
     const out = [];
-    const base = metadata.buildingBase;
-    if (!base) return out;
-    const onHand = name =>
-      assets.filter(a => a.name === name && a.location === base && a.status === 'Available').length;
+    const base = metadata.buildingBase; if (!base) return out;
+    const onHand = name => assets.filter(a => a.name === name && a.location === base && a.status === 'Available').length;
 
-    const mapping = [
-      ['DFIT', dfit],
-      ['UMA', uma],
-      ['FCA', fca],
-      ['SVA', sva],
-      ['Dogbones', dogbones],
-      ['Zippers', zippers],
-      ['PPLDropdown', ppl],
-    ];
+    const mapping = [['DFIT', dfit], ['UMA', uma], ['FCA', fca], ['SVA', sva], ['Dogbones', dogbones], ['Zippers', zippers], ['PPLDropdown', ppl]];
     mapping.forEach(([label, sec]) => {
       asArray(sec.selections).forEach((selObj, ti) => {
         const need = asArray(sec.buildQtys)[ti] || 0;
         Object.entries(selObj).forEach(([lk, name]) => {
-          if (!name) return;
-          const have = onHand(name);
-          if (need > have) {
-            out.push(
-              `Insufficient "${name}" in ${base} for ${label} tab #${ti + 1}, location ${lk}: need ${need}, have ${have}.`
-            );
-          }
+          if (!name) return; const have = onHand(name);
+          if (need > have) out.push(`Insufficient "${name}" in ${base} for ${label} tab #${ti + 1}, location ${lk}: need ${need}, have ${have}.`);
         });
       });
     });
     return out;
   }, [
-    metadata.buildingBase,
-    assets,
-    dfit.selections, dfit.buildQtys,
-    uma.selections, uma.buildQtys,
-    fca.selections, fca.buildQtys,
-    sva.selections, sva.buildQtys,
-    dogbones.selections, dogbones.buildQtys,
-    zippers.selections, zippers.buildQtys,
-    ppl.selections, ppl.buildQtys,
+    metadata.buildingBase, assets,
+    dfit.selections, dfit.buildQtys, uma.selections, uma.buildQtys, fca.selections, fca.buildQtys,
+    sva.selections, sva.buildQtys, dogbones.selections, dogbones.buildQtys, zippers.selections, zippers.buildQtys, ppl.selections, ppl.buildQtys
   ]);
 
   let woNumber = '';
   const code = pages[pageIndex]?.code;
   const tabIdx = [dfit.activeTab, uma.activeTab, fca.activeTab, sva.activeTab, dogbones.activeTab, zippers.activeTab, ppl.activeTab];
   if (pageIndex >= 3 && pageIndex <= 9) {
-    const idx = pageIndex - 3;
-    const suffix = tabIdx[idx] > 0 ? String.fromCharCode(65 + tabIdx[idx]) : '';
+    const idx = pageIndex - 3; const suffix = tabIdx[idx] > 0 ? String.fromCharCode(65 + tabIdx[idx]) : '';
     woNumber = `WO #${code}${suffix}`;
   }
   const prevLabel = pages[pageIndex - 1]?.title || '';
@@ -613,7 +448,6 @@ export default function WorkorderForm({ initialData, onClose }) {
   const canNext = pageIndex < pages.length - 1;
   const logoSrc = logoUrl || `/assets/logos/${customer.replace(/\s+/g, '-').toLowerCase()}.png`;
 
-  // ---- Pass down all model states and specs to PageRenderer for each assembly/tab
   return (
     <>
       <WorkorderModal
@@ -723,7 +557,6 @@ export default function WorkorderForm({ initialData, onClose }) {
           pplModelStates={pplModels}
           pplPanelSpecs={pplPanelSpecs}
 
-          // --- WOInfoPage SimpleViewer model state ---
           woInfoModelUrl={woInfoModelUrl}
           setWoInfoModelUrl={setWoInfoModelUrl}
           woInfoModelLocked={woInfoModelLocked}

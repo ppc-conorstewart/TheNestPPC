@@ -1,8 +1,12 @@
-// src/components/BOMPage.jsx
+// ==============================
+// FILE: src/components/BOMPage.jsx
+// ==============================
 
-import React, { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
-// Your six asset categories
+// ==============================
+// SECTION: CONSTANTS
+// ==============================
 const ASSET_CATEGORIES = [
   'Valves',
   'Adapters',
@@ -11,13 +15,12 @@ const ASSET_CATEGORIES = [
   'Instrumentation Flanges',
   'Other',
 ];
-
-// Consumable categories
 const CONSUMABLE_CATEGORIES = ['Gaskets', 'Bolt-Ups'];
-
-// Tab names
 const TABS = ['Assets', 'Consumables', 'Pad Specifications'];
 
+// ==============================
+// SECTION: TAB NAV
+// ==============================
 function TabNav({ activeTab, onChange }) {
   return (
     <div className="flex justify-center space-x-6 mb-4 border-b border-gray-700">
@@ -38,18 +41,23 @@ function TabNav({ activeTab, onChange }) {
   );
 }
 
-// Helper function: Tallies assets from all tabs
+// ==============================
+// SECTION: HELPERS (FIXED TALLY)
+// ==============================
+// Tally assets across all tabs, multiplying each slot's qtyN by the tab's buildQty.
 function tallyAssets(selectionsArr = [], buildQtysArr = []) {
-  // Map: description -> total quantity
   const assetMap = {};
   selectionsArr.forEach((selObj, tabIdx) => {
-    const qty = Number(buildQtysArr[tabIdx]) || 0;
-    Object.entries(selObj)
-      .filter(([key, val]) => /^location\d+$/.test(key) && val)
-      .forEach(([, description]) => {
-        if (!description) return;
-        assetMap[description] = (assetMap[description] || 0) + qty;
-      });
+    const buildQty = Number(buildQtysArr[tabIdx]) || 0;
+    if (!buildQty) return;
+
+    for (let i = 1; i <= 10; i++) {
+      const desc = selObj['location' + i];
+      if (!desc) continue;
+      const perAssetQty = Math.max(1, Math.floor(Number(selObj['qty' + i] || 1)));
+      const addQty = perAssetQty * buildQty;
+      assetMap[desc] = (assetMap[desc] || 0) + addQty;
+    }
   });
   return Object.entries(assetMap).map(([description, quantity]) => ({
     description,
@@ -57,6 +65,9 @@ function tallyAssets(selectionsArr = [], buildQtysArr = []) {
   }));
 }
 
+// ==============================
+// SECTION: COMPONENT
+// ==============================
 export default function BOMPage({
   dfitSelections = [],
   dfitBuildQtys = [],
@@ -77,7 +88,9 @@ export default function BOMPage({
 }) {
   const [activeTab, setActiveTab] = useState('Assets');
 
-  // Build assetItems from ALL assemblies
+  // ==============================
+  // SECTION: ASSET AGGREGATION
+  // ==============================
   const assetItems = useMemo(() => {
     const allSections = [
       [dfitSelections, dfitBuildQtys],
@@ -89,15 +102,13 @@ export default function BOMPage({
       [pplSelections, pplBuildQtys],
     ];
     const all = allSections.flatMap(([sels, qtys]) => tallyAssets(sels, qtys));
-    // Merge duplicates
     const combined = {};
     all.forEach(({ description, quantity }) => {
       combined[description] = (combined[description] || 0) + quantity;
     });
-    return Object.entries(combined).map(([description, quantity]) => ({
-      description,
-      quantity,
-    }));
+    return Object.entries(combined)
+      .map(([description, quantity]) => ({ description, quantity }))
+      .sort((a, b) => a.description.localeCompare(b.description));
   }, [
     dfitSelections, dfitBuildQtys,
     umaSelections, umaBuildQtys,
@@ -108,13 +119,10 @@ export default function BOMPage({
     pplSelections, pplBuildQtys,
   ]);
 
-  // Group assets into the six categories
   const groupedAssets = useMemo(() => {
-    const map = Object.fromEntries(
-      ASSET_CATEGORIES.map(c => [c, []])
-    );
+    const map = Object.fromEntries(ASSET_CATEGORIES.map(c => [c, []]));
     assetItems.forEach(item => {
-      const desc = item.description.toLowerCase();
+      const desc = (item.description || '').toLowerCase();
       let cat = 'Other';
       if (desc.includes('valve')) cat = 'Valves';
       else if (desc.includes('adapter')) cat = 'Adapters';
@@ -126,48 +134,33 @@ export default function BOMPage({
     return map;
   }, [assetItems]);
 
-  // Aggregate consumables, multiplying by tab's buildQty and filtering out qty <= 0
+  // ==============================
+  // SECTION: CONSUMABLES
+  // ==============================
   const consumableItems = useMemo(() => {
     const agg = {};
     consumables.forEach(({ name, quantity, qty, tab, page }) => {
       const q = Number(quantity ?? qty) || 0;
-      // Figure out the right buildQty array and value for the consumable's section and tab
       let buildQty = 1;
-      if (page === 'DFIT' && Array.isArray(dfitBuildQtys) && typeof tab === 'number') {
-        buildQty = Number(dfitBuildQtys[tab]) || 0;
-      } else if (page === 'UMA' && Array.isArray(umaBuildQtys) && typeof tab === 'number') {
-        buildQty = Number(umaBuildQtys[tab]) || 0;
-      } else if (page === 'FCA' && Array.isArray(fcaBuildQtys) && typeof tab === 'number') {
-        buildQty = Number(fcaBuildQtys[tab]) || 0;
-      } else if (page === 'SVA' && Array.isArray(svaBuildQtys) && typeof tab === 'number') {
-        buildQty = Number(svaBuildQtys[tab]) || 0;
-      } else if (page === 'Dogbones' && Array.isArray(dogbonesBuildQtys) && typeof tab === 'number') {
-        buildQty = Number(dogbonesBuildQtys[tab]) || 0;
-      } else if (page === 'Zippers' && Array.isArray(zippersBuildQtys) && typeof tab === 'number') {
-        buildQty = Number(zippersBuildQtys[tab]) || 0;
-      } else if (page === 'PPL' && Array.isArray(pplBuildQtys) && typeof tab === 'number') {
-        buildQty = Number(pplBuildQtys[tab]) || 0;
-      }
+      if (page === 'DFIT' && Array.isArray(dfitBuildQtys)) buildQty = Number(dfitBuildQtys[tab]) || 0;
+      else if (page === 'UMA' && Array.isArray(umaBuildQtys)) buildQty = Number(umaBuildQtys[tab]) || 0;
+      else if (page === 'FCA' && Array.isArray(fcaBuildQtys)) buildQty = Number(fcaBuildQtys[tab]) || 0;
+      else if (page === 'SVA' && Array.isArray(svaBuildQtys)) buildQty = Number(svaBuildQtys[tab]) || 0;
+      else if (page === 'Dogbones' && Array.isArray(dogbonesBuildQtys)) buildQty = Number(dogbonesBuildQtys[tab]) || 0;
+      else if (page === 'Zippers' && Array.isArray(zippersBuildQtys)) buildQty = Number(zippersBuildQtys[tab]) || 0;
+      else if (page === 'PPL' && Array.isArray(pplBuildQtys)) buildQty = Number(pplBuildQtys[tab]) || 0;
       const total = q * buildQty;
-      if (total > 0) {
-        agg[name] = (agg[name] || 0) + total;
-      }
+      if (total > 0) agg[name] = (agg[name] || 0) + total;
     });
     return Object.entries(agg)
       .map(([name, quantity]) => ({ name, quantity }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [
     consumables,
-    dfitBuildQtys,
-    umaBuildQtys,
-    fcaBuildQtys,
-    svaBuildQtys,
-    dogbonesBuildQtys,
-    zippersBuildQtys,
-    pplBuildQtys,
+    dfitBuildQtys, umaBuildQtys, fcaBuildQtys, svaBuildQtys,
+    dogbonesBuildQtys, zippersBuildQtys, pplBuildQtys,
   ]);
 
-  // Group consumables under Gaskets vs Bolt-Ups
   const groupedConsumables = useMemo(() => {
     const map = { 'Gaskets': [], 'Bolt-Ups': [] };
     consumableItems.forEach(item => {
@@ -177,7 +170,9 @@ export default function BOMPage({
     return map;
   }, [consumableItems]);
 
-  // ---- UNITS MAP FOR PAD SPECS ----
+  // ==============================
+  // SECTION: PAD SPECS
+  // ==============================
   const padSpecRows = [
     ['Total Fill Volume',   padSpecs.totalFillVolume,   'L'],
     ['Full Pad OAL',        padSpecs.fullPadOAL,        'INCHES'],
@@ -185,37 +180,26 @@ export default function BOMPage({
     ['Full Trucking Weight', padSpecs.fullTruckingWeight, 'LBS'],
   ];
 
+  // ==============================
+  // SECTION: RENDER
+  // ==============================
   return (
     <div className="flex flex-col h-full w-full overflow-auto px-6 py-4 uppercase text-xs">
       <TabNav activeTab={activeTab} onChange={setActiveTab} />
 
       {activeTab === 'Assets' && (
         <div className="space-y-4 overflow-auto">
-          {[
-            ASSET_CATEGORIES.slice(0, 3),
-            ASSET_CATEGORIES.slice(3, 6),
-          ].map((cats, blockIdx) => {
-            const maxRows = Math.max(
-              ...cats.map(c => groupedAssets[c].length),
-              1
-            );
+          {[ASSET_CATEGORIES.slice(0, 3), ASSET_CATEGORIES.slice(3, 6)].map((cats, blockIdx) => {
+            const maxRows = Math.max(...cats.map(c => groupedAssets[c].length), 1);
             return (
-              <table
-                key={blockIdx}
-                className="w-full table-fixed border-collapse border border-gray-600"
-              >
+              <table key={blockIdx} className="w-full table-fixed border-collapse border border-gray-600">
                 <colgroup>
-                  {cats.map((_, i) => (
-                    <col key={i} style={{ width: '33.3333%' }} />
-                  ))}
+                  {cats.map((_, i) => <col key={i} style={{ width: '33.3333%' }} />)}
                 </colgroup>
                 <thead>
                   <tr>
                     {cats.map(cat => (
-                      <th
-                        key={cat}
-                        className="border border-gray-600 px-2 py-1 text-[#6a7257] font-semibold text-center"
-                      >
+                      <th key={cat} className="border border-gray-600 px-2 py-1 text-[#6a7257] font-semibold text-center">
                         {cat}
                       </th>
                     ))}
@@ -227,10 +211,7 @@ export default function BOMPage({
                       {cats.map(cat => {
                         const item = groupedAssets[cat][rowIdx];
                         return (
-                          <td
-                            key={cat}
-                            className="border border-gray-600 px-2 py-1 text-white"
-                          >
+                          <td key={cat} className="border border-gray-600 px-2 py-1 text-white">
                             {item ? (
                               <div className="flex justify-between items-center">
                                 <span className="truncate">{item.description}</span>
@@ -261,10 +242,7 @@ export default function BOMPage({
             <thead>
               <tr>
                 {CONSUMABLE_CATEGORIES.map(cat => (
-                  <th
-                    key={cat}
-                    className="border border-gray-600 px-2 py-1 text-[#6a7257] font-semibold text-center"
-                  >
+                  <th key={cat} className="border border-gray-600 px-2 py-1 text-[#6a7257] font-semibold text-center">
                     {cat}
                   </th>
                 ))}
@@ -282,16 +260,11 @@ export default function BOMPage({
                     {CONSUMABLE_CATEGORIES.map(cat => {
                       const item = groupedConsumables[cat][rowIdx];
                       return (
-                        <td
-                          key={cat}
-                          className="border border-gray-600 px-2 py-1 text-white"
-                        >
+                        <td key={cat} className="border border-gray-600 px-2 py-1 text-white">
                           {item ? (
                             <div className="flex justify-between items-center">
                               <span className="truncate">{item.name}</span>
-                              <span className="font-bold ml-2">
-                                {item.quantity}
-                              </span>
+                              <span className="font-bold ml-2">{item.quantity}</span>
                             </div>
                           ) : (
                             <span className="text-gray-500 block text-center">—</span>
@@ -307,7 +280,7 @@ export default function BOMPage({
         </div>
       )}
 
-       {activeTab === 'Pad Specifications' && (
+      {activeTab === 'Pad Specifications' && (
         <div className="overflow-auto mt-4">
           <table className="w-full table-fixed border-collapse border border-gray-600">
             <tbody>
@@ -317,14 +290,12 @@ export default function BOMPage({
                     {label}
                   </th>
                   <td className="border border-gray-600 px-2 py-1 font-bold text-white text-right">
-                    {value
-                      ? (
-                        <>
-                          <span className="text-white">{value}</span>
-                          <span className="ml-1" style={{ color: "#6a7257" }}>{unit}</span>
-                        </>
-                      )
-                      : '—'}
+                    {value ? (
+                      <>
+                        <span className="text-white">{value}</span>
+                        <span className="ml-1" style={{ color: '#6a7257' }}>{unit}</span>
+                      </>
+                    ) : '—'}
                   </td>
                 </tr>
               ))}

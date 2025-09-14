@@ -1,5 +1,5 @@
 // ==============================
-// TrainingHub.jsx — With Add Visit Wiring
+// TrainingHub.jsx — Left Panel = Employees Only; Right Panel = Tabbed Content
 // ==============================
 
 import { useState } from "react";
@@ -11,7 +11,9 @@ import DocumentHub from "../components/Training Hub Components/DocumentHub";
 import EmployeeList, { LEVELS } from "../components/Training Hub Components/EmployeeList";
 import VisitsTable from "../components/Training Hub Components/VisitsTable";
 
-// FIELD EMPLOYEES
+// ==============================
+// SECTION: Field Employees & Ranks
+// ==============================
 const fieldEmployees = [
   "Daniel Swartz", "Jeff Bennett", "Mitch Martin", "Dillan Campbell", "Ryker Kelly",
   "Abe Nazari", "John Wells", "Jeremy Dutchak", "Dawson Howell", "Colton Peters",
@@ -22,43 +24,19 @@ const fieldEmployees = [
   "Marco Patton", "Connor Krebs"
 ];
 
-// MAP EMPLOYEE NAME TO RANK LEVEL (0=I, 1=II, ... 4=V)
 const fieldEmployeeRanks = {
-  "Daniel Swartz": 4,
-  "Jeff Bennett": 3,
-  "Mitch Martin": 3,
-  "Dillan Campbell": 3,
-  "Ryker Kelly": 3,
-  "Abe Nazari": 3,
-  "John Wells": 3,
-  "Jeremy Dutchak": 3,
-  "Dawson Howell": 3,
-  "Colton Peters": 3,
-  "Greg Hultin": 3,
-  "Dustin Luke": 3,
-  "Ryan Gray": 3,
-  "Cam Pannenbecker": 2,
-  "Todd Cuza": 2,
-  "Keegan Fiveland": 2,
-  "Jameel Emery": 2,
-  "Mike Brushett": 2,
-  "Matthew Gray": 2,
-  "Jesse Bird": 2,
-  "Patrick Bennett": 1,
-  "Chace Levis": 1,
-  "Landen Brown": 1,
-  "Austyn Jordan": 1,
-  "Trevor Mervyn": 1,
-  "Drew Twells": 1,
-  "Matthew McCausland": 1,
-  "Efraim Ebo": 1,
-  "Ernesto Rea Jr.": 1,
-  "Ruslan Karandashov": 0,
-  "Marco Patton": 0,
-  "Connor Krebs": 0
+  "Daniel Swartz": 4, "Jeff Bennett": 3, "Mitch Martin": 3, "Dillan Campbell": 3, "Ryker Kelly": 3,
+  "Abe Nazari": 3, "John Wells": 3, "Jeremy Dutchak": 3, "Dawson Howell": 3, "Colton Peters": 3,
+  "Greg Hultin": 3, "Dustin Luke": 3, "Ryan Gray": 3, "Cam Pannenbecker": 2, "Todd Cuza": 2,
+  "Keegan Fiveland": 2, "Jameel Emery": 2, "Mike Brushett": 2, "Matthew Gray": 2, "Jesse Bird": 2,
+  "Patrick Bennett": 1, "Chace Levis": 1, "Landen Brown": 1, "Austyn Jordan": 1, "Trevor Mervyn": 1,
+  "Drew Twells": 1, "Matthew McCausland": 1, "Efraim Ebo": 1, "Ernesto Rea Jr.": 1, "Ruslan Karandashov": 0,
+  "Marco Patton": 0, "Connor Krebs": 0
 };
 
-// UTILS
+// ==============================
+// SECTION: Utils
+// ==============================
 function getInitialChecklist(empName) {
   const checklist = {};
   if (!Array.isArray(LEVELS) || !Array.isArray(competencies)) return checklist;
@@ -87,25 +65,19 @@ function getInitialChecklist(empName) {
 
 function getAllInitialChecklists() {
   const obj = {};
-  fieldEmployees.forEach(emp => {
-    obj[emp] = getInitialChecklist(emp);
-  });
+  fieldEmployees.forEach(emp => { obj[emp] = getInitialChecklist(emp); });
   return obj;
 }
 
 function getAllInitialDocuments() {
   const obj = {};
-  fieldEmployees.forEach(emp => {
-    obj[emp] = [];
-  });
+  fieldEmployees.forEach(emp => { obj[emp] = []; });
   return obj;
 }
 
 function getAllInitialNotes() {
   const obj = {};
-  fieldEmployees.forEach(emp => {
-    obj[emp] = "";
-  });
+  fieldEmployees.forEach(emp => { obj[emp] = ""; });
   return obj;
 }
 
@@ -126,15 +98,54 @@ function getPresetOrProgressLevel(employeeChecklist, empName) {
   let progress = 0;
   for (let lvl = 0; lvl < LEVELS.length; lvl++) {
     const { percent } = getLevelProgress(employeeChecklist, lvl);
-    if (percent < 100) {
-      progress = lvl;
-      break;
-    }
+    if (percent < 100) { progress = lvl; break; }
     if (lvl === LEVELS.length - 1) progress = lvl;
   }
   return Math.max(preset, progress);
 }
 
+// ==============================
+// SECTION: Right Panel Tabs
+// ==============================
+const RIGHT_TABS = [
+  { key: "VISITS", label: "Field Visits" },
+  { key: "DOCUMENTS", label: "Document Hub" },
+  { key: "NOTES", label: "Employee Notes" },
+  { key: "COMPETENCIES", label: "Competencies" }
+];
+
+// ==============================
+// SECTION: Notes Panel
+// ==============================
+function NotesPanel({ value, onChange, onSave }) {
+  return (
+    <div className="flex flex-col gap-2 px-3 py-3" style={{ height: "100%" }}>
+      <div className="flex items-center justify-between">
+        <h3 className="text-white font-erbaum font-bold uppercase tracking-wide" style={{ fontSize: ".9rem" }}>
+          Employee Notes
+        </h3>
+        <button
+          onClick={onSave}
+          className="px-3 py-1 rounded bg-[#6a7257] text-black font-erbaum font-bold text-xs hover:bg-[#7fa173] transition"
+          style={{ boxShadow: "0 1px 5px #0003" }}
+        >
+          Save
+        </button>
+      </div>
+      <textarea
+        className="w-full flex-1 bg-black border border-[#6a7257] text-white rounded px-2 py-2 text-xs font-erbaum resize-none"
+        style={{ minHeight: 120 }}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Add employee-specific notes here..."
+      />
+    </div>
+  );
+}
+
+// ==============================
+// SECTION: Main Component
+// ==============================
 export default function TrainingHub() {
   const [selectedEmployee, setSelectedEmployee] = useState(fieldEmployees[0]);
   const [employeeChecklists, setEmployeeChecklists] = useState(getAllInitialChecklists());
@@ -142,7 +153,7 @@ export default function TrainingHub() {
   const [employeeNotes, setEmployeeNotes] = useState(getAllInitialNotes());
   const [tabLevel, setTabLevel] = useState(fieldEmployeeRanks[fieldEmployees[0]] ?? 0);
 
-  // ---- NEW: visits state, mutable ----
+  // Visits
   const [visits, setVisits] = useState([
     {
       date: "2025-08-01",
@@ -154,16 +165,15 @@ export default function TrainingHub() {
       objectives: "Proper valve greasing, pad safety"
     }
   ]);
-  const handleAddVisit = (newVisit) => {
-    setVisits(prev => [...prev, newVisit]);
-  };
-  // ---- END NEW ----
+  const handleAddVisit = (newVisit) => setVisits(prev => [...prev, newVisit]);
 
+  // Employee selector
   function handleSelectEmployee(emp) {
     setSelectedEmployee(emp);
     setTabLevel(fieldEmployeeRanks[emp] ?? 0);
   }
 
+  // Checklist toggles
   function handleChecklistChange(level, groupIdx, itemIdx, emp, updateObj) {
     setEmployeeChecklists((prev) => {
       const current = prev[emp];
@@ -201,6 +211,7 @@ export default function TrainingHub() {
     });
   }
 
+  // Documents
   function handleAddDocuments(files) {
     setEmployeeDocuments(prev => {
       const empDocs = prev[selectedEmployee] || [];
@@ -210,143 +221,160 @@ export default function TrainingHub() {
         uploaded: new Date().toLocaleString(),
         file
       }));
-      return {
-        ...prev,
-        [selectedEmployee]: [...empDocs, ...newDocs]
-      };
+      return { ...prev, [selectedEmployee]: [...empDocs, ...newDocs] };
     });
   }
-
   function handleDeleteDocument(id) {
     setEmployeeDocuments(prev => {
       const empDocs = prev[selectedEmployee] || [];
-      return {
-        ...prev,
-        [selectedEmployee]: empDocs.filter((d) => d.id !== id)
-      };
+      return { ...prev, [selectedEmployee]: empDocs.filter((d) => d.id !== id) };
     });
   }
-
   function handleDownloadDocument(doc) {
     const url = URL.createObjectURL(doc.file);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = doc.name;
-    a.click();
+    a.href = url; a.download = doc.name; a.click();
     URL.revokeObjectURL(url);
   }
 
+  // Notes
   const currentNotes = employeeNotes[selectedEmployee] || "";
   function handleChangeNotes(text) {
-    setEmployeeNotes(prev => ({
-      ...prev,
-      [selectedEmployee]: text
-    }));
+    setEmployeeNotes(prev => ({ ...prev, [selectedEmployee]: text }));
   }
-
   function handleSaveNotes() {}
 
+  // Progress
   const currentChecklist = employeeChecklists[selectedEmployee];
   const currentDocuments = employeeDocuments[selectedEmployee] || [];
   const unlockedLevel = getPresetOrProgressLevel(currentChecklist, selectedEmployee);
   const progress = getLevelProgress(currentChecklist, tabLevel);
-
   const progressByLevel = {};
-  LEVELS.forEach((_, lvl) => {
-    progressByLevel[lvl] = getLevelProgress(currentChecklist, lvl);
-  });
+  LEVELS.forEach((_, lvl) => { progressByLevel[lvl] = getLevelProgress(currentChecklist, lvl); });
+
+  // Right content tab
+  const [rightTab, setRightTab] = useState(RIGHT_TABS[0].key);
 
   if (!Array.isArray(competencies) || !competencies[tabLevel]) {
     return (
       <div className="w-full h-full flex items-center justify-center text-red-500 font-bold text-lg">
-        Error: Competency matrix data not loaded. Please check your CompetencyMatrix.js file and import path.<br />
-        (Current path: <code>../components/Training Hub Components/CompetencyMatrix.js</code>)
+        Error: Competency matrix data not loaded. Please check your CompetencyMatrix.js file and import path.
       </div>
     );
   }
 
   return (
-    <div
-      className="w-full h-full min-h-full ml-12 pr-12 flex relative"
-      style={{
-        background: `radial-gradient(circle at 20% 20%, #000000ff 2%, transparent 2%),
-                     radial-gradient(circle at 70% 60%, #494f3c 2%, transparent 2%),
-                     radial-gradient(circle at 30% 80%, #35392e 2%, transparent 2%)`,
-        backgroundColor: "#1b1d16",
-        backgroundSize: "100px 100px"
-      }}
-    >
+    <div className="w-full h-full min-h-full ml-12 pr-12 flex relative">
       <Sidebar />
-      <div
-        className="flex flex-1 h-[88vh] min-h-[640px] max-w-full mx-auto flex-col"
-        style={{
-          marginLeft: 4,
-          marginTop: 0,
-          marginBottom: 0,
-          boxSizing: "border-box"
-        }}
-      >
-        {/* CAMO HEADER */}
+
+      {/* ============================== */}
+      {/* SECTION: Page Header */}
+      {/* ============================== */}
+      <div className="absolute top-0 left-0 right-0 text-center py-0 camo-header" style={{ zIndex: 5 }}>
+        <h1 style={{ fontFamily: "Punoer, sans-serif" }} className="text-white uppercase text-5xl">Paloma Training Hub</h1>
+      </div>
+
+      {/* ============================== */}
+      {/* SECTION: Content Columns */}
+      {/* ============================== */}
+      <div className="flex flex-1 h-[88vh] min-h-[640px] max-w-full mx-auto flex-row" style={{ marginTop: 70 }}>
+        {/* LEFT: Employees ONLY */}
         <div
-          className="w-full text-center py-0"
+          className="flex-none flex flex-col"
           style={{
-            background: `
-              url('data:image/svg+xml;utf8,<svg width="600" height="70" xmlns="http://www.w3.org/2000/svg"><g>
-              <ellipse fill="%236a7257" fill-opacity="0.28" cx="100" cy="30" rx="70" ry="28"/>
-              <ellipse fill="%23494f3c" fill-opacity="0.33" cx="340" cy="50" rx="100" ry="30"/>
-              <ellipse fill="%233c4133" fill-opacity="0.4" cx="500" cy="30" rx="80" ry="20"/>
-              <ellipse fill="%23949c7f" fill-opacity="0.13" cx="230" cy="22" rx="72" ry="19"/>
-              <ellipse fill="%235d654b" fill-opacity="0.21" cx="380" cy="18" rx="48" ry="15"/>
-              <ellipse fill="%236a7257" fill-opacity="0.13" cx="520" cy="60" rx="60" ry="16"/>
-              <ellipse fill="%231b1d16" fill-opacity="0.22" cx="50" cy="55" rx="50" ry="17"/>
-              </g></svg>')
-              repeat-x,
-              linear-gradient(to bottom, #000000ff 94%, #000000ff 100%)
-            `,
-            backgroundSize: "600px 70px, 100% 100%",
-            borderBottom: "0px solid #6a7257",
-            borderTop: "0px solid #35392e",
-            zIndex: 5
+            width: "28%",
+            minWidth: 270,
+            borderRight: "4px solid #6a7257",
+            borderBottom: "4px solid #6a7257",
+            borderLeft: "4px solid #6a7257",
+            borderTop: "4px solid #6a7257",
+            background: "black",
+            position: "relative",
+            height: "100%"
           }}
         >
-          <h1 style={{ fontFamily: "Varien, sans-serif" }} className="text-white text-4xl">Paloma Training Hub</h1>
+          <EmployeeList
+            fieldEmployees={fieldEmployees}
+            selectedEmployee={selectedEmployee}
+            employeeChecklists={employeeChecklists}
+            onSelectEmployee={handleSelectEmployee}
+          />
         </div>
-        {/* END CAMO HEADER */}
 
-        <div className="flex flex-1 w-full h-full">
+        {/* RIGHT: Tabbed Area */}
+        <div className="flex flex-col flex-1 h-full" style={{ minWidth: 0 }}>
+          {/* Tabs for right panel */}
           <div
-            className="flex-none flex flex-col justify-between"
+            className="flex items-center gap-2 px-3 py-2"
             style={{
-              width: "28%",
-              minWidth: 270,
-              borderRight: "4px solid #6a7257",
-              borderBottom: "4px solid #6a7257",
-              borderLeft: "4px solid #6a7257",
               borderTop: "4px solid #6a7257",
-              background: "black",
-              position: "relative",
-              height: "100%"
+              borderRight: "4px solid #6a7257",
+              background: "#000"
             }}
           >
-            <EmployeeList
-              fieldEmployees={fieldEmployees}
-              selectedEmployee={selectedEmployee}
-              employeeChecklists={employeeChecklists}
-              onSelectEmployee={handleSelectEmployee}
-            />
-            <DocumentHub
-              documents={currentDocuments}
-              onAddDocuments={handleAddDocuments}
-              onDeleteDocument={handleDeleteDocument}
-              onDownloadDocument={handleDownloadDocument}
-              employeeName={selectedEmployee}
-              notes={currentNotes}
-              onChangeNotes={handleChangeNotes}
-              onSaveNotes={handleSaveNotes}
-            />
+            {RIGHT_TABS.map(t => {
+              const active = rightTab === t.key;
+              return (
+                <button
+                  key={t.key}
+                  className="font-erbaum px-3 py-1 rounded text-xs uppercase tracking-wide font-bold"
+                  style={{
+                    letterSpacing: "0.03em",
+                    color: active ? "#FFD943" : "#bbb",
+                    background: active ? "#23282b" : "#181c15",
+                    border: active ? "2px solid #FFD943" : "2px solid transparent",
+                    transition: "all .12s"
+                  }}
+                  onClick={() => setRightTab(t.key)}
+                >
+                  {t.label}
+                </button>
+              );
+            })}
           </div>
-          <div className="flex flex-col flex-1 h-full" style={{ minWidth: 0 }}>
-            <VisitsTable visits={visits} onAddVisit={handleAddVisit} />
+
+          {/* Panel Bodies */}
+          {rightTab === "VISITS" && (
+            <div className="flex-none">
+              <VisitsTable visits={visits} onAddVisit={handleAddVisit} />
+            </div>
+          )}
+
+          {rightTab === "DOCUMENTS" && (
+            <div
+              className="flex-1"
+              style={{
+                borderRight: "4px solid #6a7257",
+                borderBottom: "4px solid #6a7257",
+                background: "#000",
+                overflow: "hidden"
+              }}
+            >
+              <DocumentHub
+                documents={currentDocuments}
+                onAddDocuments={handleAddDocuments}
+                onDeleteDocument={handleDeleteDocument}
+                onDownloadDocument={handleDownloadDocument}
+                employeeName={selectedEmployee}
+              />
+            </div>
+          )}
+
+          {rightTab === "NOTES" && (
+            <div
+              className="flex-1"
+              style={{
+                borderRight: "4px solid #6a7257",
+                borderBottom: "4px solid #6a7257",
+                background: "#000",
+                overflow: "hidden"
+              }}
+            >
+              <NotesPanel value={currentNotes} onChange={handleChangeNotes} onSave={handleSaveNotes} />
+            </div>
+          )}
+
+          {rightTab === "COMPETENCIES" && (
             <div
               className="flex-1 flex flex-col items-stretch justify-start px-3 py-3"
               style={{
@@ -354,8 +382,6 @@ export default function TrainingHub() {
                 borderBottom: "4px solid #6a7257",
                 background: "#000",
                 minHeight: "70%",
-                maxHeight: "64%",
-                height: "64%",
                 overflowY: "auto"
               }}
             >
@@ -376,7 +402,7 @@ export default function TrainingHub() {
                 onChecklistChange={handleChecklistChange}
               />
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

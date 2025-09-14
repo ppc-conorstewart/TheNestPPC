@@ -13,33 +13,40 @@ import { showPalomaToast } from '../utils/toastUtils';
 const ASSEMBLIES = [
   { id: 'dog-bones',   title: 'Dog Bones',    children: ['Dogbone-A','Dogbone-B','Dogbone-C','Dogbone-D','Dogbone-E','Dogbone-F'] },
   { id: 'zippers',     title: 'Zippers',      children: ['Zipper - A','Zipper - B','Zipper - C','Zipper - D','Zipper - E','Zipper - F'] },
-  { id: 'flowcrosses', title: 'Flowcrosses',  children: ['Flowcross-A','Flowcross-B','Flowcross-C','Flowcross-D','Flowcross-E','Flowcross-F'] },
+  { id: 'flowcrosses', title: 'Flow Crosses', children: ['Flowcross-A','Flowcross-B','Flowcross-C','Flowcross-D','Flowcross-E','Flowcross-F'] },
+  { id: 'coil-trees',  title: 'Coil Trees',   children: ['CoilTree-A','CoilTree-B','CoilTree-C','CoilTree-D','CoilTree-E','CoilTree-F'] },
   { id: 'missiles',    title: 'Missiles',     children: ['Missile-1 (Double Barrel)','Missile-2','Missile-3','Missile-4'] },
 ];
 
 // =================== Helpers ===================
 const buildKeysForFamily = (family) => {
-  const base = family === 'dog-bones' ? 'Dogbone' : family === 'zippers' ? 'Zipper' : family === 'flowcrosses' ? 'Flowcross' : '';
+  const base =
+    family === 'dog-bones' ? 'Dogbone' :
+    family === 'zippers' ? 'Zipper' :
+    family === 'flowcrosses' ? 'Flowcross' :
+    family === 'coil-trees' ? 'CoilTree' : '';
   const out = [];
-  'ABCDEF'.split('').forEach((ch) => out.push(`${base}-${ch}`));
-  for (let i = 1; i <= 40; i++) out.push(`${base}-${i}`);
+  'ABCDEF'.split('').forEach((ch) => out.push(base + '-' + ch));
+  const max = family === 'coil-trees' ? 20 : 40;
+  for (let i = 1; i <= max; i++) out.push(base + '-' + i);
   return out;
 };
 function nextLetter(children = []) {
-  const letters = children.map((c) => { const m = /-\s*([A-Z])\b/i.exec(c); return m ? m[1].toUpperCase() : null; }).filter(Boolean);
+  const letters = children.map(function (c) { const m = /-\s*([A-Z])\b/i.exec(c); return m ? m[1].toUpperCase() : null; }).filter(Boolean);
   if (!letters.length) return 'A';
-  const max = letters.reduce((m, ch) => Math.max(m, ch.charCodeAt(0)), 'A'.charCodeAt(0));
+  const max = letters.reduce(function (m, ch) { return Math.max(m, ch.charCodeAt(0)); }, 'A'.charCodeAt(0));
   return String.fromCharCode(max + 1);
 }
 function nextMissileNumber(children = []) {
-  const nums = children.map((c) => { const m = /^Missile-(\d+)/i.exec(c.trim()); return m ? parseInt(m[1], 10) : null; }).filter((n) => Number.isFinite(n));
-  const max = nums.length ? Math.max(...nums) : 0;
+  const nums = children.map(function (c) { const m = /^Missile-(\d+)/i.exec(String(c).trim()); return m ? parseInt(m[1], 10) : null; }).filter(function (n) { return Number.isFinite(n); });
+  const max = nums.length ? Math.max.apply(null, nums) : 0;
   return max + 1;
 }
 const numericLabelMap = {
-  'Dog Bones': (i) => `Dogbone-${i}`,
-  'Zippers':   (i) => `Zipper-${i}`,
-  'Flowcrosses': (i) => `Flowcross-${i}`
+  'Dog Bones':   function (i) { return 'Dogbone-' + i; },
+  'Zippers':     function (i) { return 'Zipper-' + i; },
+  'Flow Crosses':function (i) { return 'Flowcross-' + i; },
+  'Coil Trees':  function (i) { return 'CoilTree-' + i; },
 };
 
 // =================== Component ===================
@@ -64,34 +71,34 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
   const childParam = searchParams.get('child') || null;
 
   const selectedAssembly = useMemo(
-    () => assemblies.find(a => a.title === assemblyParam) || assemblies[0],
+    function () { return assemblies.find(function (a) { return a.title === assemblyParam; }) || assemblies[0]; },
     [assemblies, assemblyParam]
   );
   const selectedChild = childParam;
 
-  // =================== Data Loads (assets / history / preAssigned) ===================
+  // =================== Data Loads ===================
   useEffect(() => {
     let alive = true;
     (async () => {
       setLoadingOptions(true);
       try {
-        const res = await fetch(`${API}/api/assets`, { credentials: 'include' });
+        const res = await fetch(API + '/api/assets', { credentials: 'include' });
         const data = res.ok ? await res.json() : [];
         if (!alive) return;
-        const opts = (Array.isArray(data) ? data : []).map(a => {
-          const id = a?.ppc || a?.ppc_no || a?.ppc_number || a?.PPC || a?.asset_id || a?.id || '';
-          const name = a?.name || a?.asset_name || a?.description || a?.display_name || id || 'Unnamed';
+        const opts = (Array.isArray(data) ? data : []).map(function (a) {
+          const id = a && (a.ppc || a.ppc_no || a.ppc_number || a.PPC || a.asset_id || a.id || '');
+          const name = a && (a.name || a.asset_name || a.description || a.display_name || id || 'Unnamed');
           return { id: String(id).trim(), name: String(name).trim() };
-        }).filter(o => o.id);
+        }).filter(function (o) { return o.id; });
         setAssetOptions(opts);
       } catch {} finally { if (alive) setLoadingOptions(false); }
     })();
-    return () => { alive = false; };
+    return function () { alive = false; };
   }, []);
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API}/api/master/history`, { credentials: 'include' });
+        const res = await fetch(API + '/api/master/history', { credentials: 'include' });
         if (!res.ok) return;
         setHistoryLog(await res.json());
       } catch {}
@@ -99,23 +106,23 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
   }, []);
   const fetchPreAssigned = useCallback(async (assemblyTitle) => {
     try {
-      const res = await fetch(`${API}/api/master/summary/${encodeURIComponent(assemblyTitle)}`, { credentials: 'include' });
+      const res = await fetch(API + '/api/master/summary/' + encodeURIComponent(assemblyTitle), { credentials: 'include' });
       if (!res.ok) return;
       const rows = await res.json();
       const set = new Set(
         (rows || [])
-          .filter(r => {
+          .filter(function (r) {
             const isActive = typeof r.active === 'boolean' ? r.active : (String(r.status || '').toLowerCase() === 'active');
             return isActive && Number(r.assigned_count) > 0;
           })
-          .map(r => String(r.child))
+          .map(function (r) { return String(r.child); })
       );
-      setPreAssignedByAssembly(prev => ({ ...prev, [assemblyTitle]: set }));
+      setPreAssignedByAssembly(function (prev) { return Object.assign({}, prev, (function(){ const o={}; o[assemblyTitle]=set; return o; })()); });
     } catch {}
   }, []);
-  useEffect(() => { ['Dog Bones','Zippers','Flowcrosses'].forEach(t => fetchPreAssigned(t)); }, [fetchPreAssigned]);
+  useEffect(() => { ['Dog Bones','Zippers','Flow Crosses','Coil Trees'].forEach(function (t) { fetchPreAssigned(t); }); }, [fetchPreAssigned]);
 
-  // =================== URL Writers (no state flips) ===================
+  // =================== URL Writers ===================
   const writeUrl = useCallback((assemblyTitle, child) => {
     const next = new URLSearchParams(searchParams);
     let changed = false;
@@ -127,46 +134,54 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
   }, [searchParams, setSearchParams]);
 
   const handleSelectAssembly = useCallback((asm) => {
-    const title = asm?.title || 'Dog Bones';
-    writeUrl(title, null); // clear child when switching family
+    const title = (asm && asm.title) || 'Dog Bones';
+    writeUrl(title, null);
   }, [writeUrl]);
 
   const handleSelectChild = useCallback((asm, child) => {
-    const title = asm?.title || 'Dog Bones';
+    const title = (asm && asm.title) || 'Dog Bones';
     writeUrl(title, child);
   }, [writeUrl]);
 
   const addAssemblyChild = (groupId) => {
-    const group = assemblies.find(a => a.id === groupId);
+    const group = assemblies.find(function (a) { return a.id === groupId; });
     if (!group) return;
-    const prefix = groupId === 'dog-bones' ? 'Dogbone-' : groupId === 'zippers' ? 'Zipper - ' : groupId === 'flowcrosses' ? 'Flowcross-' : '';
+    const prefix =
+      groupId === 'dog-bones' ? 'Dogbone-' :
+      groupId === 'zippers' ? 'Zipper - ' :
+      groupId === 'flowcrosses' ? 'Flowcross-' :
+      groupId === 'coil-trees' ? 'CoilTree-' : '';
     const letter = nextLetter(group.children);
-    const newChild = `${prefix}${letter}`;
-    setAssemblies(prev => prev.map(a => a.id === groupId ? { ...a, children: [...a.children, newChild] } : a));
-    setOpenDropdowns(prev => ({ ...prev, [groupId]: true }));
+    const newChild = prefix + letter;
+    setAssemblies(function (prev) { return prev.map(function (a) { return a.id === groupId ? Object.assign({}, a, { children: a.children.concat([newChild]) }) : a; }); });
+    setOpenDropdowns(function (prev) { const n = Object.assign({}, prev); n[groupId] = true; return n; });
     writeUrl(group.title, newChild);
   };
   const addMissile = () => {
     const groupId = 'missiles';
-    const group = assemblies.find(a => a.id === groupId);
+    const group = assemblies.find(function (a) { return a.id === groupId; });
     if (!group) return;
     const n = nextMissileNumber(group.children);
-    const newChild = `Missile-${n}`;
-    setAssemblies(prev => prev.map(a => a.id === groupId ? { ...a, children: [...a.children, newChild] } : a));
-    setOpenDropdowns(prev => ({ ...prev, [groupId]: true }));
+    const newChild = 'Missile-' + n;
+    setAssemblies(function (prev) { return prev.map(function (a) { return a.id === groupId ? Object.assign({}, a, { children: a.children.concat([newChild]) }) : a; }); });
+    setOpenDropdowns(function (prev) { const n = Object.assign({}, prev); n[groupId] = true; return n; });
     writeUrl(group.title, newChild);
   };
 
-  // =================== Assigned Map (for fade/badges) ===================
+  // =================== Assigned Map ===================
   const assignedMap = useMemo(() => {
     const map = {};
     const keys = Object.keys(assets || {});
-    const families = ['dog-bones', 'zippers', 'flowcrosses'];
-    families.forEach((fam) => {
-      buildKeysForFamily(fam).forEach((child) => {
-        const prefix = `${child}-`;
-        const locallyAssigned = keys.some((k) => k.startsWith(prefix) && assets[k]);
-        const assemblyTitle = fam === 'dog-bones' ? 'Dog Bones' : fam === 'zippers' ? 'Zippers' : 'Flowcrosses';
+    const families = ['dog-bones', 'zippers', 'flowcrosses', 'coil-trees'];
+    families.forEach(function (fam) {
+      buildKeysForFamily(fam).forEach(function (child) {
+        const prefix = child + '-';
+        const locallyAssigned = keys.some(function (k) { return k.startsWith(prefix) && assets[k]; });
+        const assemblyTitle =
+          fam === 'dog-bones' ? 'Dog Bones' :
+          fam === 'zippers' ? 'Zippers' :
+          fam === 'flowcrosses' ? 'Flow Crosses' :
+          'Coil Trees';
         const preSet = preAssignedByAssembly[assemblyTitle] || new Set();
         map[child] = locallyAssigned || preSet.has(child);
       });
@@ -177,7 +192,7 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
   // =================== Activity & Updates ===================
   const addHistoryEntry = useCallback(async (entry) => {
     try {
-      await fetch(`${API}/api/master/history`, {
+      await fetch(API + '/api/master/history', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -187,7 +202,7 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
   }, []);
   const fetchMasterHistory = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/master/history`, { credentials: 'include' });
+      const res = await fetch(API + '/api/master/history', { credentials: 'include' });
       if (res.ok) setHistoryLog(await res.json());
     } catch {}
   }, []);
@@ -196,12 +211,12 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
     const added = []; const cleared = [];
     try {
       for (const entry of entries) {
-        const display = entry?.assetName || entry?.assetId || 'Unknown';
-        const action = (entry?.action || '').toLowerCase();
-        if (action.includes('add')) added.push(display);
-        if (action.includes('remove') || action.includes('clear')) cleared.push(display);
+        const display = (entry && (entry.assetName || entry.assetId)) || 'Unknown';
+        const action = (entry && entry.action ? String(entry.action) : '').toLowerCase();
+        if (action.indexOf('add') > -1) added.push(display);
+        if (action.indexOf('remove') > -1 || action.indexOf('clear') > -1) cleared.push(display);
         await addHistoryEntry({
-          time: entry.time || new Date(),
+          time: (entry && entry.time) || new Date(),
           action: entry.action,
           slot: entry.slot,
           asset_id: entry.assetId,
@@ -211,20 +226,20 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
       }
       await fetchMasterHistory();
       const masterLabel = selectedChild || 'Master Assembly';
-      if (added.length) showPalomaToast({ type: 'success', message: `Successfully added`, detail: `${added.join(', ')} to Master (${masterLabel})` });
-      if (cleared.length) showPalomaToast({ type: 'success', message: `Successfully cleared`, detail: `${cleared.join(', ')} from Master (${masterLabel})` });
-      setUpdateStatus('success'); setTimeout(() => setUpdateStatus('idle'), 2000);
-      if (selectedAssembly?.title) await fetchPreAssigned(selectedAssembly.title);
+      if (added.length) showPalomaToast({ type: 'success', message: 'Successfully added', detail: added.join(', ') + ' to Master (' + masterLabel + ')' });
+      if (cleared.length) showPalomaToast({ type: 'success', message: 'Successfully cleared', detail: cleared.join(', ') + ' from Master (' + masterLabel + ')' });
+      setUpdateStatus('success'); setTimeout(function () { setUpdateStatus('idle'); }, 2000);
+      if (selectedAssembly && selectedAssembly.title) await fetchPreAssigned(selectedAssembly.title);
     } catch {
       showPalomaToast({ type: 'error', message: 'Update failed', detail: 'Please try again.' });
-      setUpdateStatus('error'); setTimeout(() => setUpdateStatus('idle'), 2000);
+      setUpdateStatus('error'); setTimeout(function () { setUpdateStatus('idle'); }, 2000);
     }
   };
 
   // =================== Header ===================
   const headerSubtitle = useMemo(() => {
-    if (!selectedChild) return `${selectedAssembly?.title || ''} › Select a Master Assembly`;
-    return `${selectedAssembly?.title || ''} › ${selectedChild || ''}`;
+    if (!selectedChild) return (selectedAssembly && selectedAssembly.title ? selectedAssembly.title : '') + ' › Select a Master Assembly';
+    return (selectedAssembly && selectedAssembly.title ? selectedAssembly.title : '') + ' › ' + (selectedChild || '');
   }, [selectedAssembly, selectedChild]);
 
   // =================== Layout ===================
@@ -279,7 +294,7 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
           selectedAssembly={selectedAssembly}
           selectedChild={selectedChild}
           openDropdowns={openDropdowns}
-          toggleDropdown={(id) => setOpenDropdowns(prev => ({ ...prev, [id]: !prev[id] }))}
+          toggleDropdown={(id) => setOpenDropdowns(function (prev) { const n = Object.assign({}, prev); n[id] = !prev[id]; return n; })}
           handleSelectAssembly={handleSelectAssembly}
           handleSelectChild={handleSelectChild}
           onAddAssemblyChild={addAssemblyChild}
@@ -296,7 +311,7 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
           <MasterAssetVisualPanel
             selectedAssembly={selectedAssembly}
             selectedChild={selectedChild}
-            fullId={`${selectedAssembly?.title || ''}-${selectedChild || ''}`}
+            fullId={(selectedAssembly && selectedAssembly.title ? selectedAssembly.title : '') + '-' + (selectedChild || '')}
             historyLog={historyLog}
             setHistoryLog={setHistoryLog}
             onAssetsUpdated={handleAssetsUpdated}
@@ -304,8 +319,8 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
             assetState={assets}
             setAssetState={setAssets}
             getAssetStateSetterFields={() => [assets, setAssets]}
-            handleClearSlot={(_id, slotKey, setAssetsFromPanel) => {
-              setAssetsFromPanel(prev => { const n = { ...prev }; delete n[slotKey]; return n; });
+            handleClearSlot={function (_id, slotKey, setAssetsFromPanel) {
+              setAssetsFromPanel(function (prev) { const n = Object.assign({}, prev); delete n[slotKey]; return n; });
             }}
             qrModalOpen={false}
             setQrModalOpen={() => {}}

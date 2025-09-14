@@ -1,3 +1,7 @@
+// ==========================================
+// FILE: server/services/assets.js
+// ==========================================
+
 // ==============================
 // services/assets.js — Postgres asset manager
 // ==============================
@@ -41,7 +45,7 @@ async function addAsset(asset, updatedBy = 'system') {
 }
 
 async function updateAsset(assetId, changes, updatedBy = 'system') {
-  const allowed = ['name', 'category', 'sn', 'status', 'location'];
+  const allowed = ['name', 'category', 'sn', 'status', 'location', 'machining_vendor', 'expected_return', 'downed_notes'];
   const fields = [];
   const values = [];
   let i = 1;
@@ -77,6 +81,25 @@ async function transferMultipleAssets(assetIds, newLocation, updatedBy = 'system
 }
 
 // ==============================
+// Availability — only assets that are Available and not assigned on any master assembly
+// ==============================
+async function getAvailableAssets() {
+  const sql = `
+    SELECT a.*
+    FROM assets a
+    WHERE lower(coalesce(a.status, '')) = 'available'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM master_assignments ma
+        WHERE ma.asset_id = a.id
+      )
+    ORDER BY a.id ASC
+  `;
+  const res = await pool.query(sql);
+  return res.rows;
+}
+
+// ==============================
 // Activity Log
 // ==============================
 async function getActivityLog(limit = 200) {
@@ -89,7 +112,8 @@ async function getActivityLog(limit = 200) {
 
 async function getActivityLogByAsset(assetId, limit = 200) {
   const res = await pool.query(
-    `SELECT * FROM asset_activity_log
+    `SELECT *
+     FROM asset_activity_log
      WHERE asset_id = $1
      ORDER BY timestamp DESC
      LIMIT $2`,
@@ -115,6 +139,7 @@ module.exports = {
   deleteAsset,
   transferMultipleAssets,
   getActivityLog,
+  getAvailableAssets,
   getActivityLogByAsset,
   addActivityLog,
 };

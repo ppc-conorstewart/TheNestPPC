@@ -1,6 +1,7 @@
-// ==============================
-// AddCustomerModal.jsx — With Category Selector
-// ==============================
+// =====================================================
+// AddCustomerModal.jsx — Customer Hub Add Modal • Glass
+// Sections: Component
+// =====================================================
 
 export default function AddCustomerModal({
   open,
@@ -10,14 +11,13 @@ export default function AddCustomerModal({
   setForm,
   logoInputRef,
   handleLogoChange,
-  pendingCategory, // no longer used, handled by select
-  setPendingCategory // <- must be passed from parent
+  pendingCategory,
+  setPendingCategory
 }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-      <div className="bg-[#232429] border-2 border-[#949C7F] rounded-2xl px-8 py-8 flex flex-col items-center min-w-[370px] max-w-[97vw] shadow-2xl relative">
-        {/* Close */}
+      <div className="glass-card px-8 py-8 flex flex-col items-center min-w-[370px] max-w-[97vw] shadow-2xl relative">
         <button
           className="absolute top-3 right-5 text-3xl text-[#949C7F] hover:text-red-600 font-bold focus:outline-none transition"
           onClick={onClose}
@@ -25,17 +25,17 @@ export default function AddCustomerModal({
           aria-label="Close"
           style={{ lineHeight: 1 }}
         >✕</button>
-        {/* Header */}
+
         <h2 className="text-2xl font-extrabold mb-6 text-[#b3b99a] tracking-wider" style={{ fontFamily: 'var(--font-varien, varien, sans-serif)' }}>
           Add New Customer
         </h2>
+
         <form
           onSubmit={e => { e.preventDefault(); onSubmit(); }}
           className="w-full"
           autoComplete="off"
         >
           <div className="flex flex-col gap-4 w-full mb-2">
-            {/* Category Selector */}
             <div className="flex flex-row items-center gap-2">
               <label className="w-40 text-right text-[#b3b99a] text-sm font-bold pr-2" htmlFor="customer-category">
                 Category
@@ -55,6 +55,7 @@ export default function AddCustomerModal({
                 <option value="missile">Missile</option>
               </select>
             </div>
+
             <div className="flex flex-row items-center gap-2">
               <label className="w-40 text-right text-[#b3b99a] text-sm font-bold pr-2" htmlFor="customer-name">
                 Customer Name
@@ -70,6 +71,7 @@ export default function AddCustomerModal({
                 required
               />
             </div>
+
             <div className="flex flex-row items-center gap-2">
               <label className="w-40 text-right text-[#b3b99a] text-sm font-bold pr-2" htmlFor="customer-logo">
                 Logo
@@ -82,7 +84,7 @@ export default function AddCustomerModal({
                   accept="image/*"
                   onChange={handleLogoChange}
                   className="block text-sm file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:bg-[#949C7F] file:text-black file:font-bold"
-                  style={{ background: "transparent" }}
+                  style={{ background: 'transparent' }}
                 />
                 {form.logo_url && (
                   <img
@@ -93,6 +95,7 @@ export default function AddCustomerModal({
                 )}
               </div>
             </div>
+
             <div className="flex flex-row items-center gap-2">
               <label className="w-40 text-right text-[#b3b99a] text-sm font-bold pr-2" htmlFor="customer-address">
                 Head Office Address
@@ -106,6 +109,7 @@ export default function AddCustomerModal({
                 style={{ fontFamily: 'Erbaum, sans-serif' }}
               />
             </div>
+
             <div className="flex flex-row items-center gap-2">
               <label className="w-40 text-right text-[#b3b99a] text-sm font-bold pr-2" htmlFor="customer-completions">
                 Head of Completions
@@ -115,10 +119,11 @@ export default function AddCustomerModal({
                 type="text"
                 value={form.head_of_completions}
                 onChange={e => setForm(f => ({ ...f, head_of_completions: e.target.value }))}
-                className="flex-1 px-3 py-1 rounded bg-[#18181b] border border-[#949C7F] text-[#f3f4f1] focus:ring-2 focus:ring-[#6a7257] outline-none transition"
+                className="flex-1 px-3 py-1 rounded bg-[#18181b] border border-[#949C7F] text-[#f3f4f1] font-semibold focus:ring-2 focus:ring-[#6a7257] outline-none transition"
                 style={{ fontFamily: 'Erbaum, sans-serif' }}
               />
             </div>
+
             <div className="flex flex-row items-center gap-2">
               <label className="w-40 text-right text-[#b3b99a] text-sm font-bold pr-2" htmlFor="customer-phone">
                 Head Office Phone
@@ -133,7 +138,7 @@ export default function AddCustomerModal({
               />
             </div>
           </div>
-          {/* Submit Button */}
+
           <div className="flex flex-row justify-center mt-6">
             <button
               type="submit"

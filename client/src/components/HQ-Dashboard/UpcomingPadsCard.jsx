@@ -117,10 +117,17 @@ export default function UpcomingPadsCard() {
   const [modalJobKey, setModalJobKey] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/hq/active-jobs')
+    fetch('/api/hq/upcoming-jobs')
       .then((res) => res.json())
       .then((data) => {
-        setJobs(dedupeJobs(data || []));
+        const list = dedupeJobs(data || [])
+          .sort((a, b) => {
+            const ad = a.rig_in_date ? new Date(a.rig_in_date) : new Date(8640000000000000);
+            const bd = b.rig_in_date ? new Date(b.rig_in_date) : new Date(8640000000000000);
+            return ad - bd;
+          })
+          .slice(0, 6);
+        setJobs(list);
         setLoading(false);
       })
       .catch(() => {
@@ -141,11 +148,11 @@ export default function UpcomingPadsCard() {
   }, [jobs.length]);
 
   const colClasses =
-    "grid grid-cols-[52px_145px_168px_84px_96px_210px_144px_114px]";
+    "grid grid-cols-[52px_145px_168px_84px_96px_210px_144px]";
 
   return (
     <div
-      className="border-2 border-[#6a7257] rounded-2xl shadow-2xl px-4 flex flex-col min-h-[60px]"
+      className="border-2 border-[#6a7257] rounded-2xl shadow-2xl px-4 flex flex-row min-h-[60px]"
       style={{
         width: '100%',
         height: '100%',
@@ -157,9 +164,6 @@ export default function UpcomingPadsCard() {
         borderColor: '#6a7257',
       }}
     >
-     <h2 className="text-xl text-yellow-400 border-b border-[#6a7257]  font-punoer font-bold  mb-2 tracking-wide text-center uppercase">
-        Upcoming Job Builds
-      </h2>
       <ZoneModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -167,33 +171,33 @@ export default function UpcomingPadsCard() {
         zoneProgress={zoneProgress[modalJobKey]}
         setZoneProgress={setZoneProgress}
       />
-      {loading ? (
-        <div className="text-center text-gray-400 py-6">Loading...</div>
-      ) : jobs.length === 0 ? (
-        <div className="text-center text-gray-400 py-6">No active jobs found.</div>
-      ) : (
-        <div className="w-full flex-1 min-h-0 flex flex-col">
-          {/* ===== Fit entire table area inside card (no scrollbars) ===== */}
+
+      {/* ===== Main Content ===== */}
+      <div className="flex-1 min-w-0">
+        {loading ? (
+          <div className="text-center text-gray-400 py-6">Loading...</div>
+        ) : jobs.length === 0 ? (
+          <div className="text-center text-gray-400 py-6">No upcoming jobs found.</div>
+        ) : (
           <ScaleToFit className="w-full flex-1 min-h-0">
             <div className="w-full">
-              {/* HEADER ROW */}
+              {/* ===== Header Row ===== */}
               <div
                 className={
                   colClasses +
-                  " items-center pb-1 border-b border-[#393c32] mb-1 font-bold text-[#b0b79f] text-xs uppercase tracking-wider"
+                  " items-center pb-1 border-b border-[#393c32] mb-1 mt-2 font-bold text-[#b0b79f] text-xs uppercase tracking-wider"
                 }
               >
                 <span className="text-center w-full"></span>
                 <span className="text-center underline w-full">Customer</span>
                 <span className="text-center underline w-full">LSD</span>
                 <span className="text-center underline w-full"># Wells</span>
-                <span className="text-center underline w-full">WO Revision</span>
+                <span className="text-center underline w-full">WO Rev</span>
                 <span className="text-center underline w-full">Progress</span>
                 <span className="text-center underline w-full">Rig in Date</span>
-                <span className="text-center underline w-full"></span>
               </div>
 
-              {/* ROWS */}
+              {/* ===== Rows ===== */}
               <div className="flex flex-col">
                 {jobs.map((job, idx) => {
                   const jobKey = getZoneKey(job);
@@ -214,11 +218,11 @@ export default function UpcomingPadsCard() {
                         boxShadow: "0 0 0.5px 0 #35392e, 0 8px 24px 0 #23240e33",
                       }}
                       tabIndex={0}
-                      aria-label={`Active job: ${job.customer} ${job.surface_lsd}`}
+                      aria-label={`Upcoming job: ${job.customer} ${job.surface_lsd}`}
                     >
                       {/* Logo */}
                       <div className="flex flex-row items-center justify-center w-full">
-                        <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 shadow animate-pulse border border-[#b59b1d] mr-1" title="Active job"></span>
+                        <span className="inline-block w-2 h-2 rounded-full bg-yellow-400 shadow animate-pulse border border-[#b59b1d] mr-1" title="Upcoming job"></span>
                         <img
                           src={job.customerLogo}
                           alt={job.customer + " logo"}
@@ -227,7 +231,7 @@ export default function UpcomingPadsCard() {
                           onError={e => { e.target.style.display = "none"; }}
                         />
                       </div>
-                      {/* Customer name - centered */}
+                      {/* Customer */}
                       <div className="flex flex-col items-center w-full justify-center">
                         <span className="font-bold text-white text-xs uppercase tracking-wide text-center">
                           {job.customer}
@@ -251,7 +255,7 @@ export default function UpcomingPadsCard() {
                           {job.workbook_revision ? job.workbook_revision : "-"}
                         </span>
                       </div>
-                      {/* Progress Bar */}
+                      {/* Progress */}
                       <div className="flex flex-col items-center w-full">
                         <span className="text-xs font-bold text-gray-300 mb-2">
                           {zp.total > 0
@@ -298,77 +302,7 @@ export default function UpcomingPadsCard() {
                             : "-"}
                         </span>
                       </div>
-                      {/* Actions */}
-                      <div className="flex flex-row items-center justify-center w-full gap-2">
-                        {/* Update Zone Count */}
-                        <button
-                          title="Update Zone Count"
-                          className="bg-[#23241b] rounded-full shadow border-2 border-[#393c32] flex items-center justify-center transition duration-150 transform group
-                            hover:scale-110 hover:border-[#84ff45] hover:shadow-[0_0_8px_2px_#baff70]"
-                          style={{ outline: "none", width: 38, height: 38 }}
-                          tabIndex={0}
-                          onClick={e => {
-                            e.stopPropagation();
-                            setModalJobKey(jobKey);
-                            setModalOpen(true);
-                          }}
-                        >
-                          <svg width={16} height={16} fill="none" viewBox="0 0 24 24"
-                            className="transition-colors duration-200 group-hover:stroke-[#84ff45] stroke-[#b0b79f]">
-                            <path d="M12 20v-6m0 0V4m0 10H6m6 0h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </button>
-                        {/* Open in Planner */}
-                        <button
-                          title="Open in Planner"
-                          className="bg-[#22261a] rounded-full shadow border-2 border-[#393c32] flex items-center justify-center transition duration-150 transform group
-                            hover:scale-110 hover:border-[#84ff45] hover:shadow-[0_0_8px_2px_#baff70]"
-                          style={{ outline: "none", width: 38, height: 38 }}
-                          tabIndex={0}
-                          onClick={e => {
-                            e.stopPropagation();
-                            window.open(`/job-planner?job=${job.id}`, "_blank");
-                          }}
-                        >
-                          <svg width={16} height={16} fill="none" viewBox="0 0 24 24"
-                            className="transition-colors duration-200 group-hover:stroke-[#84ff45] stroke-white">
-                            <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </button>
-                        {/* View MFV Info */}
-                        <div className="relative group">
-                          <button
-                            title="View MFV Info"
-                            className="bg-[#22261a] rounded-full shadow border-2 border-[#393c32] flex items-center justify-center transition-all duration-150 overflow-hidden
-                              hover:scale-110 hover:border-[#84ff45] hover:shadow-[0_0_8px_2px_#baff70]"
-                            style={{
-                              outline: "none",
-                              width: 38,
-                              height: 38,
-                              minWidth: 38,
-                              minHeight: 38,
-                              position: 'relative'
-                            }}
-                            tabIndex={0}
-                            onClick={e => {
-                              e.stopPropagation();
-                              window.open(`/mfv-info?job=${job.id || ''}`, "_blank");
-                            }}
-                          >
-                            <img
-                              src="/assets/mfv-icon.png"
-                              alt="MFV"
-                              className="w-5 h-5 object-contain transition-all duration-200"
-                            />
-                            <span
-                              className="absolute left-9 top-1/2 -translate-y-1/2 text-xs text-white font-bold uppercase opacity-0 group-hover:opacity-100 group-hover:left-12 transition-all duration-200 whitespace-nowrap pointer-events-none select-none"
-                              style={{ zIndex: 2, whiteSpace: 'nowrap' }}
-                            >
-                              View MFV Info
-                            </span>
-                          </button>
-                        </div>
-                      </div>
+
                       {idx !== jobs.length - 1 && (
                         <div className="absolute left-4 right-4 -bottom-1 h-px bg-gradient-to-r from-transparent via-[#35392e] to-transparent opacity-60 pointer-events-none"></div>
                       )}
@@ -378,8 +312,22 @@ export default function UpcomingPadsCard() {
               </div>
             </div>
           </ScaleToFit>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* ===== Right Actions Panel (Empty Placeholder) ===== */}
+      <div
+        className="ml-3 pl-3 flex flex-col items-center justify-start"
+        style={{
+          width: 54,
+          borderLeft: "2px solid #6a7257",
+          paddingTop: 8,
+          gap: 10,
+          flexShrink: 0
+        }}
+      >
+        {/* Intentionally empty for now */}
+      </div>
     </div>
   );
 }
