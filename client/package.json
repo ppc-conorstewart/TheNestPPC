@@ -1,5 +1,5 @@
 {
-  "name": "The Nest App",
+  "name": "the-nest-app-client",
   "version": "1.0.0",
   "private": true,
   "proxy": "http://localhost:3001",
@@ -35,7 +35,6 @@
     "lodash.memoize": "^4.1.2",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.511.0",
-    "memoize": "npm:lodash.memoize@^4.1.2",
     "papaparse": "^5.5.3",
     "passport": "^0.7.0",
     "passport-discord": "^0.1.4",
