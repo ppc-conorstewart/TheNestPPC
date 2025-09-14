@@ -42,7 +42,7 @@ app.use('/uploads', express.static(uploadDir, {
   }
 }))
 app.use('/uploads/docs', express.static(path.join(uploadDir, 'docs')))
-const LOGOS_DIR = 'C:/Users/WelshWonder/FLY-IQ/The NEST App/server/public/assets/logos'
+const LOGOS_DIR = path.join(__dirname, 'public', 'assets', 'logos')
 console.log('Serving customer logos from:', LOGOS_DIR)
 app.use('/assets/logos', express.static(LOGOS_DIR))
 
@@ -405,5 +405,20 @@ app.get('/auth/discord', passport.authenticate('discord'))
 app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => {
   res.redirect(`${require('./config/config').FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(req.user))}`)
 })
+
+// ==============================
+// SECTION: Static Client (Production)
+// ==============================
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, '..', 'client', 'build')
+  if (fs.existsSync(clientBuildPath)) {
+    app.use(express.static(clientBuildPath))
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(clientBuildPath, 'index.html'))
+    })
+  } else {
+    console.warn('[Static] client/build not found at:', clientBuildPath)
+  }
+}
 
 module.exports = app
