@@ -1,5 +1,5 @@
 {
-  "name": "The Nest App",
+  "name": "the-nest-app-client",
   "version": "1.0.0",
   "private": true,
   "proxy": "http://localhost:3001",
@@ -35,7 +35,6 @@
     "lodash.memoize": "^4.1.2",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.511.0",
-    "memoize": "npm:lodash.memoize@^4.1.2",
     "papaparse": "^5.5.3",
     "passport": "^0.7.0",
     "passport-discord": "^0.1.4",
@@ -68,7 +67,7 @@
     "recharts": "^2.15.3",
     "sqlite3": "^5.1.7",
     "swiper": "^11.2.8",
-    "three": "^0.177.0",
+    "three": "^0.172.0",
     "tippy.js": "^6.3.7",
     "tsparticles": "^3.8.1",
     "use-image": "^1.1.4",
