@@ -3,4 +3,4 @@ root = "client"
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "npx serve -s build -l $PORT"
+startCommand = "npx serve -s client/build -l $PORT"
