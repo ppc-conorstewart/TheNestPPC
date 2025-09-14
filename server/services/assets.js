@@ -5,16 +5,8 @@
 // ==============================
 // services/assets.js — Postgres asset manager
 // ==============================
-const { Pool } = require('pg');
-
-const pool = new Pool({
-  user: 'postgres',
-  host: 'localhost',
-  database: 'The NEST',
-  password: 'Paloma',
-  port: 5432,
-  ssl: false,
-});
+// Use the centralized pool that reads configuration strictly from env vars
+const pool = require('../db')
 
 // ==============================
 // Assets: CRUD

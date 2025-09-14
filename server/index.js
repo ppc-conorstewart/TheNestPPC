@@ -58,7 +58,15 @@ app.use((req, _res, next) => {
 // ==============================
 // SECTION: Session / Passport
 // ==============================
-app.use(session({ secret: SESSION_SECRET, resave: false, saveUninitialized: false }))
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  }
+}))
 app.use(passport.initialize())
 app.use(passport.session())
 app.use((req, _res, next) => {
