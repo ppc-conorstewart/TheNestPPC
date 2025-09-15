@@ -5,7 +5,7 @@
   "scripts": {
     "postinstall": "cd client && npm install && cd ../server && npm install",
     "build": "cd client && CI=false npm run build",
-    "start": "node server/server.js"
+    "start": "npx serve -s client/build -l $PORT"
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",
