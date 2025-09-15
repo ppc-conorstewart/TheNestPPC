@@ -1,6 +1,7 @@
 [build]
 root = "client"
 builder = "NIXPACKS"
+buildCommand = "npm ci && npm run build"
 
 [deploy]
 startCommand = "npx serve -s build -l $PORT"
