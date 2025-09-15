@@ -1,9 +1,16 @@
-# railway.toml (at repo root)
+# ==============================
+# FILE: railway.toml  (frontend service)
+# ==============================
 [build]
 root = "client"
 builder = "NIXPACKS"
-installCommand = "npm ci"
-buildCommand   = "npm run build"
+
+# Let Nixpacks do ONE install here (not again in build)
+installCommand = "npm ci --legacy-peer-deps"
+
+# Only build here; don't reinstall
+buildCommand = "npm run build"
 
 [deploy]
+# Serve the CRA build folder
 startCommand = "npx serve -s build -l $PORT"
