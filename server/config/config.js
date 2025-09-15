@@ -12,7 +12,7 @@ function requiredEnv(key, { allowEmptyInDev = true } = {}) {
 
 module.exports = {
   PORT: Number(process.env.PORT) || 3001,
-  FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
+  FRONTEND_URL: process.env.FRONTEND_URL || 'https://thenestppc-frontend-production.up.railway.app/',
   // In production these must be provided via environment; no hardcoded defaults
   DISCORD_CALLBACK_URL: requiredEnv('DISCORD_CALLBACK_URL'),
   SESSION_SECRET: process.env.SESSION_SECRET || (!isProd ? 'dev-only-session-secret' : undefined),
