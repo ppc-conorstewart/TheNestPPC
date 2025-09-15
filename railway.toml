@@ -1,7 +1,10 @@
+# ==============================
+# FILE: railway.toml
+# ==============================
 [build]
 root = "client"
 builder = "NIXPACKS"
-buildCommand = "npm ci --include=dev && npm run build"
+buildCommand = "npm ci --include=dev && CI=false npm run build"
 
 [deploy]
 startCommand = "npx serve -s build -l $PORT"
