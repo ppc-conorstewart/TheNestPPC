@@ -1,8 +1,9 @@
-# FILE: railway.toml
+# railway.toml (at repo root)
 [build]
-root = "client"                 # <— key fix: build in client/
+root = "client"
 builder = "NIXPACKS"
-buildCommand = "npm ci && npm run build"
+installCommand = "npm ci"
+buildCommand   = "npm run build"
 
 [deploy]
 startCommand = "npx serve -s build -l $PORT"
