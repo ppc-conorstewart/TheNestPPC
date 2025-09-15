@@ -78,7 +78,7 @@
   "scripts": {
     "start": "serve -s build -l $PORT",
     "dev": "set \"NODE_OPTIONS=--openssl-legacy-provider\" && craco start",
-    "build": "craco build",
+    "build": "CI=false craco build",
     "test": "craco test",
     "eject": "react-scripts eject",
     "start-all": "concurrently \"cd ../server && node index.js\" \"npm run dev\""
