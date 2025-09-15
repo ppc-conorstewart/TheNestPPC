@@ -1,13 +1,13 @@
-
+{
   "name": "the-nest-app",
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": ">=20.x"
+    "node": "20.x"
   },
   "scripts": {
-    "prebuild": "npm --prefix client ci",
-    "build": "CI=false npm --prefix client run build",
+    "postinstall": "cd client && npm ci",
+    "build": "cd client && CI=false npm run build",
     "start": "npx serve -s client/build -l $PORT"
   },
   "dependencies": {
