@@ -3,7 +3,7 @@ root = "."
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "node server/server.js"
+startCommand = "node server.js"
 
 [env]
 NIXPACKS_NODE_VERSION = "20"
