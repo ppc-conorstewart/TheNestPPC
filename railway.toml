@@ -1,21 +1,11 @@
 # ==============================
 # FILE: railway.toml
 # ==============================
-
-# ---------- FRONTEND ----------
-[build.frontend]
+[build]
 root = "client"
 builder = "NIXPACKS"
-buildCommand = "npm install && CI=false npm run build"
+buildCommand = "npm ci && npm run build"
 
-[deploy.frontend]
+[deploy]
+# Serve the prebuilt React app
 startCommand = "npx serve -s build -l $PORT"
-
-# ---------- BACKEND ----------
-[build.backend]
-root = "server"
-builder = "NIXPACKS"
-buildCommand = "npm install"
-
-[deploy.backend]
-startCommand = "node server.js"
