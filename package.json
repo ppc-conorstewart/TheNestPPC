@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "rm -rf build && cd client && CI=false npm run build && mkdir -p ../build && rsync -a --delete build/ ../build/",
-    "start": "npx serve -s build -l $PORT"
+    "postinstall": "cd client && npm install && cd ../server && npm install",
+    "build": "cd client && CI=false npm run build",
+    "start": "node server/server.js"
   },
   "dependencies": {
     "autoprefixer": "^10.4.21",
