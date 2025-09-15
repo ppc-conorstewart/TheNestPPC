@@ -1,11 +1,8 @@
-# ==============================
 # FILE: railway.toml
-# ==============================
 [build]
-root = "client"
+root = "client"                 # <— key fix: build in client/
 builder = "NIXPACKS"
 buildCommand = "npm ci && npm run build"
 
 [deploy]
-# Serve the prebuilt React app
 startCommand = "npx serve -s build -l $PORT"
