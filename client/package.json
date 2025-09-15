@@ -66,6 +66,7 @@
     "react-tsparticles": "^2.12.2",
     "react-window": "^1.8.11",
     "recharts": "^2.15.3",
+    "serve": "^14.2.3",
     "sqlite3": "^5.1.7",
     "swiper": "^11.2.8",
     "three": "^0.172.0",
@@ -75,11 +76,12 @@
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "start": "set \"NODE_OPTIONS=--openssl-legacy-provider\" && craco start",
+    "start": "serve -s build -l $PORT",
+    "dev": "set \"NODE_OPTIONS=--openssl-legacy-provider\" && craco start",
     "build": "craco build",
     "test": "craco test",
     "eject": "react-scripts eject",
-    "start-all": "concurrently \"cd ../server && node index.js\" \"npm start\""
+    "start-all": "concurrently \"cd ../server && node index.js\" \"npm run dev\""
   },
   "browserslist": {
     "production": [
