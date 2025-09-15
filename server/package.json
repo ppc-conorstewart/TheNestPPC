@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server/index.js",
+    "start": "node server/server.js",
     "client": "react-scripts start",
-    "build": "react-scripts build",
+    
     "test": "react-scripts test"
   },
   "dependencies": {
