@@ -1,35 +1,53 @@
 // ==============================
 // FILE: server/index.js — Express App Entry
-// Sections: Imports • Middleware • Routers • Discord Proxy • Action Items (In-Memory) • Exports
+// Sections: Imports • Middleware • CORS • Static • Body & Logging • Session/Passport • Routers • Universal Upload • Existing Endpoints • HQ Jobs • Discord Proxy • Action Items • Workorder PDF • Discord OAuth • Static Client (Production) • Exports
 // ==============================
 
-const express = require('express')
-const cors = require('cors')
-const session = require('express-session')
-const path = require('path')
-const fs = require('fs')
-const fetch = require('node-fetch')
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib')
+const express = require('express');
+const cors = require('cors');
+const session = require('express-session');
+const path = require('path');
+const fs = require('fs');
+const fetch = require('node-fetch');
+const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 
-const { FRONTEND_URL, SESSION_SECRET } = require('./config/config')
-const passport = require('./auth/discordStrategy')
+const { FRONTEND_URL, SESSION_SECRET } = require('./config/config');
+const passport = require('./auth/discordStrategy');
 
-const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads')
-const db = require('./db')
+const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads');
+const db = require('./db');
 
-const app = express()
+const app = express();
+
+// ==============================
+// SECTION: Middleware
+// ==============================
+app.set('trust proxy', 1);
 
 // ==============================
 // SECTION: CORS
 // ==============================
-app.use(cors({
-  origin: (origin, callback) => {
-    const allowed = [FRONTEND_URL, 'https://thenestppc-frontend-production.up.railway.app']
-    if (!origin || allowed.includes(origin)) return callback(null, true)
-    return callback(new Error('Not allowed by CORS'), false)
-  },
-  credentials: true
-}))
+const allowlist = new Set([
+  FRONTEND_URL,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://localhost:3000'
+]);
+
+function corsOrigin(origin, callback) {
+  try {
+    if (!origin) return callback(null, true);
+    if (allowlist.has(origin)) return callback(null, true);
+    const host = new URL(origin).hostname;
+    if (/\.up\.railway\.app$/.test(host)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  } catch {
+    return callback(new Error('Not allowed by CORS'));
+  }
+}
+
+app.use(cors({ origin: corsOrigin, credentials: true }));
+app.options('*', cors({ origin: corsOrigin, credentials: true }));
 
 // ==============================
 // SECTION: Static
@@ -37,23 +55,23 @@ app.use(cors({
 app.use('/uploads', express.static(uploadDir, {
   index: false,
   setHeaders: (res) => {
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   }
-}))
-app.use('/uploads/docs', express.static(path.join(uploadDir, 'docs')))
-const LOGOS_DIR = path.join(__dirname, 'public', 'assets', 'logos')
-console.log('Serving customer logos from:', LOGOS_DIR)
-app.use('/assets/logos', express.static(LOGOS_DIR))
+}));
+app.use('/uploads/docs', express.static(path.join(uploadDir, 'docs')));
+const LOGOS_DIR = path.join(__dirname, 'public', 'assets', 'logos');
+console.log('Serving customer logos from:', LOGOS_DIR);
+app.use('/assets/logos', express.static(LOGOS_DIR));
 
 // ==============================
 // SECTION: Body & Logging
 // ==============================
-app.use(express.json())
+app.use(express.json());
 app.use((req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`)
-  next()
-})
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
 
 // ==============================
 // SECTION: Session / Passport
@@ -64,156 +82,157 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax'
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   }
-}))
-app.use(passport.initialize())
-app.use(passport.session())
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 app.use((req, _res, next) => {
   if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.id) {
-    req.user_id = req.user.id
+    req.user_id = req.user.id;
   }
-  next()
-})
+  next();
+});
 
 // ==============================
 // SECTION: Routers (existing)
 // ==============================
-const draftsRouter = require('./routes/drafts')
-const transfersRouter = require('./routes/transfers')
-const assetRoutes = require('./routes/assets')
-const jobsRouter = require('./routes/jobs')
-const sourcingRouter = require('./routes/sourcing')
-const masterAssignmentsRouter = require('./routes/masterAssignments')
-const activityRouter = require('./routes/activity')
-const mfvPadsRouter = require('./routes/mfvPads')
-const customersRouter = require('./routes/customers')
-const fieldDocsRouter = require('./routes/FieldDocumentationHub')
-const torqueManualsRouter = require('./routes/TorqueandServiceHub')
-const instructionalVideosHubRouter = require('./routes/InstructionalVideosHub')
-const flyIQJobsScheduleRouter = require('./routes/FlyIQJobsSchedule')
-const projectsRouter = require('./routes/projects')
-const documentsRouter = require('./routes/documents')
-const serviceEquipmentRouter = require('./routes/serviceEquipment')
-const workordersRouter = require('./routes/workorders')
-const glbAssetsRouter = require('./routes/glbAssets')
+const draftsRouter = require('./routes/drafts');
+const transfersRouter = require('./routes/transfers');
+const assetRoutes = require('./routes/assets');
+const jobsRouter = require('./routes/jobs');
+const sourcingRouter = require('./routes/sourcing');
+const masterAssignmentsRouter = require('./routes/masterAssignments');
+const activityRouter = require('./routes/activity');
+const mfvPadsRouter = require('./routes/mfvPads');
+const customersRouter = require('./routes/customers');
+const fieldDocsRouter = require('./routes/FieldDocumentationHub');
+const torqueManualsRouter = require('./routes/TorqueandServiceHub');
+const instructionalVideosHubRouter = require('./routes/InstructionalVideosHub');
+const flyIQJobsScheduleRouter = require('./routes/FlyIQJobsSchedule');
+const projectsRouter = require('./routes/projects');
+const documentsRouter = require('./routes/documents');
+const serviceEquipmentRouter = require('./routes/serviceEquipment');
+const workordersRouter = require('./routes/workorders');
+const glbAssetsRouter = require('./routes/glbAssets');
 
-app.use('/api/mfv', mfvPadsRouter)
-app.use('/api', draftsRouter)
-app.use('/api/transfers', transfersRouter)
-app.use('/api/assets', assetRoutes)
-app.use('/api/jobs', jobsRouter)
-app.use('/api/sourcing', sourcingRouter)
-app.use('/api/master', masterAssignmentsRouter)
-app.use('/api/activity', activityRouter)
-app.use('/api/customers', customersRouter)
-app.use('/api/field-docs', fieldDocsRouter)
-app.use('/api/torque-manuals', torqueManualsRouter)
-app.use('/api/instructional-videos-hub', instructionalVideosHubRouter)
-app.use('/api/jobs-schedule', flyIQJobsScheduleRouter)
-app.use('/api/projects', projectsRouter)
-app.use('/api/documents', documentsRouter)
-app.use('/api/service-equipment', serviceEquipmentRouter)
-app.use('/api/workorders', workordersRouter)
-app.use('/api/glb-assets', glbAssetsRouter)
+app.use('/api/mfv', mfvPadsRouter);
+app.use('/api', draftsRouter);
+app.use('/api/transfers', transfersRouter);
+app.use('/api/assets', assetRoutes);
+app.use('/api/jobs', jobsRouter);
+app.use('/api/sourcing', sourcingRouter);
+app.use('/api/master', masterAssignmentsRouter);
+app.use('/api/activity', activityRouter);
+app.use('/api/customers', customersRouter);
+app.use('/api/field-docs', fieldDocsRouter);
+app.use('/api/torque-manuals', torqueManualsRouter);
+app.use('/api/instructional-videos-hub', instructionalVideosHubRouter);
+app.use('/api/jobs-schedule', flyIQJobsScheduleRouter);
+app.use('/api/projects', projectsRouter);
+app.use('/api/documents', documentsRouter);
+app.use('/api/service-equipment', serviceEquipmentRouter);
+app.use('/api/workorders', workordersRouter);
+app.use('/api/glb-assets', glbAssetsRouter);
 
 // ==============================
 // SECTION: Universal Upload
 // ==============================
 app.post('/api/upload-model', generalUpload.single('model'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
   try {
-    const url = `/uploads/${req.file.filename}`
-    res.json({ url })
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
   } catch (err) {
-    console.error('UPLOAD ERROR:', err)
-    res.status(500).json({ error: 'Upload failed', detail: err.message })
+    console.error('UPLOAD ERROR:', err);
+    res.status(500).json({ error: 'Upload failed', detail: err.message });
   }
-})
+});
 
 // ==============================
-// existing quiz and user endpoints
-app.get('/api/questions', (_req, res) => res.json(questions))
-app.get('/api/module2', (_req, res) => res.json(module2))
+// SECTION: Existing Quiz and User Endpoints
+// ==============================
+app.get('/api/questions', (_req, res) => res.json(questions));
+app.get('/api/module2', (_req, res) => res.json(module2));
 app.get('/api/user', (req, res) => {
-  if (req.isAuthenticated && req.isAuthenticated()) res.json({ user: req.user })
-  else res.status(401).json({ error: 'Not authenticated' })
-})
+  if (req.isAuthenticated && req.isAuthenticated()) res.json({ user: req.user });
+  else res.status(401).json({ error: 'Not authenticated' });
+});
 
 // ==============================
 // SECTION: HQ Jobs (existing helpers)
 // ==============================
 app.get('/api/hq/active-jobs', async (req, res) => {
   try {
-    const jobs = require('./jobs')
-    const allJobs = await jobs.getAllJobs()
-    const inProgress = allJobs.filter(job => (job.status && job.status.toLowerCase() === 'in-progress'))
+    const jobs = require('./jobs');
+    const allJobs = await jobs.getAllJobs();
+    const inProgress = allJobs.filter(job => (job.status && job.status.toLowerCase() === 'in-progress'));
     const withLogo = inProgress.map(job => ({
       ...job,
       customerLogo: `/assets/logos/${(job.customer || '').toLowerCase().replace(/[^a-z0-9]/g, '')}.png`
-    }))
-    res.json(withLogo)
+    }));
+    res.json(withLogo);
   } catch (err) {
-    console.error('Failed to get active HQ jobs:', err)
-    res.status(500).json({ error: 'Failed to load active jobs' })
+    console.error('Failed to get active HQ jobs:', err);
+    res.status(500).json({ error: 'Failed to load active jobs' });
   }
-})
+});
 
 app.get('/api/hq/upcoming-jobs', async (req, res) => {
   try {
-    const jobs = require('./jobs')
-    const allJobs = await jobs.getAllJobs()
+    const jobs = require('./jobs');
+    const allJobs = await jobs.getAllJobs();
     const upcoming = allJobs
       .filter(job => {
-        const status = (job.status || '').toLowerCase()
-        return status !== 'in-progress' && status !== 'complete'
+        const status = (job.status || '').toLowerCase();
+        return status !== 'in-progress' && status !== 'complete';
       })
       .sort((a, b) => {
-        const ad = a.rig_in_date ? new Date(a.rig_in_date) : new Date(8640000000000000)
-        const bd = b.rig_in_date ? new Date(b.rig_in_date) : new Date(8640000000000000)
-        return ad - bd
+        const ad = a.rig_in_date ? new Date(a.rig_in_date) : new Date(8640000000000000);
+        const bd = b.rig_in_date ? new Date(b.rig_in_date) : new Date(8640000000000000);
+        return ad - bd;
       })
-      .slice(0, 6)
+      .slice(0, 6);
     const withLogo = upcoming.map(job => ({
       ...job,
       customerLogo: `/assets/logos/${(job.customer || '').toLowerCase().replace(/[^a-z0-9]/g, '')}.png`
-    }))
-    res.json(withLogo)
+    }));
+    res.json(withLogo);
   } catch (err) {
-    console.error('Failed to get upcoming HQ jobs:', err)
-    res.status(500).json({ error: 'Failed to load upcoming jobs' })
+    console.error('Failed to get upcoming HQ jobs:', err);
+    res.status(500).json({ error: 'Failed to load upcoming jobs' });
   }
-})
+});
 
 // ==============================
 // SECTION: Discord Proxy (Members/DM/Channels/Announce)
 // ==============================
-const BOT_SERVICE_URL = process.env.BOT_SERVICE_URL || 'http://localhost:3020'
-const BOT_KEY = process.env.NEST_BOT_KEY || 'Paloma2025*'
+const BOT_SERVICE_URL = process.env.BOT_SERVICE_URL || 'http://localhost:3020';
+const BOT_KEY = process.env.NEST_BOT_KEY || 'Paloma2025*';
 
 app.get('/api/discord/members', async (_req, res) => {
   try {
-    const r = await fetch(`${BOT_SERVICE_URL}/members`, { headers: { 'x-bot-key': BOT_KEY } })
-    if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
-    const list = await r.json()
-    res.json(list)
+    const r = await fetch(`${BOT_SERVICE_URL}/members`, { headers: { 'x-bot-key': BOT_KEY } });
+    if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' });
+    const list = await r.json();
+    res.json(list);
   } catch (e) {
-    console.error('Discord members proxy error:', e)
-    res.status(502).json({ error: 'bot_unavailable' })
+    console.error('Discord members proxy error:', e);
+    res.status(502).json({ error: 'bot_unavailable' });
   }
-})
+});
 
 app.get('/api/discord/channels', async (_req, res) => {
   try {
-    const r = await fetch(`${BOT_SERVICE_URL}/channels`, { headers: { 'x-bot-key': BOT_KEY } })
-    if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
-    const list = await r.json()
-    res.json(list)
+    const r = await fetch(`${BOT_SERVICE_URL}/channels`, { headers: { 'x-bot-key': BOT_KEY } });
+    if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' });
+    const list = await r.json();
+    res.json(list);
   } catch (e) {
-    console.error('Discord channels proxy error:', e)
-    res.status(502).json({ error: 'bot_unavailable' })
+    console.error('Discord channels proxy error:', e);
+    res.status(502).json({ error: 'bot_unavailable' });
   }
-})
+});
 
 app.post('/api/discord/announce', async (req, res) => {
   try {
@@ -221,14 +240,14 @@ app.post('/api/discord/announce', async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
       body: JSON.stringify(req.body || {})
-    })
-    const out = await r.json().catch(() => ({}))
-    res.status(r.status).json(out)
+    });
+    const out = await r.json().catch(() => ({}));
+    res.status(r.status).json(out);
   } catch (e) {
-    console.error('Discord announce proxy error:', e)
-    res.status(502).json({ error: 'bot_unavailable' })
+    console.error('Discord announce proxy error:', e);
+    res.status(502).json({ error: 'bot_unavailable' });
   }
-})
+});
 
 app.post('/api/discord/announce/test', async (req, res) => {
   try {
@@ -236,45 +255,45 @@ app.post('/api/discord/announce/test', async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
       body: JSON.stringify(req.body || {})
-    })
-    const out = await r.json().catch(() => ({}))
-    res.status(r.status).json(out)
+    });
+    const out = await r.json().catch(() => ({}));
+    res.status(r.status).json(out);
   } catch (e) {
-    console.error('Discord announce test proxy error:', e)
-    res.status(502).json({ error: 'bot_unavailable' })
+    console.error('Discord announce test proxy error:', e);
+    res.status(502).json({ error: 'bot_unavailable' });
   }
-})
+});
 
 // ==============================
 // SECTION: Action Items — In-Memory (no DB yet)
 // ==============================
-let actionItems = []
-let nextId = 1
+let actionItems = [];
+let nextId = 1;
 
-app.get('/api/hq/action-items', (_req, res) => res.json(actionItems))
+app.get('/api/hq/action-items', (_req, res) => res.json(actionItems));
 
 app.post('/api/hq/action-items', async (req, res) => {
   try {
-    const { description, priority, category, due_date, attachment_url, attachment_name } = req.body
-    const stakeholders = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : []
-    const stakeholder_ids = Array.isArray(req.body.stakeholder_ids) ? req.body.stakeholder_ids : []
+    const { description, priority, category, due_date, attachment_url, attachment_name } = req.body;
+    const stakeholders = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : [];
+    const stakeholder_ids = Array.isArray(req.body.stakeholder_ids) ? req.body.stakeholder_ids : [];
 
-    const dmIds = new Set()
-    const stakeholderNames = []
+    const dmIds = new Set();
+    const stakeholderNames = [];
 
     for (const s of stakeholders) {
       if (typeof s === 'string') {
-        stakeholderNames.push(s)
+        stakeholderNames.push(s);
       } else if (s && typeof s === 'object') {
-        if (s.name || s.displayName || s.username) stakeholderNames.push(s.name || s.displayName || s.username)
-        if (s.id) dmIds.add(String(s.id))
+        if (s.name || s.displayName || s.username) stakeholderNames.push(s.name || s.displayName || s.username);
+        if (s.id) dmIds.add(String(s.id));
       }
     }
     for (const id of stakeholder_ids) {
-      if (id) dmIds.add(String(id))
+      if (id) dmIds.add(String(id));
     }
 
-    const id = nextId++
+    const id = nextId++;
     const item = {
       id,
       description,
@@ -284,37 +303,39 @@ app.post('/api/hq/action-items', async (req, res) => {
       stakeholders: stakeholderNames.filter(Boolean),
       attachment_url: attachment_url || null,
       attachment_name: attachment_name || null
-    }
-    actionItems.unshift(item)
+    };
+    actionItems.unshift(item);
 
     if (dmIds.size) {
-      const dateStr = item.due_date ? new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A'
+      const dateStr = item.due_date ? new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A';
       const message =
         `You have been Added to an Action Item:\n` +
         `**Description:** ${item.description}\n` +
         `**Priority:** ${item.priority}\n` +
         `**Due Date:** ${dateStr}` +
-        `${item.attachment_url ? `\n**Attached File:** ${item.attachment_name || 'attachment'}` : ''}`
-      try { await fetch(`${BOT_SERVICE_URL}/dm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-        body: JSON.stringify({ userId: Array.from(dmIds)[0], message, attachmentUrl: item.attachment_url, attachmentName: item.attachment_name })
-      }) } catch {}
+        `${item.attachment_url ? `\n**Attached File:** ${item.attachment_name || 'attachment'}` : ''}`;
+      try {
+        await fetch(`${BOT_SERVICE_URL}/dm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
+          body: JSON.stringify({ userId: Array.from(dmIds)[0], message, attachmentUrl: item.attachment_url, attachmentName: item.attachment_name })
+        });
+      } catch {}
     }
 
-    res.json(item)
+    res.json(item);
   } catch (e) {
-    console.error('Create action item failed:', e)
-    res.status(500).json({ error: 'create_failed' })
+    console.error('Create action item failed:', e);
+    res.status(500).json({ error: 'create_failed' });
   }
-})
+});
 
 app.put('/api/hq/action-items/:id', async (req, res) => {
-  const id = Number(req.params.id)
-  const idx = actionItems.findIndex(i => i.id === id)
-  if (idx === -1) return res.status(404).json({ error: 'not_found' })
-  const prev = actionItems[idx]
-  const stakeholders = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : null
+  const id = Number(req.params.id);
+  const idx = actionItems.findIndex(i => i.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not_found' });
+  const prev = actionItems[idx];
+  const stakeholders = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : null;
 
   const next = {
     ...prev,
@@ -323,102 +344,102 @@ app.put('/api/hq/action-items/:id', async (req, res) => {
     category: req.body.category ?? prev.category,
     due_date: req.body.due_date ?? prev.due_date,
     stakeholders: stakeholders ? stakeholders.map(s => (typeof s === 'string' ? s : (s.name || s.displayName || s.username || ''))).filter(Boolean) : prev.stakeholders
-  }
-  actionItems[idx] = next
-  res.json(next)
-})
+  };
+  actionItems[idx] = next;
+  res.json(next);
+});
 
 app.patch('/api/hq/action-items/:id/close', (req, res) => {
-  const id = Number(req.params.id)
-  const idx = actionItems.findIndex(i => i.id === id)
-  if (idx === -1) return res.status(404).json({ error: 'not_found' })
-  actionItems.splice(idx, 1)
-  res.json({ ok: true })
-})
+  const id = Number(req.params.id);
+  const idx = actionItems.findIndex(i => i.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'not_found' });
+  actionItems.splice(idx, 1);
+  res.json({ ok: true });
+});
 
 app.post('/api/hq/action-items/:id/reminders', async (req, res) => {
-  const id = Number(req.params.id)
-  const item = actionItems.find(i => i.id === id)
-  if (!item) return res.status(404).json({ error: 'not_found' })
-  const { when, note } = req.body || {}
-  const msg = `Reminder: "${item.description}" (Priority: ${item.priority}). ${note ? 'Note: ' + note : ''}`
-  res.json({ ok: true, when, note, msg })
-})
+  const id = Number(req.params.id);
+  const item = actionItems.find(i => i.id === id);
+  if (!item) return res.status(404).json({ error: 'not_found' });
+  const { when, note } = req.body || {};
+  const msg = `Reminder: "${item.description}" (Priority: ${item.priority}). ${note ? 'Note: ' + note : ''}`;
+  res.json({ ok: true, when, note, msg });
+});
 
 // ==============================
 // SECTION: Workorder PDF (legacy demo)
 // ==============================
-app.get('/api/workorders', (_req, res) => res.json([]))
+app.get('/api/workorders', (_req, res) => res.json([]));
 app.get('/api/workorder/test-template', async (_req, res) => {
   try {
-    const templatePath = path.join(__dirname, 'templates', 'Workorder Blank NEST.pdf')
-    const existingPdfBytes = fs.readFileSync(templatePath)
-    const pdfDoc = await PDFDocument.load(existingPdfBytes)
-    const [firstPage] = pdfDoc.getPages()
-    const timesFont = await pdfDoc.embedFont(StandardFonts.TimesRoman)
-    firstPage.drawText('PDF Template Loaded!', { x: 50, y: 750, size: 14, font: timesFont, color: rgb(1, 0, 0) })
-    const pdfBytes = await pdfDoc.save()
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'inline; filename="workorder_test.pdf"')
-    return res.send(Buffer.from(pdfBytes))
+    const templatePath = path.join(__dirname, 'templates', 'Workorder Blank NEST.pdf');
+    const existingPdfBytes = fs.readFileSync(templatePath);
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    const [firstPage] = pdfDoc.getPages();
+    const timesFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+    firstPage.drawText('PDF Template Loaded!', { x: 50, y: 750, size: 14, font: timesFont, color: rgb(1, 0, 0) });
+    const pdfBytes = await pdfDoc.save();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="workorder_test.pdf"');
+    return res.send(Buffer.from(pdfBytes));
   } catch (err) {
-    console.error('Error loading or annotating PDF:', err)
-    return res.status(500).send('Failed to load PDF template')
+    console.error('Error loading or annotating PDF:', err);
+    return res.status(500).send('Failed to load PDF template');
   }
-})
+});
 
 app.post('/api/workorder/generate', async (req, res) => {
   try {
-    const { customer, location, wells, rigInDate, revision } = req.body
+    const { customer, location, wells, rigInDate, revision } = req.body;
     if (!customer || !location || !wells || !rigInDate || !revision) {
-      return res.status(400).json({ error: 'Must include customer, location, wells, rigInDate, and revision in the request body.' })
+      return res.status(400).json({ error: 'Must include customer, location, wells, rigInDate, and revision in the request body.' });
     }
-    const templatePath = path.join(__dirname, 'templates', 'Workorder Blank NEST.pdf')
-    const existingPdfBytes = fs.readFileSync(templatePath)
-    const pdfDoc = await PDFDocument.load(existingPdfBytes)
-    const [firstPage] = pdfDoc.getPages()
-    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+    const templatePath = path.join(__dirname, 'templates', 'Workorder Blank NEST.pdf');
+    const existingPdfBytes = fs.readFileSync(templatePath);
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+    const [firstPage] = pdfDoc.getPages();
+    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const coords = {
       customer: { x: 90, y: 738 },
       location: { x: 350, y: 738 },
       wells: { x: 550, y: 738 },
       rigInDate: { x: 160, y: 712 },
       revision: { x: 572, y: 712 }
-    }
-    const fontSize = 10
-    firstPage.drawText(customer, { x: coords.customer.x, y: coords.customer.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
-    firstPage.drawText(location, { x: coords.location.x, y: coords.location.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
-    firstPage.drawText(String(wells), { x: coords.wells.x, y: coords.wells.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
-    firstPage.drawText(rigInDate, { x: coords.rigInDate.x, y: coords.rigInDate.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
-    firstPage.drawText(revision, { x: coords.revision.x, y: coords.revision.y, size: fontSize, font: helveticaBold, color: rgb(1, 0, 0) })
-    const pdfBytes = await pdfDoc.save()
-    res.setHeader('Content-Type', 'application/pdf')
-    res.setHeader('Content-Disposition', 'inline; filename="workorder_populated.pdf"')
-    return res.send(Buffer.from(pdfBytes))
+    };
+    const fontSize = 10;
+    firstPage.drawText(customer, { x: coords.customer.x, y: coords.customer.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) });
+    firstPage.drawText(location, { x: coords.location.x, y: coords.location.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) });
+    firstPage.drawText(String(wells), { x: coords.wells.x, y: coords.wells.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) });
+    firstPage.drawText(rigInDate, { x: coords.rigInDate.x, y: coords.rigInDate.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) });
+    firstPage.drawText(revision, { x: coords.revision.x, y: coords.revision.y, size: fontSize, font: helveticaBold, color: rgb(1, 0, 0) });
+    const pdfBytes = await pdfDoc.save();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="workorder_populated.pdf"');
+    return res.send(Buffer.from(pdfBytes));
   } catch (err) {
-    console.error('Error generating the populated PDF:', err)
-    return res.status(500).json({ error: 'Failed to generate workorder PDF' })
+    console.error('Error generating the populated PDF:', err);
+    return res.status(500).json({ error: 'Failed to generate workorder PDF' });
   }
-})
+});
 
-app.get('/auth/discord', passport.authenticate('discord'))
+app.get('/auth/discord', passport.authenticate('discord'));
 app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => {
-  res.redirect(`${require('./config/config').FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(req.user))}`)
-})
+  res.redirect(`${require('./config/config').FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(req.user))}`);
+});
 
 // ==============================
 // SECTION: Static Client (Production)
 // ==============================
 if (process.env.NODE_ENV === 'production') {
-  const clientBuildPath = path.join(__dirname, '..', 'client', 'build')
+  const clientBuildPath = path.join(__dirname, '..', 'client', 'build');
   if (fs.existsSync(clientBuildPath)) {
-    app.use(express.static(clientBuildPath))
+    app.use(express.static(clientBuildPath));
     app.get('*', (_req, res) => {
-      res.sendFile(path.join(clientBuildPath, 'index.html'))
-    })
+      res.sendFile(path.join(clientBuildPath, 'index.html'));
+    });
   } else {
-    console.warn('[Static] client/build not found at:', clientBuildPath)
+    console.warn('[Static] client/build not found at:', clientBuildPath);
   }
 }
 
-module.exports = app
+module.exports = app;
