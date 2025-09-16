@@ -20,49 +20,43 @@ const LINE_ALPHA = 0.20;
 
 const LOGO_OPACITY = 0.07;
 const LOGO_SIZE_RATIO = 0.40;
-const LOGO_Y_OFFSET = 0.2; // shift faded logo downward
+const LOGO_Y_OFFSET = 0.2;
 
-// ===== Cursor / Interactions =====
 const CURSOR_RADIUS = 30;
 const CURSOR_FORCE = 0.55;
 const CURSOR_EASE = 0.08;
 
-// ===== Softer click ripple =====
 const RIPPLE_SPEED = 3.0;
 const RIPPLE_WIDTH = 8;
 const RIPPLE_DECAY = 0.90;
 const RIPPLE_MAX_RADIUS = 600;
 const RIPPLE_INTENSITY = 0.18;
 
-// ===== Sparkle =====
 const SPARKLE_MIN_MS = 20000;
 const SPARKLE_MAX_MS = 30000;
 const SPARKLE_COUNT = 12;
 const SPARKLE_TTL_MS = 700;
 
-// ===== Halo =====
 const HALO_OPACITY = 0.12;
 const HALO_ROT_SPEED = 0.0035;
 const HALO_RADIUS_FACTOR = 0.7;
 const HALO_LINE_WIDTH = 1.25;
 
-// ===== Palette =====
 const PALOMA_GREEN = { r: 106, g: 114, b: 87 };
 
-// ===== Logo Exclusion Zone (No-Overlap) =====
-const LOGO_CLEAR_INNER = 1.40;     // hard kill radius (particles vanish + respawn)
-const LOGO_CLEAR_SHELL = 1.15;     // deflection shell radius (flow-around band)
-const LOGO_FLOW_TANGENTIAL = 0.095; // tangential velocity boost to prevent pooling
-const LOGO_FLOW_PUSH = 0.085;       // slight outward push to avoid edge buildup
-const RESPAWN_RING_FACTOR = 1.42;   // where particles reappear around logo
-const RESPAWN_SPEED = 0.35;         // initial speed for respawned particles
+const LOGO_CLEAR_INNER = 1.40;
+const LOGO_CLEAR_SHELL = 1.15;
+const LOGO_FLOW_TANGENTIAL = 0.095;
+const LOGO_FLOW_PUSH = 0.085;
+const RESPAWN_RING_FACTOR = 1.42;
+const RESPAWN_SPEED = 0.35;
 
 // ==============================
 // HELPERS
 // ==============================
 const now = () => performance.now();
 const rand = (a, b) => a + Math.random() * (b - a);
-const rgba = (r, g, b, a) => `rgba(${r},${g},${b},${a})`;
+const rgba = (r, g, b, a) => 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
 
 // ==============================
 // COMPONENT
@@ -76,12 +70,15 @@ export default function BackgroundFX() {
   const hasPointerRef = useRef(false);
   const cursorRef = useRef({ x: 0, y: 0, tx: 0, ty: 0 });
 
-  const ripplesRef = useRef([]);                 // {x,y,r,strength}
-  const sparkleUntilRef = useRef(new Map());     // idx -> endTime
+  const ripplesRef = useRef([]);
+  const sparkleUntilRef = useRef(new Map());
   const nextSparkleAtRef = useRef(0);
 
   const haloAngleRef = useRef(0);
-  const attractModeRef = useRef(false);          // false=repel, true=attract
+  const attractModeRef = useRef(false);
+
+  const dprRef = useRef(1);
+  const prefersReducedMotionRef = useRef(false);
 
   // ==============================
   // INIT / RESIZE
@@ -91,26 +88,35 @@ export default function BackgroundFX() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d', { alpha: true });
 
-    const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function getViewportSize() {
+      const vv = window.visualViewport;
+      return vv ? { w: Math.floor(vv.width), h: Math.floor(vv.height) } : { w: window.innerWidth, h: window.innerHeight };
+    }
 
     function resize() {
-      const { innerWidth: w, innerHeight: h } = window;
-      canvas.width = Math.floor(w * dpr);
-      canvas.height = Math.floor(h * dpr);
+      const { w, h } = getViewportSize();
+      const rawDpr = window.devicePixelRatio || 1;
+      const usedDpr = Math.max(1, Math.min(rawDpr, 2));
+      dprRef.current = usedDpr;
+
+      canvas.width = Math.floor(w * usedDpr);
+      canvas.height = Math.floor(h * usedDpr);
       canvas.style.width = w + 'px';
       canvas.style.height = h + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      ctx.setTransform(usedDpr, 0, 0, usedDpr, 0, 0);
+
+      prefersReducedMotionRef.current = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       const area = w * h;
-      const density = prefersReducedMotion ? 0.4 : 1.2;
+      const density = prefersReducedMotionRef.current ? 0.4 : 1.2;
       const target = Math.max(60, Math.floor((PARTICLE_COUNT_BASE * area) / (1280 * 720) * density));
 
       particlesRef.current = new Array(target).fill(0).map(() => ({
         x: Math.random() * w,
         y: Math.random() * h,
-        vx: (Math.random() - 0.5) * SPEED * (prefersReducedMotion ? 0.5 : 1),
-        vy: (Math.random() - 0.5) * SPEED * (prefersReducedMotion ? 0.5 : 1),
+        vx: (Math.random() - 0.5) * SPEED * (prefersReducedMotionRef.current ? 0.5 : 1),
+        vy: (Math.random() - 0.5) * SPEED * (prefersReducedMotionRef.current ? 0.5 : 1),
         s: PARTICLE_SIZE * (0.5 + Math.random() * 1.8),
         o: OPACITY * (0.5 + Math.random() * 0.5),
         p: Math.random() * Math.PI * 2,
@@ -154,16 +160,21 @@ export default function BackgroundFX() {
     // ANIMATE
     // ==============================
     function tick() {
-      const w = canvas.width / (window.devicePixelRatio || 1);
-      const h = canvas.height / (window.devicePixelRatio || 1);
+      const usedDpr = dprRef.current;
+
+      // ===== CLEAR DPR BACKING STORE =====
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+
+      const w = canvas.width / usedDpr;
+      const h = canvas.height / usedDpr;
 
       const c = cursorRef.current;
       c.tx += (c.x - c.tx) * CURSOR_EASE;
       c.ty += (c.y - c.ty) * CURSOR_EASE;
 
-      ctx.clearRect(0, 0, w, h);
-
-      // ===== Prepare Logo Box =====
       let logoBox = null;
       const logo = logoRef.current;
       if (logo) {
@@ -173,7 +184,6 @@ export default function BackgroundFX() {
         logoBox = { cx: lx + size / 2, cy: ly + size / 2, r: size / 2, x: lx, y: ly, size };
       }
 
-      // ===== Sparkle scheduler =====
       const t = now();
       if (t >= nextSparkleAtRef.current) {
         const ps = particlesRef.current;
@@ -184,7 +194,6 @@ export default function BackgroundFX() {
         nextSparkleAtRef.current = t + rand(SPARKLE_MIN_MS, SPARKLE_MAX_MS);
       }
 
-      // ===== Ripples evolve =====
       for (let i = ripplesRef.current.length - 1; i >= 0; i--) {
         const rp = ripplesRef.current[i];
         rp.r += RIPPLE_SPEED;
@@ -197,18 +206,16 @@ export default function BackgroundFX() {
       const ps = particlesRef.current;
 
       // ==============================
-      // DRAW PARTICLES (BEHIND LOGO)
+      // DRAW PARTICLES
       // ==============================
       for (let i = 0; i < ps.length; i++) {
         const p = ps[i];
 
-        // Organic drift
         p.p += DRIFT;
         p.vx += Math.cos(p.p) * 0.0006;
         p.vy += Math.sin(p.p * 0.7) * 0.0006;
 
-        // Cursor interaction
-        if (!prefersReducedMotion && hasPointerRef.current) {
+        if (!prefersReducedMotionRef.current && hasPointerRef.current) {
           const dxc = p.x - c.tx;
           const dyc = p.y - c.ty;
           const dc = Math.hypot(dxc, dyc);
@@ -222,7 +229,6 @@ export default function BackgroundFX() {
           }
         }
 
-        // Softer click ripple push
         for (let r = 0; r < ripplesRef.current.length; r++) {
           const rp = ripplesRef.current[r];
           const dxr = p.x - rp.x;
@@ -239,7 +245,6 @@ export default function BackgroundFX() {
           }
         }
 
-        // ===== Logo Exclusion: vanish + respawn inside inner radius =====
         if (logoBox) {
           const dxL = p.x - logoBox.cx;
           const dyL = p.y - logoBox.cy;
@@ -247,47 +252,37 @@ export default function BackgroundFX() {
           const rInner = logoBox.r * LOGO_CLEAR_INNER;
           const rShell = logoBox.r * LOGO_CLEAR_SHELL;
 
-          // Hard kill zone — particle disappears and respawns on an outer ring
           if (dL < rInner) {
             const theta = Math.random() * Math.PI * 2;
             const rr = logoBox.r * RESPAWN_RING_FACTOR;
             p.x = logoBox.cx + Math.cos(theta) * rr;
             p.y = logoBox.cy + Math.sin(theta) * rr;
-
-            // Give it tangential velocity so it flows around the logo immediately
             const tx = -Math.sin(theta);
             const ty = Math.cos(theta);
             p.vx = tx * RESPAWN_SPEED * (0.5 + Math.random());
             p.vy = ty * RESPAWN_SPEED * (0.5 + Math.random());
-          }
-          // Deflection shell — steer tangentially + slight outward push (no pooling)
-          else if (dL < rShell) {
+          } else if (dL < rShell) {
             const nx = dxL / (dL || 1);
             const ny = dyL / (dL || 1);
-            const txv = -ny; // tangential unit vector
+            const txv = -ny;
             const tyv = nx;
-
             p.vx += txv * LOGO_FLOW_TANGENTIAL;
             p.vy += tyv * LOGO_FLOW_TANGENTIAL;
-
             p.vx += nx * LOGO_FLOW_PUSH * 0.6;
             p.vy += ny * LOGO_FLOW_PUSH * 0.6;
           }
         }
 
-        // Integrate + friction
         p.x += p.vx;
         p.y += p.vy;
         p.vx *= 0.99;
         p.vy *= 0.99;
 
-        // Wrap
         if (p.x < -10) p.x = w + 10;
         if (p.x > w + 10) p.x = -10;
         if (p.y < -10) p.y = h + 10;
         if (p.y > h + 10) p.y = -10;
 
-        // Draw (behind logo)
         const sparkleOn = sparkleUntilRef.current.has(i) && t < sparkleUntilRef.current.get(i);
         const alpha = sparkleOn ? Math.min(1, p.o + 0.35) : p.o;
         const blur = sparkleOn ? 10 : 5;
@@ -303,7 +298,7 @@ export default function BackgroundFX() {
       }
 
       // ==============================
-      // CONNECTIONS (skip lines crossing logo)
+      // CONNECTIONS
       // ==============================
       if (logoBox) {
         for (let i = 0; i < ps.length; i++) {
@@ -314,17 +309,14 @@ export default function BackgroundFX() {
             const dy = pi.y - pj.y;
             const dist = Math.hypot(dx, dy);
             if (dist < CONNECTION_DISTANCE) {
-              // Quick reject if either endpoint is close to logo edge
               const di = Math.hypot(pi.x - logoBox.cx, pi.y - logoBox.cy);
               const dj = Math.hypot(pj.x - logoBox.cx, pj.y - logoBox.cy);
               const cutR = logoBox.r * LOGO_CLEAR_SHELL;
 
-              // If segment intersects the logo circle, skip drawing
               let draw = true;
               if (di < cutR || dj < cutR) {
                 draw = false;
               } else {
-                // Approximate intersection test using projection
                 const vx = pj.x - pi.x;
                 const vy = pj.y - pi.y;
                 const wx = logoBox.cx - pi.x;
@@ -350,7 +342,6 @@ export default function BackgroundFX() {
           }
         }
       } else {
-        // No logo yet — normal connections
         for (let i = 0; i < ps.length; i++) {
           for (let j = i + 1; j < ps.length; j++) {
             const dx = ps[i].x - ps[j].x;
@@ -371,15 +362,13 @@ export default function BackgroundFX() {
       }
 
       // ==============================
-      // DRAW LOGO + HALO (ON TOP)
+      // LOGO + HALO
       // ==============================
       if (logoBox && logo) {
-        // Logo
         ctx.globalAlpha = LOGO_OPACITY;
         ctx.drawImage(logo, logoBox.x, logoBox.y, logoBox.size, logoBox.size);
         ctx.globalAlpha = 1;
 
-        // Halo
         haloAngleRef.current += HALO_ROT_SPEED;
         const haloR = logoBox.size * HALO_RADIUS_FACTOR;
         ctx.save();
