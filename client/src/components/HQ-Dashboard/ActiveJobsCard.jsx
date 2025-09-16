@@ -117,7 +117,7 @@ export default function ActiveJobsCard() {
   const [modalJobKey, setModalJobKey] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/hq/active-jobs')
+    fetch('http://thenestppc.ca/api/hq/active-jobs')
       .then((res) => res.json())
       .then((data) => {
         setJobs(dedupeJobs(data || []));
