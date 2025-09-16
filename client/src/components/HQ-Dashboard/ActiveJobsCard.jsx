@@ -1,6 +1,10 @@
 // =================== Imports and Dependencies ===================
 import { useEffect, useState } from "react";
 import ScaleToFit from "../ui/ScaleToFit";
+import { API_BASE_URL } from '../../api';
+
+
+const API_BASE = API_BASE_URL || '';
 
 // =================== Utility Functions ===================
 function dedupeJobs(jobs) {
@@ -117,7 +121,7 @@ export default function ActiveJobsCard() {
   const [modalJobKey, setModalJobKey] = useState(null);
 
   useEffect(() => {
-    fetch('http://thenestppc.ca/api/hq/active-jobs')
+    fetch(`${API_BASE}/api/hq/active-jobs`)
       .then((res) => res.json())
       .then((data) => {
         setJobs(dedupeJobs(data || []));
@@ -377,3 +381,4 @@ export default function ActiveJobsCard() {
     </div>
   );
 }
+
