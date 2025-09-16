@@ -11,7 +11,7 @@ function requiredEnv(key, { allowEmptyInDev = true } = {}) {
 }
 
 module.exports = {
-  PORT: Number(process.env.PORT) || 3001,
+  PORT: Number(process.env.PORT) || 8080,
   FRONTEND_URL: process.env.FRONTEND_URL || 'https://thenestppc.ca',
   // In production these must be provided via environment; no hardcoded defaults
   DISCORD_CALLBACK_URL: requiredEnv('DISCORD_CALLBACK_URL'),
