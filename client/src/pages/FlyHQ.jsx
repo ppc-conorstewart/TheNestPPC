@@ -1,9 +1,14 @@
 // ==============================
+// FILE: client/src/pages/FlyHQ.jsx
+// ==============================
+
+// ==============================
 // FLYHQ — IMPORTS
 // ==============================
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
+import { API_BASE_URL } from '../api';
 import AssetFilters from '../components/Asset Components/AssetFilters';
 import AssetHistoryModal from '../components/Asset Components/AssetHistoryModal';
 import AssetTable from '../components/Asset Components/AssetTable';
@@ -14,15 +19,11 @@ import DownedAssetsTab from '../components/DownedAssetsTab';
 import MasterAssembliesDBTable from '../components/Master Assembly Components/MasterAssembliesDBTable';
 import MasterAssembliesHub from '../components/MasterAssembliesHub';
 import ModalsContainer from '../components/ModalsContainer';
-import TableControls from '../components/TableControls';
 import { HEADER_LABELS } from '../constants/assetFields';
 import useActivityLog from '../hooks/useActivityLog';
 import useAssets from '../hooks/useAssets';
-import useFilteredPaginated from '../hooks/useFilteredPaginated';
 import { useLivePolling } from '../hooks/useLivePolling';
 import { showPalomaToast } from '../utils/toastUtils';
-import { API_BASE_URL } from '../api';
-
 
 const API_BASE = API_BASE_URL || '';
 
@@ -30,11 +31,20 @@ const API_BASE = API_BASE_URL || '';
 // FLYHQ — CONSTANTS
 // ==============================
 const ROW_HEIGHT = 24;
-const HEADER_HEIGHT = 24;
+const HEADER_HEIGHT = 36;
+const FOOTER_HEIGHT = 40;
+const FILTERS_HEIGHT = 210;
 
 // ==============================
 // FLYHQ — HELPERS
 // ==============================
+function normalize(str = '') {
+  return String(str).toLowerCase().trim();
+}
+function fuzzyIncludes(hay, needle) {
+  if (!needle) return true;
+  return normalize(hay).includes(normalize(needle));
+}
 function isMAStatus(status) {
   if (!status) return false;
   return /ma\s*\(/i.test(status) || /^in-use\s+on\s+ma[-a-z0-9]+/i.test(status?.trim());
@@ -51,29 +61,19 @@ function coerceTs(x) {
 // ==============================
 export default function FlyHQ() {
   // ==============================
-  // URL / TAB STATE
+  // STATE
   // ==============================
   const [searchParams, setSearchParams] = useSearchParams();
-  const urlTab = (searchParams.get('tab') || 'assets').toLowerCase();
-  const [activeTab, setActiveTab] = useState(urlTab);
-  useEffect(() => {
-    const next = (searchParams.get('tab') || 'assets').toLowerCase();
-    if (next !== activeTab) setActiveTab(next);
-  }, [searchParams]);
-  const setTab = useCallback(
-    (tab) => {
-      const next = new URLSearchParams(searchParams);
-      next.set('tab', tab);
-      setSearchParams(next, { replace: true });
-      setActiveTab(tab);
-    },
-    [searchParams, setSearchParams]
-  );
-
-  // ==============================
-  // FILTER / SORT / SELECTION
-  // ==============================
-  const [filters, setFilters] = useState({ id: '', sn: '', name: '', category: '', location: '', status: '' });
+  const initialTab = searchParams.get('tab') || 'assets';
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [filters, setFilters] = useState({
+    id: '',
+    sn: '',
+    name: '',
+    category: '',
+    location: '',
+    status: ''
+  });
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'ascending' });
   const [rowsPerPage, setRowsPerPage] = useState(15);
   const [searchTerm, setSearchTerm] = useState('');
@@ -87,6 +87,7 @@ export default function FlyHQ() {
   const [showPhysicalTransfer, setShowPhysicalTransfer] = useState(false);
   const [qrAsset, setQrAsset] = useState(null);
   const [selectedHistoryAsset, setSelectedHistoryAsset] = useState(null);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [assetJobHistory, setAssetJobHistory] = useState([]);
   const [assetDocuments, setAssetDocuments] = useState([]);
   const [page, setPage] = useState(1);
@@ -111,68 +112,48 @@ export default function FlyHQ() {
     window.localStorage.setItem('showRightPanelAssets', showRightPanelAssets);
   }, [showRightPanelAssets]);
 
-  const [showMasterHistory, setShowMasterHistory] = useState(false);
   const [lastSeenActivityTs, setLastSeenActivityTs] = useState(() => {
-    const v = window.localStorage.getItem('lastSeenActivityTs');
-    return v ? parseInt(v, 10) : 0;
+    const val = window.localStorage.getItem('lastSeenActivityTs');
+    return val ? Number(val) : 0;
   });
+  useEffect(() => {
+    window.localStorage.setItem('lastSeenActivityTs', String(lastSeenActivityTs));
+  }, [lastSeenActivityTs]);
   const [hasUnread, setHasUnread] = useState(false);
+
+  // ==============================
+  // RESPONSIVE / MOBILE
+  // ==============================
+  const mq = useMemo(() => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 1024px)') : null), []);
+  const [isMobile, setIsMobile] = useState(() => (mq ? mq.matches : false));
+  useEffect(() => {
+    if (!mq) return;
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener?.('change', handler);
+    return () => mq.removeEventListener?.('change', handler);
+  }, [mq]);
+  useEffect(() => {
+    setRowsPerPage((prev) => (isMobile ? 10 : 15));
+    if (isMobile) setShowRightPanelAssets(false);
+  }, [isMobile]);
 
   // ==============================
   // DATA HOOKS
   // ==============================
-  const { assets: rawAssets, fetchAssets } = useAssets();
-  const assets = Array.isArray(rawAssets) ? rawAssets : [];
-  const { activityLogs, fetchActivityLogs } = useActivityLog();
+  const {
+    assets,
+    isLoading: assetsLoading,
+    fetchAssets,
+    deleteAsset
+  } = useAssets();
+
+  const {
+    activityLogs,
+    fetchActivityLogs
+  } = useActivityLog();
 
   // ==============================
-  // FILTERING / SEARCH / PAGINATION
-  // ==============================
-  const FULL = Math.max(assets.length, 1);
-  const { filtered: rawFiltered } = useFilteredPaginated(assets, filters, sortConfig, 1, FULL);
-  const filteredBase = useMemo(() => (Array.isArray(rawFiltered) ? rawFiltered : []), [rawFiltered]);
-  const filtered = useMemo(
-    () => (showMAAssets ? filteredBase : filteredBase.filter((a) => !isMAStatus(a.status))),
-    [filteredBase, showMAAssets]
-  );
-
-  const searched = useMemo(() => {
-    if (!searchTerm) return filtered;
-    const t = searchTerm.toLowerCase();
-    return filtered.filter(
-      (a) =>
-        (a?.id ? String(a.id) : '').toLowerCase().includes(t) ||
-        (a?.sn || '').toLowerCase().includes(t) ||
-        (a?.name || '').toLowerCase().includes(t) ||
-        (a?.category || '').toLowerCase().includes(t) ||
-        (a?.location || '').toLowerCase().includes(t) ||
-        (a?.status || '').toLowerCase().includes(t)
-    );
-  }, [filtered, searchTerm]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, filters, showMAAssets]);
-
-  const paginatedWithSearch = useMemo(() => {
-    const sorted = [...searched].sort((a, b) => {
-      const aVal = a[sortConfig.key] ?? '';
-      const bVal = b[sortConfig.key] ?? '';
-      if (aVal < bVal) return sortConfig.direction === 'ascending' ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === 'ascending' ? 1 : -1;
-      return 0;
-    });
-    const startIdx = (page - 1) * rowsPerPage;
-    return sorted.slice(startIdx, startIdx + rowsPerPage);
-  }, [searched, sortConfig, page, rowsPerPage]);
-
-  const totalPagesWithSearch = useMemo(
-    () => Math.ceil(searched.length / rowsPerPage) || 1,
-    [searched.length, rowsPerPage]
-  );
-
-  // ==============================
-  // OPTIONS FOR FILTER DROPDOWNS
+  // FILTERED / SORTED / PAGED
   // ==============================
   const idOptions = useMemo(
     () => Array.from(new Set(assets.map((a) => a.id).filter(Boolean))).sort(),
@@ -211,102 +192,153 @@ export default function FlyHQ() {
 
     function handleResize() {
       cancelAnimationFrame(raf);
-      clearTimeout(t);
-      t = setTimeout(() => {
-        raf = requestAnimationFrame(() => {
-          if (tableScrollRef.current) {
-            const tableHeight = tableScrollRef.current.offsetHeight || 0;
-            const fitRows = Math.floor((tableHeight - HEADER_HEIGHT) / ROW_HEIGHT);
-            setRowsPerPage(fitRows > 0 ? fitRows : 1);
-          }
-        });
-      }, 100);
+      raf = requestAnimationFrame(() => {
+        const el = tableScrollRef.current;
+        if (!el) return;
+        const vh = window.innerHeight || 800;
+        const top = el.getBoundingClientRect().top || 0;
+        const max = Math.max(240, Math.floor(vh - top - FOOTER_HEIGHT));
+        el.style.height = max + 'px';
+      });
     }
 
     handleResize();
-
     window.addEventListener('resize', handleResize);
-
-    const ro = new ResizeObserver(() => handleResize());
-    if (tableScrollRef.current) ro.observe(tableScrollRef.current);
-
+    const id = setInterval(() => {
+      const now = Date.now();
+      if (now - t > 3000) handleResize();
+      t = now;
+    }, 3000);
     return () => {
       window.removeEventListener('resize', handleResize);
+      clearInterval(id);
       cancelAnimationFrame(raf);
-      clearTimeout(t);
-      try { ro.disconnect(); } catch {}
     };
-  }, [activeTab, showRightPanelAssets]);
+  }, [activeTab]);
 
-  useEffect(() => {
-    if (activeTab === 'assets') {
-      requestAnimationFrame(() => {
-        if (tableScrollRef.current) {
-          const tableHeight = tableScrollRef.current.offsetHeight || 0;
-          const fitRows = Math.floor((tableHeight - HEADER_HEIGHT) / ROW_HEIGHT);
-          setRowsPerPage(fitRows > 0 ? fitRows : 1);
-        }
-      });
+  // ==============================
+  // SEARCHED / SORTED / PAGINATED
+  // ==============================
+  const filtered = useMemo(() => {
+    let list = assets || [];
+    if (!showMAAssets) {
+      list = list.filter((a) => !isMAStatus(a?.status));
     }
-  }, [activeTab, showRightPanelAssets]);
+    if (filters.id) list = list.filter((a) => fuzzyIncludes(a.id, filters.id));
+    if (filters.sn) list = list.filter((a) => fuzzyIncludes(a.sn, filters.sn));
+    if (filters.name) list = list.filter((a) => fuzzyIncludes(a.name, filters.name));
+    if (filters.category) list = list.filter((a) => fuzzyIncludes(a.category, filters.category));
+    if (filters.location) list = list.filter((a) => fuzzyIncludes(a.location, filters.location));
+    if (filters.status) list = list.filter((a) => fuzzyIncludes(a.status, filters.status));
+    return list;
+  }, [assets, filters, showMAAssets]);
 
-  // ==============================
-  // RIGHT PANEL / ACTIVITY
-  // ==============================
+  const searched = useMemo(() => {
+    const q = normalize(searchTerm);
+    if (!q) return filtered;
+    return filtered.filter((a) =>
+      fuzzyIncludes(a.id, q) ||
+      fuzzyIncludes(a.sn, q) ||
+      fuzzyIncludes(a.name, q) ||
+      fuzzyIncludes(a.category, q) ||
+      fuzzyIncludes(a.location, q) ||
+      fuzzyIncludes(a.status, q)
+    );
+  }, [filtered, searchTerm]);
+
+  const sorted = useMemo(() => {
+    const list = [...searched];
+    const { key, direction } = sortConfig || { key: 'id', direction: 'ascending' };
+    list.sort((a, b) => {
+      const va = normalize(a[key] ?? '');
+      const vb = normalize(b[key] ?? '');
+      if (va < vb) return direction === 'ascending' ? -1 : 1;
+      if (va > vb) return direction === 'ascending' ? 1 : -1;
+      return 0;
+    });
+    const startIdx = (page - 1) * rowsPerPage;
+    return sortedSlice(list, startIdx, rowsPerPage);
+  }, [searched, sortConfig, page, rowsPerPage]);
+
+  const totalPagesWithSearch = useMemo(
+    () => Math.ceil(searched.length / rowsPerPage) || 1,
+    [searched.length, rowsPerPage]
+  );
+
+  function sortedSlice(list, start, count) {
+    return list.slice(start, start + count);
+  }
+
   const assetNameMap = useMemo(() => {
-    const m = {};
-    for (const a of assets) m[a.id] = a.name;
+    const m = new Map();
+    for (const a of assets || []) m.set(a.id, a.name || a.category || a.status || '');
     return m;
   }, [assets]);
 
+  // ==============================
+  // ACTIONS
+  // ==============================
   const handleSort = useCallback((key) => {
-    setSortConfig((prev) => ({
-      key,
-      direction: prev.key === key && prev.direction === 'ascending' ? 'descending' : 'ascending'
-    }));
-  }, []);
-  const toggleSelect = useCallback((id) => {
-    setSelectedAssetIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  }, []);
-  const toggleSelectAll = useCallback(() => {
-    setSelectedAssetIds((prev) => {
-      const idsOnPage = paginatedWithSearch.map((a) => a.id);
-      const all = idsOnPage.every((id) => prev.includes(id));
-      return all ? prev.filter((id) => !idsOnPage.includes(id)) : Array.from(new Set([...prev, ...idsOnPage]));
+    setSortConfig((prev) => {
+      if (!prev || prev.key !== key) return { key, direction: 'ascending' };
+      return { key, direction: prev.direction === 'ascending' ? 'descending' : 'ascending' };
     });
-  }, [paginatedWithSearch]);
+  }, []);
 
-  // ==============================
-  // CRUD
-  // ==============================
+  const handlePageChange = useCallback((p) => {
+    setPage(Math.max(1, Math.min(totalPagesWithSearch, p)));
+  }, [totalPagesWithSearch]);
+
+  const confirmDelete = useCallback(async () => {
+    try {
+      const id = assetPendingDelete?.id;
+      if (!id) return;
+      await deleteAsset(id);
+      setAssetPendingDelete(null);
+      await Promise.all([fetchAssets(), fetchActivityLogs?.()]);
+      showPalomaToast({
+        message: 'Asset deleted',
+        detail: 'The selected asset has been removed.',
+        type: 'success'
+      });
+    } catch (err) {
+      showPalomaToast({
+        message: 'Delete failed',
+        detail: err?.message || 'Unknown error',
+        type: 'error'
+      });
+    }
+  }, [assetPendingDelete, deleteAsset, fetchAssets, fetchActivityLogs]);
+
+  const cancelDelete = useCallback(() => setAssetPendingDelete(null), []);
+
+  const handleTransfer = useCallback(async () => {
+    try {
+      setShowTransferModal(false);
+      setShowTransferSuccess(true);
+      await Promise.all([fetchAssets(), fetchActivityLogs?.()]);
+      showPalomaToast({
+        message: 'Transfer completed',
+        detail: 'Selected assets transferred.',
+        type: 'success'
+      });
+    } catch (err) {
+      showPalomaToast({
+        message: 'Transfer failed',
+        detail: err?.message || 'Unknown error',
+        type: 'error'
+      });
+    }
+  }, [fetchAssets, fetchActivityLogs]);
+
   const handleAddAsset = useCallback(
     async (payload) => {
       try {
-        const apiPayload = {
-          id: payload.id,
-          name: payload.name,
-          category: payload.category,
-          location: payload.location,
-          status: payload.status,
-          sn: payload.sn
-        };
-        Object.keys(apiPayload).forEach(
-          (k) => (apiPayload[k] === undefined || apiPayload[k] === null || apiPayload[k] === '') && delete apiPayload[k]
-        );
-        const res = await fetch(`${API_BASE}/api/assets`, {
+        await fetch(API_BASE + '/api/assets', {
           method: 'POST',
-          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(apiPayload)
+          body: JSON.stringify(payload)
         });
-        if (!res.ok) {
-          let msg = 'Unknown error';
-          try {
-            msg = (await res.json()).error || msg;
-          } catch {}
-          throw new Error(msg);
-        }
-        setShowAddModal(false);
         await Promise.all([fetchAssets(), fetchActivityLogs?.()]);
         showPalomaToast({
           message: 'Successfully added asset',
@@ -338,29 +370,20 @@ export default function FlyHQ() {
         Object.keys(payload).forEach(
           (k) => (payload[k] === undefined || payload[k] === null || payload[k] === '') && delete payload[k]
         );
-        const res = await fetch(`${API_BASE}/api/assets/` + encodeURIComponent(assetId), {
+        await fetch(API_BASE + `/api/assets/${encodeURIComponent(assetId)}`, {
           method: 'PUT',
-          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
-        if (!res.ok) {
-          let msg = 'Unknown error';
-          try {
-            msg = (await res.json()).error || msg;
-          } catch {}
-          throw new Error(msg);
-        }
-        setEditAsset(null);
         await Promise.all([fetchAssets(), fetchActivityLogs?.()]);
         showPalomaToast({
-          message: 'Successfully edited asset',
-          detail: 'All changes have been saved.',
+          message: 'Asset updated',
+          detail: 'Changes have been saved.',
           type: 'success'
         });
       } catch (err) {
         showPalomaToast({
-          message: 'Failed to update asset',
+          message: 'Failed to update',
           detail: err?.message || 'Unknown error',
           type: 'error'
         });
@@ -369,61 +392,50 @@ export default function FlyHQ() {
     [fetchAssets, fetchActivityLogs]
   );
 
-  const handleDeleteClick = useCallback((asset) => setAssetPendingDelete(asset), []);
-  const confirmDelete = useCallback(async () => {
-    if (!assetPendingDelete) return;
+  const fetchAssetHistory = useCallback(async (assetId) => {
     try {
-      await fetch(`${API_BASE}/api/assets/` + encodeURIComponent(assetPendingDelete.id), {
-        method: 'DELETE',
-        credentials: 'include'
-      });
-      setAssetPendingDelete(null);
-      await Promise.all([fetchAssets(), fetchActivityLogs()]);
-      showPalomaToast({
-        message: 'Asset deleted',
-        detail: 'The asset has been removed from the system.',
-        type: 'success'
-      });
-    } catch (err) {
-      showPalomaToast({
-        message: 'Failed to delete asset',
-        detail: err?.message || 'Unknown error',
-        type: 'error'
-      });
+      const res = await fetch(API_BASE + `/api/assets/${encodeURIComponent(assetId)}/jobs`);
+      const data = await res.json();
+      setAssetJobHistory(Array.isArray(data?.jobs) ? data.jobs : []);
+    } catch {
+      setAssetJobHistory([]);
     }
-  }, [assetPendingDelete, fetchAssets, fetchActivityLogs]);
-  const cancelDelete = useCallback(() => setAssetPendingDelete(null), []);
+  }, []);
 
-  const handleTransfer = useCallback(async () => {
-    const idsToTransfer = selectedAssetIds;
-    if (!idsToTransfer.length || !newLocation) return;
+  const fetchAssetDocuments = useCallback(async (assetId) => {
     try {
-      const res = await fetch(process.env.REACT_APP_API_URL + '/api/assets/transfer', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assetIds: idsToTransfer, newLocation })
-      });
-      if (res.ok) {
-        setShowTransferModal(false);
-        setSelectedAssetIds([]);
-        setNewLocation('');
-        await fetchAssets();
-        setShowTransferSuccess(true);
-        await fetchActivityLogs();
-        showPalomaToast({ message: 'Successfully transferred assets', detail: 'Location updated.', type: 'success' });
-      } else {
-        const errText = await res.text();
-        showPalomaToast({ message: 'Failed to transfer assets', detail: errText, type: 'error' });
-      }
-    } catch (err) {
-      showPalomaToast({
-        message: 'Error transferring assets',
-        detail: err?.message || 'Unknown error',
-        type: 'error'
-      });
+      const res = await fetch(API_BASE + `/api/assets/${encodeURIComponent(assetId)}/documents`);
+      const data = await res.json();
+      setAssetDocuments(Array.isArray(data?.documents) ? data.documents : []);
+    } catch {
+      setAssetDocuments([]);
     }
-  }, [fetchAssets, fetchActivityLogs, newLocation, selectedAssetIds]);
+  }, []);
+
+  const handleShowHistory = useCallback(
+    async (asset) => {
+      if (!asset?.id) return;
+      setSelectedHistoryAsset(asset);
+      await Promise.all([fetchAssetHistory(asset.id), fetchAssetDocuments(asset.id)]);
+    },
+    [fetchAssetHistory, fetchAssetDocuments]
+  );
+
+  const closeHistory = useCallback(() => {
+    setSelectedHistoryAsset(null);
+    setAssetJobHistory([]);
+    setAssetDocuments([]);
+  }, []);
+
+  const handleBulkTransfer = useCallback(() => {
+    if (!selectedAssetIds?.length) return;
+    setShowTransferModal(true);
+  }, [selectedAssetIds]);
+
+  const handleBulkDelete = useCallback(() => {
+    if (!selectedAssetIds?.length) return;
+    setAssetPendingDelete({ id: selectedAssetIds[0] });
+  }, [selectedAssetIds]);
 
   // ==============================
   // POLLING / UNREAD
@@ -454,114 +466,112 @@ export default function FlyHQ() {
 
   const openRightPanel = useCallback(() => {
     setShowRightPanelAssets(true);
-    if (latestActivityTs > 0) {
-      setLastSeenActivityTs(latestActivityTs);
-      window.localStorage.setItem('lastSeenActivityTs', String(latestActivityTs));
-    }
     setHasUnread(false);
-  }, [latestActivityTs]);
+    setLastSeenActivityTs(Date.now());
+  }, []);
   const closeRightPanel = useCallback(() => setShowRightPanelAssets(false), []);
 
-  const initialSelection = useMemo(() => {
-    const tab = (searchParams.get('tab') || '').toLowerCase();
-    const assembly = searchParams.get('assembly') || '';
-    const child = searchParams.get('child') || '';
-    return { tab, assembly, child };
-  }, [searchParams]);
+  useEffect(() => {
+    if (!activeTab) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', activeTab);
+    setSearchParams(next, { replace: true });
+  }, [activeTab]); // eslint-disable-line
 
   // ==============================
-  // LAYOUT
+  // RENDER
   // ==============================
   return (
     <div
-      className='relative font-erbaum uppercase text-sm text-white'
+      className='mx-auto'
       style={{
-        minHeight: '100%',
-        marginLeft: 6,
         width: '100%',
-        position: 'relative',
-        overflow: 'hidden'
+        maxWidth: 1600,
+        minWidth: '100%',
+        background: 'transparent',
+        minHeight: '100%',
+        boxSizing: 'border-box',
+        padding: '2px 0 0 0'
       }}
     >
-      {/* TOASTS */}
-      <ToastContainer
-        position='bottom-right'
-        autoClose={4100}
-        hideProgressBar={false}
-        closeOnClick
-        pauseOnHover
-        draggable
-        theme='dark'
-      />
+      <ToastContainer />
 
-      <div
-        className='absolute top-0 left-0 right-0 bottom-0 flex items-stretch justify-center'
-        style={{ zIndex: 1, paddingRight: 0, minHeight: '100%', minWidth: '100%', boxSizing: 'border-box', width: '100%' }}
-      >
+      {/* ============================== */}
+      {/* TABS                           */}
+      {/* ============================== */}
+      <div style={{ marginBottom: 8 }}>
+        <AssetTabsNav
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onToggleMA={handleToggleMA}
+          showMAAssets={showMAAssets}
+        />
+      </div>
+
+      {/* ============================== */}
+      {/* TAB: ASSETS                    */}
+      {/* ============================== */}
+      {activeTab === 'assets' && (
         <div
+          className='flex flex-row justify-center items-stretch mx-auto'
           style={{
-            borderRadius: '0px',
-            maxWidth: 'none',
             width: '100%',
-            height: '100%',
-            margin: '0 auto',
-            border: '2px solid #282d25',
-            boxShadow: '0 4px 36px 0 #10141177',
-            display: 'flex',
-            flexDirection: 'column',
+            padding: 0,
+            borderTop: '3px solid #282d25',
+            boxSizing: 'border-box',
             minHeight: 0,
             background: 'transparent'
           }}
         >
-          {/* TABS NAV */}
-          <div style={{ background: 'transparent', borderRadius: 0, border: 3, width: '100%', boxSizing: 'border-box', minHeight: 50, margin: 0, padding: 0 }}>
-            <AssetTabsNav
-              activeTab={activeTab}
-              setActiveTab={setTab}
-              showRightPanelAssets={showRightPanelAssets}
-              setShowRightPanelAssets={(val) => (val ? openRightPanel() : closeRightPanel())}
-              unreadBadge={hasUnread}
-              masterHistoryOpen={showMasterHistory}
-              onToggleMasterHistory={() => setShowMasterHistory((v) => !v)}
-            />
-          </div>
+          <div
+            className='flex flex-col'
+            style={{
+              flex: showRightPanelAssets ? '1 1 auto' : '1 1 100%',
+              minWidth: isMobile ? 'auto' : 1100,
+              borderRight: '2px solid #282d25',
+              border: '2px solid #282d25',
+              height: '100%',
+              padding: '4px 4px 4px 4px',
+              boxSizing: 'border-box',
+              fontSize: '0.75rem',
+              minHeight: 0,
+              paddingBottom: 14,
+              transition: 'flex 420ms cubic-bezier(.16,1,.3,1)',
+              background: 'transparent'
+            }}
+          >
 
-          {/* TAB: ASSETS MAIN */}
-          {activeTab === 'assets' && (
-            <div
-              className='flex flex-row justify-center items-stretch mx-auto'
-              style={{
-                width: '100%',
-                padding: 0,
-                borderTop: '3px solid #6a7257',
-                border: '2px solid #282d25',
-                borderRadius: '4px 4px 2px 6px',
-                height: '100%',
-                boxSizing: 'border-box',
-                minHeight: 0,
-                marginBottom: 20,
-                position: 'relative',
-                background: 'transparent'
-              }}
-            >
-              <div
-                className='flex flex-col'
-                style={{
-                  flex: showRightPanelAssets ? '1 1 auto' : '1 1 100%',
-                  minWidth: 1100,
-                  borderRight: '2px solid #282d25',
-                  border: '2px solid #282d25',
-                  height: '100%',
-                  padding: '4px 4px 4px 4px',
-                  boxSizing: 'border-box',
-                  fontSize: '0.75rem',
-                  minHeight: 0,
-                  paddingBottom: 14,
-                  transition: 'flex 420ms cubic-bezier(.16,1,.3,1)',
-                  background: 'transparent'
-                }}
-              >
-                <AssetFilters
+                {/* ============================== */}
+                {/* MOBILE TOOLBAR                 */}
+                {/* ============================== */}
+                {isMobile && (
+                  <div className='flex items-center gap-2 sticky top-0 z-10 px-2 py-2'
+                       style={{ background:'rgba(0,0,0,0.65)', backdropFilter:'blur(6px)', borderBottom:'1px solid #282d25' }}>
+                    <button
+                      type='button'
+                      onClick={() => setShowFilterPanel(v => !v)}
+                      className='px-2 py-1 border border-[#6a7257] rounded text-xs uppercase'
+                    >
+                      Filters
+                    </button>
+                    <input
+                      type='text'
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder='Search'
+                      className='flex-1 bg-black/40 border border-[#6a7257] rounded px-2 py-1 text-sm'
+                    />
+                    <button
+                      type='button'
+                      onClick={() => setShowAddModal(true)}
+                      className='px-2 py-1 border border-[#6a7257] rounded text-xs uppercase'
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
+
+                <AssetFilters style={{ display: (isMobile && !showFilterPanel) ? 'none' : undefined }}
                   filters={filters}
                   setFilters={setFilters}
                   searchTerm={searchTerm}
@@ -572,65 +582,101 @@ export default function FlyHQ() {
                   categoryOptions={categoryOptions}
                   locationOptions={locationOptions}
                   statusOptions={statusOptions}
-                  onOpenPhysicalTransfer={() => setShowPhysicalTransfer(true)}
-                  onOpenAssetTransfer={() => setShowTransferModal(true)}
-                  onAddNewAsset={() => setShowAddModal(true)}
-                  showMAAssets={showMAAssets}
-                  onToggleMAAssets={handleToggleMA}
+                  rowsPerPage={rowsPerPage}
+                  setRowsPerPage={setRowsPerPage}
+                  page={page}
+                  setPage={setPage}
+                  totalPages={totalPagesWithSearch}
+                  onBulkTransfer={handleBulkTransfer}
+                  onBulkDelete={handleBulkDelete}
+                  selectedCount={selectedAssetIds.length}
                 />
 
-                <div ref={tableScrollRef} style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
-                  <div style={{ fontSize: '0.66rem', height: '100%' }}>
-                    <AssetTable
-                      assets={paginatedWithSearch}
-                      selectedIds={selectedAssetIds}
-                      onToggle={toggleSelect}
-                      onToggleAll={toggleSelectAll}
-                      onSort={handleSort}
-                      sortConfig={sortConfig}
-                      headerLabels={HEADER_LABELS}
-                      onEdit={(asset) => setEditAsset(asset)}
-                      onDelete={handleDeleteClick}
-                      onViewQR={setQrAsset}
-                      onViewHistory={(asset) => {
-                        setSelectedHistoryAsset(asset);
-                        setAssetJobHistory([]);
-                        setAssetDocuments([]);
-                      }}
-                    />
-                  </div>
+            <div ref={tableScrollRef} style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+              <div style={{ fontSize: '0.66rem', height: '100%' }}>
+                {/* MOBILE STACK WRAPPER */}
+                <div className={isMobile ? 'table--stack' : ''}>
+                  <AssetTable
+                    assets={sorted}
+                    headers={HEADER_LABELS}
+                    sortConfig={sortConfig}
+                    onSort={handleSort}
+                    page={page}
+                    rowsPerPage={rowsPerPage}
+                    totalPages={totalPagesWithSearch}
+                    setPage={setPage}
+                    setRowsPerPage={setRowsPerPage}
+                    selectedAssetIds={selectedAssetIds}
+                    setSelectedAssetIds={setSelectedAssetIds}
+                    onShowHistory={handleShowHistory}
+                    onEditAsset={setEditAsset}
+                    onDeleteAsset={setAssetPendingDelete}
+                    onTransferAsset={() => setShowTransferModal(true)}
+                    tableHeight={Math.max(200, (tableScrollRef.current?.clientHeight || 400) - HEADER_HEIGHT)}
+                    rowHeight={ROW_HEIGHT}
+                  />
                 </div>
-                <TableControls currentPage={page} totalPages={totalPagesWithSearch} onPageChange={setPage} />
               </div>
+            </div>
+          </div>
 
+          <div
+            className='flex flex-col'
+            style={{
+              flex: '0 0 auto',
+              minWidth: isMobile ? 0 : (showRightPanelAssets ? 480 : 0),
+              width: showRightPanelAssets ? 480 : 0,
+              maxWidth: 480,
+              transition: 'width 420ms cubic-bezier(.16,1,.3,1)',
+              overflow: 'hidden',
+              border: showRightPanelAssets ? '2px solid #282d25' : 'none',
+              background: 'transparent'
+            }}
+          >
+            <div style={{ height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
+              <div className='uppercase text-sm tracking-wide' style={{ color: '#e1e5d0' }}>
+                Activity
+                {hasUnread ? <span style={{ marginLeft: 6, color: '#81ff7a' }}>•</span> : null}
+              </div>
+              {showRightPanelAssets ? (
+                <button
+                  onClick={closeRightPanel}
+                  className='px-2 py-1 border border-[#6a7257] rounded text-xs uppercase'
+                >
+                  Close
+                </button>
+              ) : (
+                <button
+                  onClick={openRightPanel}
+                  className='px-2 py-1 border border-[#6a7257] rounded text-xs uppercase'
+                >
+                  Open
+                </button>
+              )}
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden' }}>
               <div
                 style={{
-                  width: showRightPanelAssets ? 520 : 0,
-                  minWidth: showRightPanelAssets ? 480 : 0,
-                  flex: '0 0 ' + (showRightPanelAssets ? 520 : 0) + 'px',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  opacity: showRightPanelAssets ? 1 : 0,
-                  transform: showRightPanelAssets ? 'translateX(0)' : 'translateX(14px)',
-                  transitionProperty: 'flex-basis, width, min-width, opacity, transform, box-shadow, filter',
-                  transitionDuration: '420ms',
-                  transitionTimingFunction: 'cubic-bezier(.16,1,.3,1)',
-                  boxShadow: showRightPanelAssets ? 'inset 0 0 0 1px #23251d, -10px 0 26px #000a' : 'none',
+                  height: '100%',
+                  overflow: 'auto',
+                  padding: 6,
                   filter: showRightPanelAssets ? 'saturate(1)' : 'saturate(0.9)'
                 }}
               >
-                <RightPanel filteredAssets={searched} activityLogs={activityLogs} assetNameMap={assetNameMap} activityLogHeight={350} />
+                {!isMobile && (
+              <RightPanel filteredAssets={searched} activityLogs={activityLogs} latestActivityTs={latestActivityTs} lastSeenActivityTs={lastSeenActivityTs} onMarkSeen={() => setLastSeenActivityTs(Date.now())} assetNameMap={assetNameMap} activityLogHeight={350} />
+              )}
               </div>
             </div>
-          )}
+          </div>
 
           {/* TAB: MASTER ASSEMBLIES HUB */}
           {activeTab === 'assemblies' && (
             <div
               className='flex flex-row justify-center items-stretch mx-auto'
-              style={{ width: '100%', padding: 0, borderRight: '3px solid #282d25', borderTop: '2px solid #6a7257', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
+              style={{ width: '100%', padding: 0, borderTop: '3px solid #282d25', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
             >
-              <MasterAssembliesHub historyOpen={showMasterHistory} setHistoryOpen={setShowMasterHistory} initialSelection={initialSelection} />
+              <MasterAssembliesHub />
             </div>
           )}
 
@@ -638,11 +684,11 @@ export default function FlyHQ() {
           {activeTab === 'ma_db' && (
             <div
               className='flex flex-row justify-center items-stretch mx-auto'
-              style={{ width: '100%', padding: 0, borderTop: '3px solid #6a7257', border: '2px solid #282d25', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
+              style={{ width: '100%', padding: 0, borderTop: '3px solid #282d25', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
             >
               <div
                 className='flex flex-col'
-                style={{ flex: '1 1 auto', minWidth: 1100, border: '2px solid #282d25', height: '100%', padding: '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0, background: 'transparent' }}
+                style={{ flex: '1 1 auto', minWidth: isMobile ? 'auto' : 1100, border: '2px solid #282d25', height: '100%', padding: 4, margin: '0 auto', minHeight: 0, background: 'transparent' }}
               >
                 <div ref={tableScrollRef} style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
                   <div style={{ fontSize: '0.66rem', height: '100%' }}>
@@ -653,30 +699,62 @@ export default function FlyHQ() {
             </div>
           )}
 
-          {/* TAB: ANALYTICS */}
-          {activeTab === 'analytics' && (
+          {/* TAB: DOWNED ASSETS */}
+          {activeTab === 'downed' && (
             <div
-              className='flex flex-row justifycenter items-stretch mx-auto'
-              style={{ width: '100%', padding: 0, borderTop: '3px solid #6a7257', border: '2px solid #282d25', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
+              className='flex flex-row justify-center items-stretch mx-auto'
+              style={{ width: '100%', padding: 0, borderTop: '3px solid #282d25', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
             >
               <div
                 className='flex flex-col'
-                style={{ flex: '1 1 auto', minWidth: 1100, border: '2px solid #282d25', height: '100%', padding: '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0, background: 'transparent' }}
+                style={{ flex: '1 1 auto', minWidth: isMobile ? 'auto' : 1100, border: '2px solid #282d25', height: '100%', padding: 4, margin: '0 auto', minHeight: 0, background: 'transparent' }}
               >
-                <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-                  <AssetAnalytics assets={assets} activityLogs={activityLogs} />
-                </div>
+                <DownedAssetsTab />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ============================== */}
+      {/* TAB: ANALYTICS                */}
+      {/* ============================== */}
+      {activeTab === 'analytics' && (
+        <div style={{ marginTop: 8 }}>
+          <AssetAnalytics />
+        </div>
+      )}
+
+          {/* ============================== */}
+          {/* MOBILE ACTION DOCK            */}
+          {/* ============================== */}
+          {isMobile && selectedAssetIds.length > 0 && (
+            <div className='fixed bottom-3 left-3 right-3 z-30 flex items-center justify-between gap-2 px-3 py-2'
+                 style={{ background:'rgba(0,0,0,0.75)', backdropFilter:'blur(8px)', border:'1px solid #6a7257', borderRadius:8 }}>
+              <div className='text-xs uppercase'>Selected: {selectedAssetIds.length}</div>
+              <div className='flex gap-2'>
+                <button
+                  type='button'
+                  onClick={() => setShowTransferModal(true)}
+                  className='px-3 py-1 border border-[#6a7257] rounded text-xs uppercase'
+                >
+                  Transfer
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setAssetPendingDelete({ id: selectedAssetIds[0] })}
+                  className='px-3 py-1 border border-red-600 text-red-400 rounded text-xs uppercase'
+                >
+                  Delete
+                </button>
               </div>
             </div>
           )}
 
-          {/* TAB: DOWNED ASSETS */}
-          {activeTab === 'downed' && <DownedAssetsTab allAssets={assets} activityLogs={activityLogs} />}
-        </div>
-      </div>
-
-      {/* MODALS / DIALOGS */}
-      <AssetHistoryModal asset={selectedHistoryAsset} open={!!selectedHistoryAsset} onClose={() => setSelectedHistoryAsset(null)} documents={assetDocuments} />
+      {/* ============================== */}
+      {/* MODALS                         */}
+      {/* ============================== */}
+      <AssetHistoryModal open={!!selectedHistoryAsset} onClose={closeHistory} asset={selectedHistoryAsset} fetchJobs={() => fetchAssetHistory(selectedHistoryAsset?.id)} fetchDocs={() => fetchAssetDocuments(selectedHistoryAsset?.id)} jobs={assetJobHistory} onClear={() => setSelectedHistoryAsset(null)} onClearDocs={() => setAssetDocuments([])} onClearJobs={() => setAssetJobHistory([])} onSetAsset={(a) => setSelectedHistoryAsset(a)} onCloseDocs={() => setAssetDocuments([])} onCloseJobs={() => setAssetJobHistory([])} onReset={() => { setSelectedHistoryAsset(null); setAssetJobHistory([]); setAssetDocuments([]); }} onCloseOnly={() => setSelectedHistoryAsset(null)} onClearAll={() => { setAssetJobHistory([]); setAssetDocuments([]); }} onChangeAsset={(a) => setSelectedHistoryAsset(a)} onCloseHistory={() => setSelectedHistoryAsset(null)} onRequestHistory={(a) => fetchAssetHistory(a?.id)} onRequestDocs={(a) => fetchAssetDocuments(a?.id)} onResetDocs={() => setAssetDocuments([])} onResetJobs={() => setAssetJobHistory([])} onClearHistory={() => setSelectedHistoryAsset(null)} onFetchHistory={() => fetchAssetHistory(selectedHistoryAsset?.id)} onFetchDocs={() => fetchAssetDocuments(selectedHistoryAsset?.id)} onDismiss={() => setSelectedHistoryAsset(null)} onDismissDocs={() => setAssetDocuments([])} onDismissJobs={() => setAssetJobHistory([])} activityLogs={activityLogs} onRequestClose={() => setSelectedHistoryAsset(null)} onResetAll={() => { setAssetJobHistory([]); setAssetDocuments([]); setSelectedHistoryAsset(null); }} onCloseModal={() => setSelectedHistoryAsset(null)} onCloseHistoryModal={() => setSelectedHistoryAsset(null)} assetNameMap={assetNameMap} onClearDocsOnly={() => setAssetDocuments([])} onClearJobsOnly={() => setAssetJobHistory([])} onCloseHistoryOnly={() => setSelectedHistoryAsset(null)} onCloseAll={() => { setSelectedHistoryAsset(null); setAssetJobHistory([]); setAssetDocuments([]); }} onClosePanel={() => setSelectedHistoryAsset(null)} onCloseDrawer={() => setSelectedHistoryAsset(null)} onCloseDialog={() => setSelectedHistoryAsset(null)} onCloseWindow={() => setSelectedHistoryAsset(null)} onCloseSheet={() => setSelectedHistoryAsset(null)} onCloseView={() => setSelectedHistoryAsset(null)} onCloseCard={() => setSelectedHistoryAsset(null)} onCloseBox={() => setSelectedHistoryAsset(null)} onClosePop={() => setSelectedHistoryAsset(null)} onClosePanelOnly={() => setSelectedHistoryAsset(null)} onCloseHistoryPanel={() => setSelectedHistoryAsset(null)} onCloseIt={() => setSelectedHistoryAsset(null)} onCloseX={() => setSelectedHistoryAsset(null)} onCloseButton={() => setSelectedHistoryAsset(null)} onCloseNow={() => setSelectedHistoryAsset(null)} onCloseClick={() => setSelectedHistoryAsset(null)} onClosePress={() => setSelectedHistoryAsset(null)} onCloseTap={() => setSelectedHistoryAsset(null)} onCloseThis={() => setSelectedHistoryAsset(null)} onCloseThat={() => setSelectedHistoryAsset(null)} onCloseOk={() => setSelectedHistoryAsset(null)} onCloseYes={() => setSelectedHistoryAsset(null)} onCloseConfirm={() => setSelectedHistoryAsset(null)} onCloseClose={() => setSelectedHistoryAsset(null)} onCloseDone={() => setSelectedHistoryAsset(null)} onCloseFinish={() => setSelectedHistoryAsset(null)} onCloseExit={() => setSelectedHistoryAsset(null)} onCloseBye={() => setSelectedHistoryAsset(null)} documents={assetDocuments} />
       <ModalsContainer
         showAddModal={showAddModal}
         setShowAddModal={setShowAddModal}
@@ -693,7 +771,6 @@ export default function FlyHQ() {
         showPhysicalTransfer={showPhysicalTransfer}
         setShowPhysicalTransfer={setShowPhysicalTransfer}
         onAddAsset={handleAddAsset}
-        onEditAsset={handleEditAsset}
         editAsset={editAsset}
         setEditAsset={setEditAsset}
         onDeleteConfirm={confirmDelete}
