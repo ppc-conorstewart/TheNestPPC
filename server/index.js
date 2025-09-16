@@ -1,6 +1,6 @@
 // ==============================
 // FILE: server/index.js — Express App Entry
-// Sections: Imports • App Init • Trust Proxy • CORS • Static • Body & Logging • Session/Passport • Routers • Upload • HQ Jobs • Discord Proxy • Action Items • Workorder PDF • OAuth • Static Client (Production) • Exports
+// Sections: Imports • App Init • Trust Proxy • CORS • Static • Body & Logging • Session/Passport • Routers • Upload • Demo Endpoints (Hardened) • HQ Jobs • Discord Proxy • Action Items • Workorder PDF • OAuth • Static Client (Production) • Exports
 // ==============================
 
 const express = require('express');
@@ -27,9 +27,8 @@ app.set('trust proxy', 1);
 // ==============================
 // SECTION: CORS
 // ==============================
-const explicitFrontEnd = FRONTEND_URL || 'https://thenestppc-frontend-production.up.railway.app';
 const allowlist = new Set([
-  explicitFrontEnd,
+  FRONTEND_URL,
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'https://localhost:3000'
@@ -41,9 +40,9 @@ function corsOrigin(origin, callback) {
     if (allowlist.has(origin)) return callback(null, true);
     const host = new URL(origin).hostname;
     if (/\.up\.railway\.app$/.test(host)) return callback(null, true);
-    return callback(new Error('Not allowed by CORS'));
+    return callback(new Error('Not allowed by CORS'), false);
   } catch {
-    return callback(new Error('Not allowed by CORS'));
+    return callback(new Error('Not allowed by CORS'), false);
   }
 }
 
@@ -137,7 +136,7 @@ app.use('/api/workorders', workordersRouter);
 app.use('/api/glb-assets', glbAssetsRouter);
 
 // ==============================
-// SECTION: Universal Upload
+// SECTION: Upload
 // ==============================
 app.post('/api/upload-model', generalUpload.single('model'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -151,17 +150,23 @@ app.post('/api/upload-model', generalUpload.single('model'), (req, res) => {
 });
 
 // ==============================
-// SECTION: Existing Demo Endpoints
+// SECTION: Demo Endpoints (Hardened)
 // ==============================
-app.get('/api/questions', (_req, res) => res.json(global.questions || []));
-app.get('/api/module2', (_req, res) => res.json(global.module2 || []));
+app.get('/api/questions', (_req, res) => {
+  const data = (global && global.questions) || [];
+  res.json(Array.isArray(data) ? data : []);
+});
+app.get('/api/module2', (_req, res) => {
+  const data = (global && global.module2) || [];
+  res.json(Array.isArray(data) ? data : []);
+});
 app.get('/api/user', (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) res.json({ user: req.user });
   else res.status(401).json({ error: 'Not authenticated' });
 });
 
 // ==============================
-// SECTION: HQ Jobs (existing helpers)
+// SECTION: HQ Jobs
 // ==============================
 app.get('/api/hq/active-jobs', async (req, res) => {
   try {
@@ -206,7 +211,7 @@ app.get('/api/hq/upcoming-jobs', async (req, res) => {
 });
 
 // ==============================
-// SECTION: Discord Proxy (Members/DM/Channels/Announce)
+// SECTION: Discord Proxy
 // ==============================
 const BOT_SERVICE_URL = process.env.BOT_SERVICE_URL || 'http://localhost:3020';
 const BOT_KEY = process.env.NEST_BOT_KEY || 'Paloma2025*';
@@ -368,7 +373,7 @@ app.post('/api/hq/action-items/:id/reminders', async (req, res) => {
 });
 
 // ==============================
-// SECTION: Workorder PDF (legacy demo)
+// SECTION: Workorder PDF
 // ==============================
 app.get('/api/workorders', (_req, res) => res.json([]));
 app.get('/api/workorder/test-template', async (_req, res) => {
