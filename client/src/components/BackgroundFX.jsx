@@ -10,7 +10,7 @@ import { useEffect, useRef } from 'react';
 // ==============================
 // CONSTANTS
 // ==============================
-const PARTICLE_COUNT_BASE = 10;
+const PARTICLE_COUNT_BASE = 0;
 const PARTICLE_SIZE = 0.8;
 const SPEED = 0.10;
 const DRIFT = 0.0010;
