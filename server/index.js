@@ -25,7 +25,7 @@ const app = express()
 app.use(cors({
 origin: (origin, callback) => {
     
-    const allowed = [FRONTEND_URL, 'https://thenestppc-frontend-production.up.railway.app']
+    const allowed = [FRONTEND_URL, 'https://thenestppc.ca']
 if (!origin || allowed.includes(origin)) return callback(null, true)
 return callback(new Error('Not allowed by CORS'), false)
 },
