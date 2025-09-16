@@ -5,6 +5,10 @@
 import '@google/model-viewer';
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { API_BASE_URL } from '../../api';
+
+
+const API_BASE = API_BASE_URL || '';
 
 // ==============================
 // ======== UTILS ===============
@@ -12,7 +16,7 @@ import * as THREE from 'three';
 const withServerUrl = (url) => {
   if (!url) return '';
   if (/^https?:\/\//i.test(url)) return url;
-  return 'http://localhost:3001' + url;
+  return `${API_BASE}` + url;
 };
 const norm = (s) => (s || '').toLowerCase().trim();
 
@@ -260,3 +264,4 @@ export default function TrainingViewer({
     />
   );
 }
+

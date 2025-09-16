@@ -13,6 +13,9 @@ import MFVTableView from '../components/MFV Page Components/MFVTableView';
 
 // --- ADD: PDF Report Generation ---
 import generateMfvReport from '../utils/generateMfvReport';
+import { API_BASE_URL } from '../api';
+
+const API_BASE = API_BASE_URL || '';
 
 import {
   CategoryScale,
@@ -94,15 +97,15 @@ const ROWS_PER_PAGE_BY_TAB = {
 // Section: API Helpers
 // ==============================
 async function fetchPads() {
-  const res = await fetch('/api/mfv/pads');
+  const res = await fetch(`${API_BASE}/api/mfv/pads`);
   return res.json();
 }
 async function fetchPadRows(pad_key) {
-  const res = await fetch(`/api/mfv/pads/${pad_key}/rows`);
+  const res = await fetch(`${API_BASE}/api/mfv/pads/${pad_key}/rows`);
   return res.json();
 }
 async function addPadApi({ pad_key, label, url }) {
-  const res = await fetch('/api/mfv/pads', {
+  const res = await fetch(`${API_BASE}/api/mfv/pads`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pad_key, label, url })
@@ -110,7 +113,7 @@ async function addPadApi({ pad_key, label, url }) {
   return res.json();
 }
 async function archivePadApi(id, archived) {
-  const res = await fetch(`/api/mfv/pads/${id}/archive`, {
+  const res = await fetch(`${API_BASE}/api/mfv/pads/${id}/archive`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ archived })
@@ -118,7 +121,7 @@ async function archivePadApi(id, archived) {
   return res.json();
 }
 async function importPadCsv(pad_key, headers, rows) {
-  const res = await fetch(`/api/mfv/pads/${pad_key}/import`, {
+  const res = await fetch(`${API_BASE}/api/mfv/pads/${pad_key}/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ headers, rows })
@@ -126,11 +129,11 @@ async function importPadCsv(pad_key, headers, rows) {
   return res.json();
 }
 async function fetchCustomers() {
-  const res = await fetch('/api/customers');
+  const res = await fetch(`${API_BASE}/api/customers`);
   return res.json();
 }
 async function fetchAssetsAll() {
-  const res = await fetch('/api/assets');
+  const res = await fetch(`${API_BASE}/api/assets`);
   return res.json();
 }
 
@@ -180,10 +183,7 @@ export default function MFVPageWrapper() {
 
   const chartRef = useRef();
 
-  const IMG_BASE =
-    process.env.NODE_ENV === 'development'
-      ? 'http://localhost:3001'
-      : '';
+  const IMG_BASE = API_BASE;
 
   // ==============================
   // Section: Local Storage Pad

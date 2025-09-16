@@ -14,7 +14,11 @@ import { useWorkorderSection } from '../../hooks/useWorkorderSection';
 import AlertsModal from './AlertsModal';
 import PageRenderer from './PageRenderer';
 import WorkorderModal from './WorkorderModal';
-axios.defaults.baseURL = 'http://localhost:3001';
+import { API_BASE_URL } from '../../api';
+
+const API_BASE = API_BASE_URL || '';
+
+axios.defaults.baseURL = API_BASE;
 
 const asArray = x => Array.isArray(x) ? x : x ? [x] : [];
 

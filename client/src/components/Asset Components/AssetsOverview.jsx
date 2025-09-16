@@ -15,6 +15,10 @@ import {
   XAxis,
   YAxis
 } from 'recharts'
+import { API_BASE_URL } from '../../api';
+
+const API_BASE = API_BASE_URL || '';
+
 
 // =================== AssetsOverview Component ===================
 export default function AssetsOverview() {
@@ -24,7 +28,7 @@ export default function AssetsOverview() {
 
   // --------- Fetch Asset Data and Calculate Summary ---------
   useEffect(() => {
-    fetch('http://localhost:3001/api/assets')
+    fetch(`${API_BASE}/api/assets`)
       .then((r) => r.json())
       .then((data) => {
         const totals = data.reduce((acc, asset) => {
@@ -166,3 +170,4 @@ export default function AssetsOverview() {
     </div>
   )
 }
+
