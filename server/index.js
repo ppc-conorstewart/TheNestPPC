@@ -1,6 +1,6 @@
 // ==============================
 // FILE: server/index.js — Express App Entry
-// Sections: Imports • Middleware • CORS • Static • Body & Logging • Session/Passport • Routers • Universal Upload • Existing Endpoints • HQ Jobs • Discord Proxy • Action Items • Workorder PDF • Discord OAuth • Static Client (Production) • Exports
+// Sections: Imports • App Init • Trust Proxy • CORS • Static • Body & Logging • Session/Passport • Routers • Upload • HQ Jobs • Discord Proxy • Action Items • Workorder PDF • OAuth • Static Client (Production) • Exports
 // ==============================
 
 const express = require('express');
@@ -20,15 +20,16 @@ const db = require('./db');
 const app = express();
 
 // ==============================
-// SECTION: Middleware
+// SECTION: Trust Proxy
 // ==============================
 app.set('trust proxy', 1);
 
 // ==============================
 // SECTION: CORS
 // ==============================
+const explicitFrontEnd = FRONTEND_URL || 'https://thenestppc-frontend-production.up.railway.app';
 const allowlist = new Set([
-  FRONTEND_URL,
+  explicitFrontEnd,
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'https://localhost:3000'
@@ -150,10 +151,10 @@ app.post('/api/upload-model', generalUpload.single('model'), (req, res) => {
 });
 
 // ==============================
-// SECTION: Existing Quiz and User Endpoints
+// SECTION: Existing Demo Endpoints
 // ==============================
-app.get('/api/questions', (_req, res) => res.json(questions));
-app.get('/api/module2', (_req, res) => res.json(module2));
+app.get('/api/questions', (_req, res) => res.json(global.questions || []));
+app.get('/api/module2', (_req, res) => res.json(global.module2 || []));
 app.get('/api/user', (req, res) => {
   if (req.isAuthenticated && req.isAuthenticated()) res.json({ user: req.user });
   else res.status(401).json({ error: 'Not authenticated' });
@@ -265,7 +266,7 @@ app.post('/api/discord/announce/test', async (req, res) => {
 });
 
 // ==============================
-// SECTION: Action Items — In-Memory (no DB yet)
+// SECTION: Action Items — In-Memory
 // ==============================
 let actionItems = [];
 let nextId = 1;
