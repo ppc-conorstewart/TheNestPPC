@@ -21,6 +21,10 @@ import useAssets from '../hooks/useAssets';
 import useFilteredPaginated from '../hooks/useFilteredPaginated';
 import { useLivePolling } from '../hooks/useLivePolling';
 import { showPalomaToast } from '../utils/toastUtils';
+import { API_BASE_URL } from '../api';
+
+
+const API_BASE = API_BASE_URL || '';
 
 // ==============================
 // FLYHQ — CONSTANTS
@@ -289,7 +293,7 @@ export default function FlyHQ() {
         Object.keys(apiPayload).forEach(
           (k) => (apiPayload[k] === undefined || apiPayload[k] === null || apiPayload[k] === '') && delete apiPayload[k]
         );
-        const res = await fetch('http://localhost:3001/api/assets', {
+        const res = await fetch(`${API_BASE}/api/assets`, {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -334,7 +338,7 @@ export default function FlyHQ() {
         Object.keys(payload).forEach(
           (k) => (payload[k] === undefined || payload[k] === null || payload[k] === '') && delete payload[k]
         );
-        const res = await fetch('http://localhost:3001/api/assets/' + encodeURIComponent(assetId), {
+        const res = await fetch(`${API_BASE}/api/assets/` + encodeURIComponent(assetId), {
           method: 'PUT',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -369,7 +373,7 @@ export default function FlyHQ() {
   const confirmDelete = useCallback(async () => {
     if (!assetPendingDelete) return;
     try {
-      await fetch('http://localhost:3001/api/assets/' + encodeURIComponent(assetPendingDelete.id), {
+      await fetch(`${API_BASE}/api/assets/` + encodeURIComponent(assetPendingDelete.id), {
         method: 'DELETE',
         credentials: 'include'
       });
