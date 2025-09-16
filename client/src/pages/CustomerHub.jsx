@@ -15,13 +15,14 @@ import CustomerGeneralInfoPanel from '../components/Customer Hub Components/Cust
 import CustomerListPanel from '../components/Customer Hub Components/CustomerListPanel';
 import CustomerLogoCard from '../components/Customer Hub Components/CustomerLogoCard';
 import CustomerProgramInfo from '../components/Customer Hub Components/CustomerProgramInfo';
+import { API_BASE_URL } from '../api';
+
+
+const API_BASE = API_BASE_URL || '';
 
 // ===== CONSTANTS =====
-const API_URL = '/api/customers';
-const IMG_BASE =
-  process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3001'
-    : '';
+const API_URL = `${API_BASE}/api/customers`;
+const IMG_BASE = API_BASE;
 
 // ===== COMPONENT =====
 export default function CustomerHub() {
@@ -307,3 +308,5 @@ export default function CustomerHub() {
     </div>
   );
 }
+
+
