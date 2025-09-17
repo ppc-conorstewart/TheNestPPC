@@ -3,7 +3,9 @@
 // Meta & Gasket API + date helpers
 // ==============================
 
+import { resolveApiUrl } from '../../../api';
 const MASTER_BASE = '/api/master';
+const masterUrl = (suffix = '') => resolveApiUrl(`${MASTER_BASE}${suffix}`);
 
 export function normDate(v) {
   if (!v) return '';
@@ -30,7 +32,7 @@ export function addMonths(dateStr, months) {
 
 export async function apiFetchMeta(assembly, child) {
   const res = await fetch(
-    `${MASTER_BASE}/meta/${encodeURIComponent(assembly)}/${encodeURIComponent(child)}`,
+    masterUrl(`/meta/${encodeURIComponent(assembly)}/${encodeURIComponent(child)}`),
     { credentials: 'include' }
   );
   if (!res.ok) return { status: 'Inactive', creation_date: '', recert_date: '' };
@@ -47,7 +49,7 @@ export async function apiSaveMeta({ assembly, child, status, creation_date, rece
     recert_date: normDate(recert_date),
     updated_by
   };
-  const res = await fetch(`${MASTER_BASE}/meta`, {
+  const res = await fetch(masterUrl('/meta'), {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -60,7 +62,7 @@ export async function apiSaveMeta({ assembly, child, status, creation_date, rece
 
 export async function apiFetchGaskets(assembly, child) {
   const res = await fetch(
-    `${MASTER_BASE}/gaskets/${encodeURIComponent(assembly)}/${encodeURIComponent(child)}`,
+    masterUrl(`/gaskets/${encodeURIComponent(assembly)}/${encodeURIComponent(child)}`),
     { credentials: 'include' }
   );
   if (!res.ok) return [];
@@ -72,7 +74,7 @@ export async function apiSaveGasketsBulk({ assembly, child, items, updated_by = 
     ...i,
     gasket_date: normDate(i.gasket_date)
   }));
-  const res = await fetch(`${MASTER_BASE}/gaskets/bulk`, {
+  const res = await fetch(masterUrl('/gaskets/bulk'), {
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -81,3 +83,4 @@ export async function apiSaveGasketsBulk({ assembly, child, items, updated_by = 
   if (!res.ok) throw new Error('Failed to save gaskets');
   return await res.json();
 }
+
