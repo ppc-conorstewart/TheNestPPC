@@ -398,7 +398,7 @@ export default function FlyHQ() {
     const idsToTransfer = selectedAssetIds;
     if (!idsToTransfer.length || !newLocation) return;
     try {
-      const res = await fetch(process.env.REACT_APP_API_URL + '/api/assets/transfer', {
+      const res = await fetch(`${API_BASE}/api/assets/transfer`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

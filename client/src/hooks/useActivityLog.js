@@ -1,5 +1,6 @@
 // src/hooks/useActivityLog.js
 import { useState, useEffect, useCallback } from 'react';
+import { resolveApiUrl } from '../api';
 
 export default function useActivityLog() {
   const [activityLogs, setActivityLogs] = useState([]);
@@ -8,7 +9,7 @@ export default function useActivityLog() {
   const fetchActivityLogs = useCallback(async () => {
     setLoadingLog(true);
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/activity`, {
+      const res = await fetch(resolveApiUrl('/api/activity'), {
         credentials: 'include',
       });
       const data = await res.json();

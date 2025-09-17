@@ -1,13 +1,14 @@
 // =================== Imports and Dependencies ===================
 import { QrCode } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { API_BASE_URL } from '../../api';
 import AssetSelector from './Physical Transfer Components/AssetSelector';
 import QRScanModal from './Physical Transfer Components/QRScanModal';
 import SignaturePadSection from './Physical Transfer Components/SignaturePadSection';
 
 // =================== Constants and Utility Functions ===================
 const palomaLogo = require('../../assets/Paloma_Icon_Black_large.png');
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API_BASE = API_BASE_URL || '';
 
 function getCurrentBOLNumber() {
   let n = parseInt(localStorage.getItem('paloma_bol_no') || '1', 10);
@@ -228,7 +229,7 @@ export default function PhysicalAssetTransferModal({
         signature: signatureURL,
       };
 
-      const response = await fetch(`${API_BASE_URL}/api/transfers`, {
+      const response = await fetch(`${API_BASE}/api/transfers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(transferData),

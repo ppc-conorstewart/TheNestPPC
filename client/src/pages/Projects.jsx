@@ -6,6 +6,7 @@
 // IMPORTS
 // ==============================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { resolveApiUrl } from "../api";
 import Sidebar from "../components/Sidebar";
 import UniversalCard from "../templates/Cards/UniversalCard";
 
@@ -21,7 +22,6 @@ const CARD_LIST = [
   { key: "bpm", title: "Body Pressure Monitoring", projectId: 4 },
 ];
 
-const API_BASE = import.meta?.env?.VITE_API_BASE || 'http://localhost:4000/api';
 
 // ==============================
 // COMPONENT
@@ -50,12 +50,12 @@ export default function Projects() {
   // ---------- Effects ----------
   useEffect(() => {
     if (!activeProjectId) return;
-    fetch(`${API_BASE}/projects/${activeProjectId}/checklist`, { credentials: 'include' })
+    fetch(resolveApiUrl(`/api/projects/${activeProjectId}/checklist`), { credentials: 'include' })
       .then(res => res.json())
       .then(setChecklist)
       .catch(console.error);
 
-    fetch(`${API_BASE}/projects/${activeProjectId}/progress`, { credentials: 'include' })
+    fetch(resolveApiUrl(`/api/projects/${activeProjectId}/progress`), { credentials: 'include' })
       .then(res => res.json())
       .then(data => setProgress(data.progressPct || 0))
       .catch(console.error);
@@ -91,7 +91,7 @@ export default function Projects() {
   // ---------- Handlers ----------
   const handleAddChecklistItem = () => {
     if (!newItem.trim()) return;
-    fetch(`${API_BASE}/projects/${activeProjectId}/checklist`, {
+    fetch(resolveApiUrl(`/api/projects/${activeProjectId}/checklist`), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -106,7 +106,7 @@ export default function Projects() {
   };
 
   const handleToggleComplete = (id, isCompleted) => {
-    fetch(`${API_BASE}/projects/checklist/${id}`, {
+    fetch(resolveApiUrl(`/api/projects/checklist/${id}`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -120,7 +120,7 @@ export default function Projects() {
   };
 
   const handleDeleteItem = (id) => {
-    fetch(`${API_BASE}/projects/checklist/${id}`, {
+    fetch(resolveApiUrl(`/api/projects/checklist/${id}`), {
       method: 'DELETE',
       credentials: 'include'
     })

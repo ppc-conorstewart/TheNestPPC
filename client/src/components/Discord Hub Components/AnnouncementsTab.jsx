@@ -4,6 +4,7 @@
 // ==============================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { resolveApiUrl } from '../../api';
 
 const EMOJI_SET = ['🔥','✅','⚠️','📌','🛠️','🗓️','⏰','🏁','📣','🤝','✨','🔁'];
 
@@ -27,8 +28,12 @@ export default function AnnouncementsTab() {
 
   useEffect(() => {
     (async () => {
+      const endpoint = resolveApiUrl('/api/discord/channels');
+      if (!endpoint) return;
       try {
-        const res = await fetch('http://localhost:3020/channels', { headers: { 'x-bot-key': localStorage.getItem('bot_key') || 'Paloma2025*' } });
+        const res = await fetch(endpoint, {
+          headers: { 'x-bot-key': localStorage.getItem('bot_key') || 'Paloma2025*' }
+        });
         const data = await res.json();
         if (Array.isArray(data)) setChannels(data);
       } catch {}

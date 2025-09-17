@@ -1,9 +1,10 @@
 // =================== Imports and Dependencies ===================
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../api';
 import PalomaIcon from '../../assets/Paloma_Icon_Black_large.png';
 
 // =================== Constants and Utility Functions ===================
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API_BASE = API_BASE_URL || '';
 
 function padTicketNumber(id, length = 4) {
   return String(id).padStart(length, '0');
@@ -39,7 +40,7 @@ export default function ViewBOLModal({ bolId, isOpen, onClose }) {
     if (isOpen && bolId) {
       setError(null);
       setLoading(true);
-      fetch(`${API_BASE_URL}/api/transfers/${bolId}`)
+      fetch(`${API_BASE}/api/transfers/${bolId}`)
         .then(res => {
           if (!res.ok) throw new Error(`Transfer not found (status ${res.status})`);
           return res.json();

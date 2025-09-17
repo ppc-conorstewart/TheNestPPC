@@ -1,8 +1,9 @@
 // =================== Imports and Constants ===================
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../api';
 import ViewBOLModal from './ViewBOLModal';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const API_BASE = API_BASE_URL || '';
 const palomaGreen = '#6a7257';
 
 const pulseDotStyle = {
@@ -41,7 +42,7 @@ export default function ActiveTransfers() {
   // --------- Data Fetching Logic ---------
   const fetchTransfers = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/transfers`);
+      const res = await fetch(`${API_BASE}/api/transfers`);
       if (!res.ok) throw new Error('Failed to fetch transfers');
       const data = await res.json();
       setTransfers(data);
@@ -59,7 +60,7 @@ export default function ActiveTransfers() {
   // --------- Transfer Action Handlers ---------
   const handleReceive = async (id) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/transfers/${id}/receive-all`, {
+      const res = await fetch(`${API_BASE}/api/transfers/${id}/receive-all`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -73,7 +74,7 @@ export default function ActiveTransfers() {
   const handlePartialReceiveOpen = async (id) => {
     setPartialReceiveId(id);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/transfers/${id}`);
+      const res = await fetch(`${API_BASE}/api/transfers/${id}`);
       if (!res.ok) throw new Error('Failed to get transfer');
       const data = await res.json();
       setPartialAssets((data.assets || []).map(a => ({ ...a, selected: false })));
@@ -86,7 +87,7 @@ export default function ActiveTransfers() {
     const receivedAssetIds = partialAssets.filter(a => a.selected).map(a => a.id);
     if (receivedAssetIds.length === 0) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/transfers/${partialReceiveId}/partial-receive`, {
+      const res = await fetch(`${API_BASE}/api/transfers/${partialReceiveId}/partial-receive`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ assetIds: receivedAssetIds })
@@ -102,7 +103,7 @@ export default function ActiveTransfers() {
   const handleRemoveTransfer = async (id) => {
     if (!window.confirm('Are you sure you want to remove this transfer?')) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/transfers/${id}`, {
+      const res = await fetch(`${API_BASE}/api/transfers/${id}`, {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to remove transfer');

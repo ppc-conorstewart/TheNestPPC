@@ -3,6 +3,7 @@
 // ==============================
 
 import { useEffect, useState } from 'react';
+import { resolveApiUrl } from './api';
 import BackgroundFX from './components/BackgroundFX';
 
 // ==============================
@@ -43,8 +44,9 @@ export default function LandingPage() {
   // ==============================
   // ======== CONFIG =============
   // ==============================
-  const BASE_URL = process.env.REACT_APP_API_URL;
-  const handleDiscordLogin = () => (window.location.href = `${BASE_URL}/auth/discord`);
+  const handleDiscordLogin = () => {
+    window.location.href = resolveApiUrl('/auth/discord');
+  };
 
   const CRESTS = [
     { logo: flyIqLogo,  href: '/fly-iq',        desktopOffset: '26vh' },

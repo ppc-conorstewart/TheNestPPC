@@ -4,6 +4,7 @@
 // =====================================================
 import Lottie from 'lottie-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { API_BASE_URL, resolveApiUrl } from '../api';
 
 import GlassBackdrop from '../components/ui/GlassBackdrop';
 
@@ -32,21 +33,7 @@ const cardStyle = {
   borderRadius: 12
 };
 
-function resolveApiBase() {
-  const envBase = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || '';
-  if (envBase) return envBase.replace(/\/+$/, '');
-  try {
-    const loc = window.location;
-    if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
-      const port = loc.port === '3000' ? '3001' : (loc.port || '3001');
-      return `${loc.protocol}//${loc.hostname}:${port}`;
-    }
-    return `${loc.protocol}//${loc.host}`;
-  } catch {
-    return '';
-  }
-}
-const API_BASE = resolveApiBase();
+const API_BASE = API_BASE_URL || '';
 
 function uid() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
@@ -55,7 +42,7 @@ function toPublicUrl(storagePath) {
   const norm = String(storagePath).replace(/\\/g, '/');
   const idx = norm.lastIndexOf('/uploads/');
   const rel = idx >= 0 ? norm.slice(idx) : `/uploads/docs/${norm.split('/').pop()}`;
-  return `${API_BASE}${rel}`;
+  return API_BASE ? `${API_BASE}${rel}` : rel;
 }
 function mapDoc(row) {
   const storage = row.latest_storage_path || row.storage_path;
@@ -114,10 +101,13 @@ export default function DocumentationHub() {
     return () => { window.removeEventListener('resize', measure); clearInterval(id); };
   }, []);
 
-  const API = `${API_BASE}/api/documents`;
+  const API = resolveApiUrl('/api/documents');
 
   async function fetchList({ query = '' } = {}) {
-    const url = new URL(API);
+    const url = new URL(
+      API,
+      typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
+    );
     if (query) url.searchParams.set('q', query);
     const res = await fetch(url.toString());
     const data = await res.json();

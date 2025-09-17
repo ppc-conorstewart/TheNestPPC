@@ -1,6 +1,7 @@
 // src/hooks/useAssets.js
 
 import { useCallback, useEffect, useState } from 'react';
+import { resolveApiUrl } from '../api';
 import assetSpecs from '../data/AssetSpecifications.json';
 
 // --- Fraction to decimal utility (inline for now) ---
@@ -36,10 +37,9 @@ export default function useAssets() {
   const fetchAssets = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.REACT_APP_API_URL}/api/assets`,
-        { credentials: 'include' }
-      );
+      const res = await fetch(resolveApiUrl('/api/assets'), {
+        credentials: 'include'
+      });
       const data = await res.json();
       setAssets(data);
     } catch (err) {

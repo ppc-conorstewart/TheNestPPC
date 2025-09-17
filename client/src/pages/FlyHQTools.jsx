@@ -3,6 +3,7 @@
 // ===========================================
 
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { API_BASE_URL } from '../api'
 import ActionItemsCard from '../components/HQ-Dashboard/ActionItemsCard'
 import ActiveJobsCard from '../components/HQ-Dashboard/ActiveJobsCard'
 import DeployedCoilCard from '../components/HQ-Dashboard/DeployedCoilCard'
@@ -12,6 +13,8 @@ import UpcomingPadsCard from '../components/HQ-Dashboard/UpcomingPadsCard'
 import '../styles/dragula.min.css'
 import dragula from '../styles/dragula.min.js'
 import './FlyHQTools.css'
+
+const API_BASE = API_BASE_URL || ''
 
 const STAT_ITEMS = [
   { label: 'Wells Completed', valueKey: 'wells', color: '#8fffbb' },
@@ -230,7 +233,7 @@ export default function FlyHQTools() {
   useEffect(() => { setShowSummary(true) }, [])
   useEffect(() => {
     if (!showSummary) return
-    fetch(`${process.env.REACT_APP_API_URL}/api/jobs`)
+    fetch(`${API_BASE}/api/jobs`)
       .then(res => { if (!res.ok) throw new Error('Jobs fetch failed'); return res.json() })
       .then(allJobs => {
         const completedThisYear = allJobs.filter(job => {

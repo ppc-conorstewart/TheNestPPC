@@ -7,6 +7,7 @@
 // =====================================================
 
 import React from 'react';
+import { API_BASE_URL, resolveApiUrl } from '../api';
 import ViewEditPanel from '../components/Document Hub Components/View-Edit-Panel';
 import LeftNavPanelSE from '../components/Service Equipment Components/LeftNavPanelSE';
 import Sidebar from '../components/Sidebar';
@@ -186,29 +187,15 @@ function MaintenanceForm({ onSubmit }) {
 // =====================================================
 // DOCS API BASE + MAPPERS
 // =====================================================
-function resolveApiBase() {
-  const envBase = process.env.REACT_APP_API_URL || process.env.REACT_APP_BACKEND_URL || '';
-  if (envBase) return envBase.replace(/\/+$/, '');
-  try {
-    const loc = window.location;
-    if (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1') {
-      const port = loc.port === '3000' ? '3001' : (loc.port || '3001');
-      return `${loc.protocol}//${loc.hostname}:${port}`;
-    }
-    return `${loc.protocol}//${loc.host}`;
-  } catch {
-    return '';
-  }
-}
-const API_BASE = resolveApiBase();
-const SE_DOCS_API = `${API_BASE}/api/service-equipment-docs`;
+const API_BASE = API_BASE_URL || '';
+const SE_DOCS_API = resolveApiUrl('/api/service-equipment-docs');
 
 function toPublicUrl(storagePath) {
   if (!storagePath) return '';
   const norm = String(storagePath).replace(/\\/g, '/');
   const idx = norm.lastIndexOf('/uploads/');
   const rel = idx >= 0 ? norm.slice(idx) : `/uploads/service-equipment/${norm.split('/').pop()}`;
-  return `${API_BASE}${rel}`;
+  return API_BASE ? `${API_BASE}${rel}` : rel;
 }
 function mapDoc(row) {
   const storage = row.storage_path;

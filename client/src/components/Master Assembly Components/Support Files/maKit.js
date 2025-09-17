@@ -19,22 +19,22 @@ import {
 // ==============================
 export async function apiFetchAssignments(assemblyTitle, selectedChild) {
   const res = await fetch(
-    `${API}/api/master/assignments/${encodeURIComponent(assemblyTitle)}/${encodeURIComponent(selectedChild)}`,
+    `${API}/api/master/assignments?assembly=${encodeURIComponent(assemblyTitle)}&child=${encodeURIComponent(selectedChild)}`,
     { credentials: 'include' }
   );
   if (!res.ok) return [];
   return res.json();
 }
 export async function apiUpsertAssignment({ assembly, child, slot, asset_id }) {
-  await fetch(`${API}/api/master/assignments`, {
-    method: 'PUT',
+  await fetch(`${API}/api/master/assignment`, {
+    method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ assembly, child, slot, asset_id, updated_by: 'Current User' }),
   });
 }
 export async function apiDeleteAssignment({ assembly, child, slot, new_status, notes }) {
-  await fetch(`${API}/api/master/assignments`, {
+  await fetch(`${API}/api/master/assignment`, {
     method: 'DELETE',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -43,7 +43,7 @@ export async function apiDeleteAssignment({ assembly, child, slot, new_status, n
 }
 export async function apiUpdateAssetStatus(assetId, status) {
   await fetch(`${API}/api/assets/${encodeURIComponent(assetId)}`, {
-    method: 'PUT',
+    method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status }),
@@ -509,3 +509,4 @@ export const styles = {
     cursor: 'pointer',
   }),
 };
+

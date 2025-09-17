@@ -189,11 +189,16 @@ res.status(500).json({ error: 'Failed to load upcoming jobs' })
 // ==============================
 // SECTION: Discord Proxy (Members/DM/Channels/Announce)
 // ==============================
-const BOT_SERVICE_URL = process.env.BOT_SERVICE_URL || 'http://localhost:3020'
+const BOT_SERVICE_URL = (() => {
+  const fromEnv = (process.env.BOT_SERVICE_URL || '').trim()
+  if (fromEnv) return fromEnv
+  return process.env.NODE_ENV !== 'production' ? 'http://localhost:3020' : ''
+})()
 const BOT_KEY = process.env.NEST_BOT_KEY || 'Paloma2025*'
 
 app.get('/api/discord/members', async (_req, res) => {
 try {
+if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
 const r = await fetch(`${BOT_SERVICE_URL}/members`, { headers: { 'x-bot-key': BOT_KEY } })
 if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
 const list = await r.json()
@@ -206,6 +211,7 @@ res.status(502).json({ error: 'bot_unavailable' })
 
 app.get('/api/discord/channels', async (_req, res) => {
 try {
+if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
 const r = await fetch(`${BOT_SERVICE_URL}/channels`, { headers: { 'x-bot-key': BOT_KEY } })
 if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
 const list = await r.json()
@@ -218,6 +224,7 @@ res.status(502).json({ error: 'bot_unavailable' })
 
 app.post('/api/discord/announce', async (req, res) => {
 try {
+if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
 const r = await fetch(`${BOT_SERVICE_URL}/announce`, {
 method: 'POST',
 headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
@@ -233,6 +240,7 @@ res.status(502).json({ error: 'bot_unavailable' })
 
 app.post('/api/discord/announce/test', async (req, res) => {
 try {
+if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
 const r = await fetch(`${BOT_SERVICE_URL}/announce/test`, {
 method: 'POST',
 headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
@@ -296,11 +304,13 @@ const message =
 `**Priority:** ${item.priority}\n` +
 `**Due Date:** ${dateStr}` +
 `${item.attachment_url ? `\n**Attached File:** ${item.attachment_name || 'attachment'}` : ''}`
+if (BOT_SERVICE_URL) {
 try { await fetch(`${BOT_SERVICE_URL}/dm`, {
 method: 'POST',
 headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
 body: JSON.stringify({ userId: Array.from(dmIds)[0], message, attachmentUrl: item.attachment_url, attachmentName: item.attachment_name })
 }) } catch {}
+}
 }
 
 res.json(item)
