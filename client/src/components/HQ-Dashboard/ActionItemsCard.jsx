@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FiBell, FiCheckCircle, FiEdit2, FiPaperclip, FiPlus, FiUser, FiX } from 'react-icons/fi'
+import { resolveBotUrl } from '../../api'
 
 // ===========================
 // SECTION: Add Modal
@@ -33,7 +34,9 @@ function AddModal({ open, onClose, onSubmit }) {
     setFileUrl('')
     setFileName('')
 
-    fetch('/api/discord/members')
+    fetch(resolveBotUrl('/members'), {
+      headers: { 'x-bot-key': process.env.REACT_APP_BOT_KEY }
+    })
       .then(r => (r.ok ? r.json() : []))
       .then(data => setMembers(Array.isArray(data) ? data : []))
       .catch(() => setMembers([]))
@@ -208,7 +211,7 @@ function AddModal({ open, onClose, onSubmit }) {
                           onChange={() => togglePick(m)}
                           className='accent-[#6a7257]'
                         />
-                        <img src={m.avatar} alt='' className='w-5 h-5 rounded-full' />
+                        {m.avatar ? <img src={m.avatar} alt='' className='w-5 h-5 rounded-full' /> : <FiUser className='opacity-70' />}
                         <span className='font-bold'>{m.displayName || m.username}</span>
                       </label>
                     ))}
