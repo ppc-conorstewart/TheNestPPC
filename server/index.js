@@ -40,7 +40,7 @@ const defaultCorsOrigins = [
   'http://127.0.0.1:5173'
 ]
   .filter(Boolean)
-  .map(origin => origin.replace(/\/+$, ''))
+  .map(origin => origin.replace(/\/+$/, ''))
 
 const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i
 const railwayPattern = /^https?:\/\/[^\s]+\.railway\.app$/i
@@ -48,14 +48,14 @@ const extraCors = (process.env.CORS_ALLOWED_ORIGINS || '')
   .split(',')
   .map(value => value.trim())
   .filter(Boolean)
-  .map(origin => origin.replace(/\/+$, ''))
+  .map(origin => origin.replace(/\/+$/, ''))
 
 const allowedCorsOrigins = new Set([...defaultCorsOrigins, ...extraCors])
 
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true)
-    const normalized = origin.replace(/\/+$, '')
+    const normalized = origin.replace(/\/+$/, '')
     if (allowedCorsOrigins.has(normalized)) return callback(null, true)
     if (localhostPattern.test(normalized)) return callback(null, true)
     if (isProd && railwayPattern.test(normalized)) return callback(null, true)
@@ -69,11 +69,11 @@ app.use(cors({
 // SECTION: Static
 // ==============================
 app.use('/uploads', express.static(uploadDir, {
-index: false,
-setHeaders: (res) => {
-res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
-res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-}
+  index: false,
+  setHeaders: (res) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+  }
 }))
 app.use('/uploads/docs', express.static(path.join(uploadDir, 'docs')))
 const LOGOS_DIR = path.join(__dirname, 'public', 'assets', 'logos')
@@ -85,29 +85,29 @@ app.use('/assets/logos', express.static(LOGOS_DIR))
 // ==============================
 app.use(express.json())
 app.use((req, _res, next) => {
-console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`)
-next()
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`)
+  next()
 })
 
 // ==============================
 // SECTION: Session / Passport
 // ==============================
 app.use(session({
-secret: SESSION_SECRET,
-resave: false,
-saveUninitialized: false,
-cookie: {
-secure: isProd,
-sameSite: isProd ? 'none' : 'lax'
-}
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax'
+  }
 }))
 app.use(passport.initialize())
 app.use(passport.session())
 app.use((req, _res, next) => {
-if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.id) {
-req.user_id = req.user.id
-}
-next()
+  if (req.isAuthenticated && req.isAuthenticated() && req.user && req.user.id) {
+    req.user_id = req.user.id
+  }
+  next()
 })
 
 // ==============================
@@ -155,14 +155,14 @@ app.use('/api/glb-assets', glbAssetsRouter)
 // SECTION: Universal Upload
 // ==============================
 app.post('/api/upload-model', generalUpload.single('model'), (req, res) => {
-if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
-try {
-const url = `/uploads/${req.file.filename}`
-res.json({ url })
-} catch (err) {
-console.error('UPLOAD ERROR:', err)
-res.status(500).json({ error: 'Upload failed', detail: err.message })
-}
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
+  try {
+    const url = `/uploads/${req.file.filename}`
+    res.json({ url })
+  } catch (err) {
+    console.error('UPLOAD ERROR:', err)
+    res.status(500).json({ error: 'Upload failed', detail: err.message })
+  }
 })
 
 // ==============================
@@ -170,53 +170,53 @@ res.status(500).json({ error: 'Upload failed', detail: err.message })
 app.get('/api/questions', (_req, res) => res.json(questions))
 app.get('/api/module2', (_req, res) => res.json(module2))
 app.get('/api/user', (req, res) => {
-if (req.isAuthenticated && req.isAuthenticated()) res.json({ user: req.user })
-else res.status(401).json({ error: 'Not authenticated' })
+  if (req.isAuthenticated && req.isAuthenticated()) res.json({ user: req.user })
+  else res.status(401).json({ error: 'Not authenticated' })
 })
 
 // ==============================
 // SECTION: HQ Jobs (existing helpers)
 // ==============================
 app.get('/api/hq/active-jobs', async (req, res) => {
-try {
-const jobs = require('./jobs')
-const allJobs = await jobs.getAllJobs()
-const inProgress = allJobs.filter(job => (job.status && job.status.toLowerCase() === 'in-progress'))
-const withLogo = inProgress.map(job => ({
-...job,
-customerLogo: `/assets/logos/${(job.customer || '').toLowerCase().replace(/[^a-z0-9]/g, '')}.png`
-}))
-res.json(withLogo)
-} catch (err) {
-console.error('Failed to get active HQ jobs:', err)
-res.status(500).json({ error: 'Failed to load active jobs' })
-}
+  try {
+    const jobs = require('./jobs')
+    const allJobs = await jobs.getAllJobs()
+    const inProgress = allJobs.filter(job => (job.status && job.status.toLowerCase() === 'in-progress'))
+    const withLogo = inProgress.map(job => ({
+      ...job,
+      customerLogo: `/assets/logos/${(job.customer || '').toLowerCase().replace(/[^a-z0-9]/g, '')}.png`
+    }))
+    res.json(withLogo)
+  } catch (err) {
+    console.error('Failed to get active HQ jobs:', err)
+    res.status(500).json({ error: 'Failed to load active jobs' })
+  }
 })
 
 app.get('/api/hq/upcoming-jobs', async (req, res) => {
-try {
-const jobs = require('./jobs')
-const allJobs = await jobs.getAllJobs()
-const upcoming = allJobs
-.filter(job => {
-const status = (job.status || '').toLowerCase()
-return status !== 'in-progress' && status !== 'complete'
-})
-.sort((a, b) => {
-const ad = a.rig_in_date ? new Date(a.rig_in_date) : new Date(8640000000000000)
-const bd = b.rig_in_date ? new Date(b.rig_in_date) : new Date(8640000000000000)
-return ad - bd
-})
-.slice(0, 6)
-const withLogo = upcoming.map(job => ({
-...job,
-customerLogo: `/assets/logos/${(job.customer || '').toLowerCase().replace(/[^a-z0-9]/g, '')}.png`
-}))
-res.json(withLogo)
-} catch (err) {
-console.error('Failed to get upcoming HQ jobs:', err)
-res.status(500).json({ error: 'Failed to load upcoming jobs' })
-}
+  try {
+    const jobs = require('./jobs')
+    const allJobs = await jobs.getAllJobs()
+    const upcoming = allJobs
+      .filter(job => {
+        const status = (job.status || '').toLowerCase()
+        return status !== 'in-progress' && status !== 'complete'
+      })
+      .sort((a, b) => {
+        const ad = a.rig_in_date ? new Date(a.rig_in_date) : new Date(8640000000000000)
+        const bd = b.rig_in_date ? new Date(b.rig_in_date) : new Date(8640000000000000)
+        return ad - bd
+      })
+      .slice(0, 6)
+    const withLogo = upcoming.map(job => ({
+      ...job,
+      customerLogo: `/assets/logos/${(job.customer || '').toLowerCase().replace(/[^a-z0-9]/g, '')}.png`
+    }))
+    res.json(withLogo)
+  } catch (err) {
+    console.error('Failed to get upcoming HQ jobs:', err)
+    res.status(500).json({ error: 'Failed to load upcoming jobs' })
+  }
 })
 
 // ==============================
@@ -230,61 +230,61 @@ const BOT_SERVICE_URL = (() => {
 const BOT_KEY = process.env.NEST_BOT_KEY || 'Paloma2025*'
 
 app.get('/api/discord/members', async (_req, res) => {
-try {
-if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
-const r = await fetch(`${BOT_SERVICE_URL}/members`, { headers: { 'x-bot-key': BOT_KEY } })
-if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
-const list = await r.json()
-res.json(list)
-} catch (e) {
-console.error('Discord members proxy error:', e)
-res.status(502).json({ error: 'bot_unavailable' })
-}
+  try {
+    if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
+    const r = await fetch(`${BOT_SERVICE_URL}/members`, { headers: { 'x-bot-key': BOT_KEY } })
+    if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
+    const list = await r.json()
+    res.json(list)
+  } catch (e) {
+    console.error('Discord members proxy error:', e)
+    res.status(502).json({ error: 'bot_unavailable' })
+  }
 })
 
 app.get('/api/discord/channels', async (_req, res) => {
-try {
-if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
-const r = await fetch(`${BOT_SERVICE_URL}/channels`, { headers: { 'x-bot-key': BOT_KEY } })
-if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
-const list = await r.json()
-res.json(list)
-} catch (e) {
-console.error('Discord channels proxy error:', e)
-res.status(502).json({ error: 'bot_unavailable' })
-}
+  try {
+    if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
+    const r = await fetch(`${BOT_SERVICE_URL}/channels`, { headers: { 'x-bot-key': BOT_KEY } })
+    if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
+    const list = await r.json()
+    res.json(list)
+  } catch (e) {
+    console.error('Discord channels proxy error:', e)
+    res.status(502).json({ error: 'bot_unavailable' })
+  }
 })
 
 app.post('/api/discord/announce', async (req, res) => {
-try {
-if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
-const r = await fetch(`${BOT_SERVICE_URL}/announce`, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-body: JSON.stringify(req.body || {})
-})
-const out = await r.json().catch(() => ({}))
-res.status(r.status).json(out)
-} catch (e) {
-console.error('Discord announce proxy error:', e)
-res.status(502).json({ error: 'bot_unavailable' })
-}
+  try {
+    if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
+    const r = await fetch(`${BOT_SERVICE_URL}/announce`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
+      body: JSON.stringify(req.body || {})
+    })
+    const out = await r.json().catch(() => ({}))
+    res.status(r.status).json(out)
+  } catch (e) {
+    console.error('Discord announce proxy error:', e)
+    res.status(502).json({ error: 'bot_unavailable' })
+  }
 })
 
 app.post('/api/discord/announce/test', async (req, res) => {
-try {
-if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
-const r = await fetch(`${BOT_SERVICE_URL}/announce/test`, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-body: JSON.stringify(req.body || {})
-})
-const out = await r.json().catch(() => ({}))
-res.status(r.status).json(out)
-} catch (e) {
-console.error('Discord announce test proxy error:', e)
-res.status(502).json({ error: 'bot_unavailable' })
-}
+  try {
+    if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
+    const r = await fetch(`${BOT_SERVICE_URL}/announce/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
+      body: JSON.stringify(req.body || {})
+    })
+    const out = await r.json().catch(() => ({}))
+    res.status(r.status).json(out)
+  } catch (e) {
+    console.error('Discord announce test proxy error:', e)
+    res.status(502).json({ error: 'bot_unavailable' })
+  }
 })
 
 // ==============================
@@ -296,97 +296,97 @@ let nextId = 1
 app.get('/api/hq/action-items', (_req, res) => res.json(actionItems))
 
 app.post('/api/hq/action-items', async (req, res) => {
-try {
-const { description, priority, category, due_date, attachment_url, attachment_name } = req.body
-const stakeholders = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : []
-const stakeholder_ids = Array.isArray(req.body.stakeholder_ids) ? req.body.stakeholder_ids : []
+  try {
+    const { description, priority, category, due_date, attachment_url, attachment_name } = req.body
+    const stakeholders = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : []
+    const stakeholder_ids = Array.isArray(req.body.stakeholder_ids) ? req.body.stakeholder_ids : []
 
-const dmIds = new Set()
-const stakeholderNames = []
+    const dmIds = new Set()
+    const stakeholderNames = []
 
-for (const s of stakeholders) {
-if (typeof s === 'string') {
-stakeholderNames.push(s)
-} else if (s && typeof s === 'object') {
-if (s.name || s.displayName || s.username) stakeholderNames.push(s.name || s.displayName || s.username)
-if (s.id) dmIds.add(String(s.id))
-}
-}
-for (const id of stakeholder_ids) {
-if (id) dmIds.add(String(id))
-}
+    for (const s of stakeholders) {
+      if (typeof s === 'string') {
+        stakeholderNames.push(s)
+      } else if (s && typeof s === 'object') {
+        if (s.name || s.displayName || s.username) stakeholderNames.push(s.name || s.displayName || s.username)
+        if (s.id) dmIds.add(String(s.id))
+      }
+    }
+    for (const id of stakeholder_ids) {
+      if (id) dmIds.add(String(id))
+    }
 
-const id = nextId++
-const item = {
-id,
-description,
-priority: priority || 'Normal',
-category: category || 'General',
-due_date: due_date || null,
-stakeholders: stakeholderNames.filter(Boolean),
-attachment_url: attachment_url || null,
-attachment_name: attachment_name || null
-}
-actionItems.unshift(item)
+    const id = nextId++
+    const item = {
+      id,
+      description,
+      priority: priority || 'Normal',
+      category: category || 'General',
+      due_date: due_date || null,
+      stakeholders: stakeholderNames.filter(Boolean),
+      attachment_url: attachment_url || null,
+      attachment_name: attachment_name || null
+    }
+    actionItems.unshift(item)
 
-if (dmIds.size) {
-const dateStr = item.due_date ? new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A'
-const message =
+    if (dmIds.size) {
+      const dateStr = item.due_date ? new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A'
+      const message =
 `You have been Added to an Action Item:\n` +
 `**Description:** ${item.description}\n` +
 `**Priority:** ${item.priority}\n` +
 `**Due Date:** ${dateStr}` +
 `${item.attachment_url ? `\n**Attached File:** ${item.attachment_name || 'attachment'}` : ''}`
-if (BOT_SERVICE_URL) {
-try { await fetch(`${BOT_SERVICE_URL}/dm`, {
-method: 'POST',
-headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-body: JSON.stringify({ userId: Array.from(dmIds)[0], message, attachmentUrl: item.attachment_url, attachmentName: item.attachment_name })
-}) } catch {}
-}
-}
+      if (BOT_SERVICE_URL) {
+        try { await fetch(`${BOT_SERVICE_URL}/dm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
+          body: JSON.stringify({ userId: Array.from(dmIds)[0], message, attachmentUrl: item.attachment_url, attachmentName: item.attachment_name })
+        }) } catch {}
+      }
+    }
 
-res.json(item)
-} catch (e) {
-console.error('Create action item failed:', e)
-res.status(500).json({ error: 'create_failed' })
-}
+    res.json(item)
+  } catch (e) {
+    console.error('Create action item failed:', e)
+    res.status(500).json({ error: 'create_failed' })
+  }
 })
 
 app.put('/api/hq/action-items/:id', async (req, res) => {
-const id = Number(req.params.id)
-const idx = actionItems.findIndex(i => i.id === id)
-if (idx === -1) return res.status(404).json({ error: 'not_found' })
-const prev = actionItems[idx]
-const stakeholders = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : null
+  const id = Number(req.params.id)
+  const idx = actionItems.findIndex(i => i.id === id)
+  if (idx === -1) return res.status(404).json({ error: 'not_found' })
+  const prev = actionItems[idx]
+  const stakeholders = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : null
 
-const next = {
-...prev,
-description: req.body.description ?? prev.description,
-priority: req.body.priority ?? prev.priority,
-category: req.body.category ?? prev.category,
-due_date: req.body.due_date ?? prev.due_date,
-stakeholders: stakeholders ? stakeholders.map(s => (typeof s === 'string' ? s : (s.name || s.displayName || s.username || ''))).filter(Boolean) : prev.stakeholders
-}
-actionItems[idx] = next
-res.json(next)
+  const next = {
+    ...prev,
+    description: req.body.description ?? prev.description,
+    priority: req.body.priority ?? prev.priority,
+    category: req.body.category ?? prev.category,
+    due_date: req.body.due_date ?? prev.due_date,
+    stakeholders: stakeholders ? stakeholders.map(s => (typeof s === 'string' ? s : (s.name || s.displayName || s.username || ''))).filter(Boolean) : prev.stakeholders
+  }
+  actionItems[idx] = next
+  res.json(next)
 })
 
 app.patch('/api/hq/action-items/:id/close', (req, res) => {
-const id = Number(req.params.id)
-const idx = actionItems.findIndex(i => i.id === id)
-if (idx === -1) return res.status(404).json({ error: 'not_found' })
-actionItems.splice(idx, 1)
-res.json({ ok: true })
+  const id = Number(req.params.id)
+  const idx = actionItems.findIndex(i => i.id === id)
+  if (idx === -1) return res.status(404).json({ error: 'not_found' })
+  actionItems.splice(idx, 1)
+  res.json({ ok: true })
 })
 
 app.post('/api/hq/action-items/:id/reminders', async (req, res) => {
-const id = Number(req.params.id)
-const item = actionItems.find(i => i.id === id)
-if (!item) return res.status(404).json({ error: 'not_found' })
-const { when, note } = req.body || {}
-const msg = `Reminder: "${item.description}" (Priority: ${item.priority}). ${note ? 'Note: ' + note : ''}`
-res.json({ ok: true, when, note, msg })
+  const id = Number(req.params.id)
+  const item = actionItems.find(i => i.id === id)
+  if (!item) return res.status(404).json({ error: 'not_found' })
+  const { when, note } = req.body || {}
+  const msg = `Reminder: "${item.description}" (Priority: ${item.priority}). ${note ? 'Note: ' + note : ''}`
+  res.json({ ok: true, when, note, msg })
 })
 
 // ==============================
@@ -394,75 +394,75 @@ res.json({ ok: true, when, note, msg })
 // ==============================
 app.get('/api/workorders', (_req, res) => res.json([]))
 app.get('/api/workorder/test-template', async (_req, res) => {
-try {
-const templatePath = path.join(__dirname, 'templates', 'Workorder Blank NEST.pdf')
-const existingPdfBytes = fs.readFileSync(templatePath)
-const pdfDoc = await PDFDocument.load(existingPdfBytes)
-const [firstPage] = pdfDoc.getPages()
-const timesFont = await pdfDoc.embedFont(StandardFonts.TimesRoman)
-firstPage.drawText('PDF Template Loaded!', { x: 50, y: 750, size: 14, font: timesFont, color: rgb(1, 0, 0) })
-const pdfBytes = await pdfDoc.save()
-res.setHeader('Content-Type', 'application/pdf')
-res.setHeader('Content-Disposition', 'inline; filename="workorder_test.pdf"')
-return res.send(Buffer.from(pdfBytes))
-} catch (err) {
-console.error('Error loading or annotating PDF:', err)
-return res.status(500).send('Failed to load PDF template')
-}
+  try {
+    const templatePath = path.join(__dirname, 'templates', 'Workorder Blank NEST.pdf')
+    const existingPdfBytes = fs.readFileSync(templatePath)
+    const pdfDoc = await PDFDocument.load(existingPdfBytes)
+    const [firstPage] = pdfDoc.getPages()
+    const timesFont = await pdfDoc.embedFont(StandardFonts.TimesRoman)
+    firstPage.drawText('PDF Template Loaded!', { x: 50, y: 750, size: 14, font: timesFont, color: rgb(1, 0, 0) })
+    const pdfBytes = await pdfDoc.save()
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'inline; filename="workorder_test.pdf"')
+    return res.send(Buffer.from(pdfBytes))
+  } catch (err) {
+    console.error('Error loading or annotating PDF:', err)
+    return res.status(500).send('Failed to load PDF template')
+  }
 })
 
 app.post('/api/workorder/generate', async (req, res) => {
-try {
-const { customer, location, wells, rigInDate, revision } = req.body
-if (!customer || !location || !wells || !rigInDate || !revision) {
-return res.status(400).json({ error: 'Must include customer, location, wells, rigInDate, and revision in the request body.' })
-}
-const templatePath = path.join(__dirname, 'templates', 'Workorder Blank NEST.pdf')
-const existingPdfBytes = fs.readFileSync(templatePath)
-const pdfDoc = await PDFDocument.load(existingPdfBytes)
-const [firstPage] = pdfDoc.getPages()
-const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
-const coords = {
-customer: { x: 90, y: 738 },
-location: { x: 350, y: 738 },
-wells: { x: 550, y: 738 },
-rigInDate: { x: 160, y: 712 },
-revision: { x: 572, y: 712 }
-}
-const fontSize = 10
-firstPage.drawText(customer, { x: coords.customer.x, y: coords.customer.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
-firstPage.drawText(location, { x: coords.location.x, y: coords.location.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
-firstPage.drawText(String(wells), { x: coords.wells.x, y: coords.wells.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
-firstPage.drawText(rigInDate, { x: coords.rigInDate.x, y: coords.rigInDate.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
-firstPage.drawText(revision, { x: coords.revision.x, y: coords.revision.y, size: fontSize, font: helveticaBold, color: rgb(1, 0, 0) })
-const pdfBytes = await pdfDoc.save()
-res.setHeader('Content-Type', 'application/pdf')
-res.setHeader('Content-Disposition', 'inline; filename="workorder_populated.pdf"')
-return res.send(Buffer.from(pdfBytes))
-} catch (err) {
-console.error('Error generating the populated PDF:', err)
-return res.status(500).json({ error: 'Failed to generate workorder PDF' })
-}
+  try {
+    const { customer, location, wells, rigInDate, revision } = req.body
+    if (!customer || !location || !wells || !rigInDate || !revision) {
+      return res.status(400).json({ error: 'Must include customer, location, wells, rigInDate, and revision in the request body.' })
+    }
+    const templatePath = path.join(__dirname, 'templates', 'Workorder Blank NEST.pdf')
+    const existingPdfBytes = fs.readFileSync(templatePath)
+    const pdfDoc = await PDFDocument.load(existingPdfBytes)
+    const [firstPage] = pdfDoc.getPages()
+    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+    const coords = {
+      customer: { x: 90, y: 738 },
+      location: { x: 350, y: 738 },
+      wells: { x: 550, y: 738 },
+      rigInDate: { x: 160, y: 712 },
+      revision: { x: 572, y: 712 }
+    }
+    const fontSize = 10
+    firstPage.drawText(customer, { x: coords.customer.x, y: coords.customer.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
+    firstPage.drawText(location, { x: coords.location.x, y: coords.location.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
+    firstPage.drawText(String(wells), { x: coords.wells.x, y: coords.wells.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
+    firstPage.drawText(rigInDate, { x: coords.rigInDate.x, y: coords.rigInDate.y, size: fontSize, font: helveticaBold, color: rgb(0, 0, 0) })
+    firstPage.drawText(revision, { x: coords.revision.x, y: coords.revision.y, size: fontSize, font: helveticaBold, color: rgb(1, 0, 0) })
+    const pdfBytes = await pdfDoc.save()
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', 'inline; filename="workorder_populated.pdf"')
+    return res.send(Buffer.from(pdfBytes))
+  } catch (err) {
+    console.error('Error generating the populated PDF:', err)
+    return res.status(500).json({ error: 'Failed to generate workorder PDF' })
+  }
 })
 
 app.get('/auth/discord', passport.authenticate('discord'))
 app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => {
-res.redirect(`${require('./config/config').FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(req.user))}`)
+  res.redirect(`${require('./config/config').FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(req.user))}`)
 })
 
 // ==============================
 // SECTION: Static Client (Production)
 // ==============================
 if (process.env.NODE_ENV === 'production') {
-const clientBuildPath = path.join(__dirname, '..', 'client', 'build')
-if (fs.existsSync(clientBuildPath)) {
-app.use(express.static(clientBuildPath))
-app.get('*', (_req, res) => {
-res.sendFile(path.join(clientBuildPath, 'index.html'))
-})
-} else {
-console.warn('[Static] client/build not found at:', clientBuildPath)
-}
+  const clientBuildPath = path.join(__dirname, '..', 'client', 'build')
+  if (fs.existsSync(clientBuildPath)) {
+    app.use(express.static(clientBuildPath))
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(clientBuildPath, 'index.html'))
+    })
+  } else {
+    console.warn('[Static] client/build not found at:', clientBuildPath)
+  }
 }
 
 module.exports = app
