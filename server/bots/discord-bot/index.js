@@ -19,7 +19,7 @@ const DISCORD_TOKEN   = process.env.DISCORD_TOKEN;
 const GUILD_ID        = process.env.DISCORD_GUILD_ID;
 const API_BASE_URL    = (process.env.NEST_API_URL || 'http://localhost:3001/api').replace(/\/+$/,'');
 const API_BOT_KEY     = process.env.NEST_BOT_KEY || 'Paloma2025*';
-const BOT_HTTP_PORT   = Number(process.env.BOT_HTTP_PORT || 3020);
+const BOT_HTTP_PORT   = Number(process.env.PORT || process.env.BOT_HTTP_PORT || 3020);
 
 // ==============================
 // Discord Setup
