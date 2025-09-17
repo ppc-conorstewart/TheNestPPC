@@ -16,6 +16,7 @@ const passport = require('./auth/discordStrategy')
 
 const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads')
 const db = require('./db')
+const discordMembersRest = require('./services/discordMembersRest')
 
 const app = express()
 
@@ -230,16 +231,52 @@ const BOT_SERVICE_URL = (() => {
 const BOT_KEY = process.env.NEST_BOT_KEY || 'Paloma2025*'
 
 app.get('/api/discord/members', async (_req, res) => {
-  try {
-    if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
-    const r = await fetch(`${BOT_SERVICE_URL}/members`, { headers: { 'x-bot-key': BOT_KEY } })
-    if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
-    const list = await r.json()
-    res.json(list)
-  } catch (e) {
-    console.error('Discord members proxy error:', e)
-    res.status(502).json({ error: 'bot_unavailable' })
+  const hasRemote = Boolean(BOT_SERVICE_URL)
+  const hasFallback = discordMembersRest.isConfigured()
+
+  if (!hasRemote && !hasFallback) {
+    return res.status(503).json({ error: 'bot_service_unconfigured' })
   }
+
+  const errors = []
+
+  if (hasRemote) {
+    try {
+      const r = await fetch(`${BOT_SERVICE_URL}/members`, { headers: { 'x-bot-key': BOT_KEY } })
+      if (!r.ok) {
+        let details = ''
+        try {
+          details = await r.text()
+        } catch (_) {
+          details = ''
+        }
+        const statusInfo = `${r.status} ${r.statusText}`.trim()
+        const message = details ? `${statusInfo}: ${details}` : statusInfo
+        throw new Error(`Bot service responded ${message}`)
+      }
+      const list = await r.json()
+      return res.json(list)
+    } catch (err) {
+      errors.push({ scope: 'remote', error: err })
+    }
+  }
+
+  if (hasFallback) {
+    try {
+      const list = await discordMembersRest.fetchMembers()
+      return res.json(list)
+    } catch (err) {
+      errors.push({ scope: 'fallback', error: err })
+    }
+  }
+
+  if (errors.length) {
+    for (const { scope, error } of errors) {
+      console.error(`[Discord members ${scope} error]:`, error)
+    }
+  }
+
+  return res.status(502).json({ error: 'bot_unavailable' })
 })
 
 app.get('/api/discord/channels', async (_req, res) => {
