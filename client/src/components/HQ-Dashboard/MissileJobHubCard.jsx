@@ -1,4 +1,4 @@
-// =================== MissileJobHubCard.jsx ===================
+// =================== FILE: client/src/components/HQ-Dashboard/MissileJobHubCard.jsx ===================
 
 // =================== Imports and Dependencies ===================
 import { useState } from 'react';
@@ -331,16 +331,7 @@ export default function MissileJobHubCard() {
       </div>
 
       {/* ===== Right Actions Panel ===== */}
-      <div
-        className='ml-3 pl-3 flex flex-col items-center justify-start'
-        style={{
-          width: 54,
-          borderLeft: '2px solid #6a7257',
-          paddingTop: 8,
-          gap: 10,
-          flexShrink: 0
-        }}
-      >
+      <div className='ml-3 pl-3 fhq-action-rail'>
         <ActionIconBtn
           icon={icons.plus}
           tooltip='Add Job'

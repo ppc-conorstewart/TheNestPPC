@@ -1,7 +1,5 @@
-// ===========================
-// FILE: client/src/components/HQ-Dashboard/ActionItemsCard.jsx
+// =========================== FILE: client/src/components/HQ-Dashboard/ActionItemsCard.jsx ===========================
 // Sections: Imports • Add Modal • Edit Modal • Reminder Modal • Docs Modal • Row • Component
-// ===========================
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FiBell, FiCheckCircle, FiEdit2, FiPaperclip, FiPlus, FiUser, FiX } from 'react-icons/fi'
@@ -504,7 +502,7 @@ function Row({ item, selected, onSelect }) {
       High: 'bg-[#38231f] text-[#ffb39a] border-[#4a2d27]',
       Urgent: 'bg-[#3a2626] text-[#ff8e8e] border-[#523030]'
     }
-    const cls = 'px-2 py-0.5 text-[11px] font-bold rounded border ' + (map[val] || 'bg-[#252821] text-[#cfd3c3] border-[#3a3d33]')
+    const cls = 'px-2 py-0.5 text[11px] text-[11px] font-bold rounded border ' + (map[val] || 'bg-[#252821] text-[#cfd3c3] border-[#3a3d33]')
     return <span className={cls}>{val}</span>
   }
   const base = 'grid grid-cols-[1fr_110px_140px_140px_1.2fr] items-center py-1 rounded-lg transition-all duration-150 cursor-pointer '
@@ -674,10 +672,7 @@ export default function ActionItemsCard() {
         )}
       </div>
 
-      <div
-        className='ml-3 pl-3 flex flex-col items-center justify-start'
-        style={{ width: 54, borderLeft: '2px solid #6a7257', paddingTop: 8, gap: 10, flexShrink: 0 }}
-      >
+      <div className='ml-3 pl-3 fhq-action-rail'>
         <button
           type='button'
           className={addCls}

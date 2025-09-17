@@ -1,3 +1,5 @@
+// =========================== FILE: client/src/components/HQ-Dashboard/UpcomingPadsCard.jsx ===========================
+
 // =================== Imports and Dependencies ===================
 import { useEffect, useState } from "react";
 import ScaleToFit from "../ui/ScaleToFit";
@@ -316,17 +318,8 @@ export default function UpcomingPadsCard() {
       </div>
 
       {/* ===== Right Actions Panel (Empty Placeholder) ===== */}
-      <div
-        className="ml-3 pl-3 flex flex-col items-center justify-start"
-        style={{
-          width: 54,
-          borderLeft: "2px solid #6a7257",
-          paddingTop: 8,
-          gap: 10,
-          flexShrink: 0
-        }}
-      >
-        {/* Intentionally empty for now */}
+      <div className="ml-3 pl-3 fhq-action-rail">
+        {/* Intentionally empty for future actions */}
       </div>
     </div>
   );

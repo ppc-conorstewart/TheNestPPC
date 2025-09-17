@@ -1,8 +1,7 @@
 // =================== Imports and Dependencies ===================
 import { useEffect, useState } from "react";
-import ScaleToFit from "../ui/ScaleToFit";
 import { API_BASE_URL } from '../../api';
-
+import ScaleToFit from "../ui/ScaleToFit";
 
 const API_BASE = API_BASE_URL || '';
 
@@ -144,12 +143,13 @@ export default function ActiveJobsCard() {
     setZoneProgress(next);
   }, [jobs.length]);
 
+  // UPDATED: responsive auto-fit columns instead of fixed pixels
   const colClasses =
-    "grid grid-cols-[52px_145px_168px_84px_96px_210px_144px_114px]";
+    "grid grid-cols-[40px_repeat(6,minmax(0,1fr))_100px]";
 
   return (
     <div
-      className="border-2 border-[#6a7257] rounded-2xl shadow-2xl px-4 flex flex-col min-h-[60px]"
+      className="border-2 border-[#6a7257] rounded-2xl shadow-2xl px-0 flex flex-col min-h-[60px]"
       style={{
         width: '100%',
         height: '100%',
@@ -196,7 +196,7 @@ export default function ActiveJobsCard() {
 
               {/* ROWS */}
               <div className="flex flex-col">
-                {jobs.map((job, idx) => {
+                {jobs.map((job) => {
                   const jobKey = getZoneKey(job);
                   const zp = zoneProgress[jobKey] || { completed: 0, total: 0 };
                   const percent = zp.total ? Math.min(100, Math.round((zp.completed / zp.total) * 100)) : 0;
@@ -214,8 +214,6 @@ export default function ActiveJobsCard() {
                         minHeight: 32,
                         boxShadow: "0 0 0.5px 0 #35392e, 0 8px 24px 0 #23240e33",
                       }}
-                      tabIndex={0}
-                      aria-label={`Active job: ${job.customer} ${job.surface_lsd}`}
                     >
                       {/* Logo */}
                       <div className="flex flex-row items-center justify-center w-full">
@@ -239,7 +237,7 @@ export default function ActiveJobsCard() {
                         <span className="text-sm text-[#b0b79f] font-mono text-center">{job.surface_lsd}</span>
                       </div>
                       {/* Wells */}
-                      <div className="flex flex-col items-center w/full">
+                      <div className="flex flex-col items-center w-full">
                         <span className="text-sm text-[#a9c27a] font-bold font-mono text-center">
                           {job.num_wells != null && !isNaN(Number(job.num_wells))
                             ? Number(job.num_wells).toFixed(0)
@@ -247,13 +245,13 @@ export default function ActiveJobsCard() {
                         </span>
                       </div>
                       {/* Zones */}
-                      <div className="flex flex-col items-center w/full">
+                      <div className="flex flex-col items-center w-full">
                         <span className="text-sm text-[#a9c27a] font-bold font-mono text-center">
                           {zp.completed} / {zp.total || "-"}
                         </span>
                       </div>
                       {/* Progress Bar */}
-                      <div className="flex flex-col items-center w/full">
+                      <div className="flex flex-col items-center w-full">
                         <span className="text-xs font-bold text-gray-300 mb-2">
                           {zp.total > 0
                             ? `PROGRESS: ${percent}%`
@@ -280,15 +278,6 @@ export default function ActiveJobsCard() {
                               ? "text-[#4ade80] animate-pulse"
                               : "text-[#4ade80]")
                           }
-                          title={
-                            job.end_date
-                              ? `Job ends in ${endDays} day${Math.abs(endDays) === 1 ? '' : 's'} (${new Date(job.end_date).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: '2-digit',
-                                  year: 'numeric'
-                                })})`
-                              : ''
-                          }
                         >
                           {job.end_date
                             ? new Date(job.end_date).toLocaleDateString("en-US", {
@@ -307,7 +296,6 @@ export default function ActiveJobsCard() {
                           className="bg-[#23241b] rounded-full shadow border-2 border-[#393c32] flex items-center justify-center transition duration-150 transform group
                             hover:scale-110 hover:border-[#84ff45] hover:shadow-[0_0_8px_2px_#baff70]"
                           style={{ outline: "none", width: 38, height: 38 }}
-                          tabIndex={0}
                           onClick={e => {
                             e.stopPropagation();
                             setModalJobKey(jobKey);
@@ -325,7 +313,6 @@ export default function ActiveJobsCard() {
                           className="bg-[#22261a] rounded-full shadow border-2 border-[#393c32] flex items-center justify-center transition duration-150 transform group
                             hover:scale-110 hover:border-[#84ff45] hover:shadow-[0_0_8px_2px_#baff70]"
                           style={{ outline: "none", width: 38, height: 38 }}
-                          tabIndex={0}
                           onClick={e => {
                             e.stopPropagation();
                             window.open(`/job-planner?job=${job.id}`, "_blank");
@@ -350,7 +337,6 @@ export default function ActiveJobsCard() {
                               minHeight: 38,
                               position: 'relative'
                             }}
-                            tabIndex={0}
                             onClick={e => {
                               e.stopPropagation();
                               window.open(`/mfv-info?job=${job.id || ''}`, "_blank");
@@ -381,4 +367,3 @@ export default function ActiveJobsCard() {
     </div>
   );
 }
-

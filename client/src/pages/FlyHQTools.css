@@ -1,6 +1,5 @@
+/* =========================== FILE: client/src/pages/FlyHQTools.css =========================== */
 /* ===========================================
-   FILE: client/src/pages/FlyHQTools.css
-   ===========================================
    Sections:
    • Root Vars
    • Grid (Gaps/Margins)
@@ -11,7 +10,8 @@
    • Mobile Overrides ≤768px / ≤480px
    • Doc Hub Overrides
    • Dragula Classes
-*/
+   • Action Rail (Slim Global Style)
+   =========================================== */
 
 /* ========== Root Vars ========== */
 :root {
@@ -226,3 +226,23 @@ body, html { overflow-x: hidden; font-family: 'MyFont','erbaum','Inter','Arial',
 .gu-hide { display: none !important; }
 .gu-unselectable { -webkit-user-select: none !important; -moz-user-select: none !important; -ms-user-select: none !important; user-select: none !important; }
 .gu-transit { opacity: .2; }
+
+/* ========== Action Rail (Slim Global Style) ========== */
+.fhq-action-rail {
+  width: 36px;
+  border-left: 2px solid #6a7257;
+  padding-top: 8px;
+  gap: 10px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+@media (max-width: 768px) {
+  .fhq-action-rail {
+    width: 34px;
+    gap: 8px;
+  }
+}

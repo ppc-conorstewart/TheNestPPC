@@ -1,7 +1,5 @@
-// ===========================
-// FILE: client/src/components/HQ-Dashboard/SourcingTableCard.jsx
+// =========================== FILE: client/src/components/HQ-Dashboard/SourcingTableCard.jsx ===========================
 // Sections: Imports • Icons • UI Bits • TableRow • Component
-// ===========================
 
 import { useEffect, useMemo, useState } from 'react'
 
@@ -233,10 +231,7 @@ export default function SourcingTableCard() {
       </div>
 
       {/* ===== RIGHT: SIDEBAR (hidden on mobile) ===== */}
-      <div
-        className='hidden md:flex ml-3 pl-3 flex-col items-center justify-start'
-        style={{ width: 54, borderLeft: '2px solid #6a7257', paddingTop: 8, gap: 10, flexShrink: 0 }}
-      >
+      <div className='hidden md:flex ml-3 pl-3 fhq-action-rail'>
         <RightBtn icon={icons.refresh} tooltip='Refresh' onClick={fetchData} />
         <RightBtn icon={icons.csv} tooltip='Export CSV' onClick={downloadCSV} />
       </div>
