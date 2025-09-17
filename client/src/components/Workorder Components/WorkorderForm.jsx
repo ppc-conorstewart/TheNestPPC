@@ -14,7 +14,7 @@ import { useWorkorderSection } from '../../hooks/useWorkorderSection';
 import AlertsModal from './AlertsModal';
 import PageRenderer from './PageRenderer';
 import WorkorderModal from './WorkorderModal';
-import { API_BASE_URL } from '../../api';
+import { API_BASE_URL, resolveApiUrl } from '../../api';
 
 const API_BASE = API_BASE_URL || '';
 
@@ -200,7 +200,7 @@ export default function WorkorderForm({ initialData, onClose }) {
   useEffect(() => {
     async function loadDraft() {
       try {
-        const res = await axios.get('/api/drafts', { params: { user_id: userId, page_key: storageKey } });
+        const res = await axios.get(resolveApiUrl('/api/drafts'), { params: { user_id: userId, page_key: storageKey } });
         const saved = res.data.payload;
         setMetadata(saved.metadata || metadata);
         setPageIndex(saved.pageIndex ?? pageIndex);
@@ -361,21 +361,21 @@ export default function WorkorderForm({ initialData, onClose }) {
           customer, surface_lsd: surfaceLSD, num_wells: numberOfWells, rig_in_date: rigInDate,
           well_bank_type: wellBankType, workbook_revision: workbookRevision, notes: notes || ''
         };
-        const jobRes = await axios.post('/api/jobs', jobCreatePayload);
+        const jobRes = await axios.post(resolveApiUrl('/api/jobs'), jobCreatePayload);
         savedJobId = jobRes.data?.id || jobRes.data?.jobId || jobRes.data?.ID;
         if (!savedJobId) throw new Error('Server did not return a job id!');
         alert('New Job created! Saving full workorder...');
       } else {
-        await axios.patch(`/api/jobs/${savedJobId}`, {
+        await axios.patch(resolveApiUrl(`/api/jobs/${savedJobId}`), {
           customer, surface_lsd: surfaceLSD, num_wells: numberOfWells, rig_in_date: rigInDate,
           well_bank_type: wellBankType, workbook_revision: workbookRevision, notes: notes || ''
         });
       }
 
-      await axios.post('/api/drafts', { user_id: userId, workorder_id: savedJobId, page_key: storageKey, payload: draftBody });
+      await axios.post(resolveApiUrl('/api/drafts'), { user_id: userId, workorder_id: savedJobId, page_key: storageKey, payload: draftBody });
 
       const createPayload = { job_id: Number(savedJobId), revision: 'A', payload: draftBody };
-      const woRes = await axios.post('/api/workorders', createPayload);
+      const woRes = await axios.post(resolveApiUrl('/api/workorders'), createPayload);
       if (woRes?.data?.id) setWorkorderRecordId(woRes.data.id);
 
       if (!workorderId && savedJobId) { setLocalWorkorderId(savedJobId); initialData.id = savedJobId; }
@@ -404,10 +404,10 @@ export default function WorkorderForm({ initialData, onClose }) {
       const workOrdersData = { revision, bom: bomPayload };
 
       if (workorderRecordId) {
-        await axios.put(`/api/workorders/${workorderRecordId}`, { revision, payload: workOrdersData });
+        await axios.put(resolveApiUrl(`/api/workorders/${workorderRecordId}`), { revision, payload: workOrdersData });
       } else {
         const createPayload = { job_id: Number(workorderId), revision, payload: workOrdersData };
-        const woRes = await axios.post('/api/workorders', createPayload);
+        const woRes = await axios.post(resolveApiUrl('/api/workorders'), createPayload);
         if (woRes?.data?.id) setWorkorderRecordId(woRes.data.id);
       }
 

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
+import { resolveApiUrl } from '../api'
 
 export function useUser() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    fetch('/api/user', {
+    fetch(resolveApiUrl('/api/user'), {
       credentials: 'include',
     })
       .then(res => res.json())

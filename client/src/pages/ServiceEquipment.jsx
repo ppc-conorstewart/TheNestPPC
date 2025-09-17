@@ -235,7 +235,7 @@ export default function ServiceEquipment() {
     if (!cat) { setItems([]); setSelected(null); setLoading(false); return; }
     setLoading(true);
     setSelected(null);
-    fetch('/api/service-equipment?category=' + encodeURIComponent(cat))
+    fetch(resolveApiUrl('/api/service-equipment?category=') + encodeURIComponent(cat))
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then(data => { if (isMounted) setItems(Array.isArray(data) ? data : []); })
       .catch(() => { if (isMounted) setItems([]); })

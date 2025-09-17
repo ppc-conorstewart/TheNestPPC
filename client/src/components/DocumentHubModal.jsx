@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { resolveApiUrl } from '../api'
 
 /* ==============================
    TAB CONSTANTS (UI ↔ Server Map)
@@ -91,7 +92,7 @@ export default function DocumentHubModal({ isOpen, onClose, job, notify }) {
     let updated = {};
     for (let tab of UI_TABS) {
       try {
-        const res = await axios.get(`/api/jobs/${job.id}/files`, { params: { tab: serverKeyFor(tab) } });
+        const res = await axios.get(resolveApiUrl(`/api/jobs/${job.id}/files`), { params: { tab: serverKeyFor(tab) } });
         updated[tab] = res.data || [];
       } catch {
         updated[tab] = [];
@@ -142,7 +143,7 @@ export default function DocumentHubModal({ isOpen, onClose, job, notify }) {
       formData.append('file', file);
       formData.append('tab', serverKeyFor(tab));
       try {
-        await axios.post(`/api/jobs/${job.id}/files`, formData, {
+        await axios.post(resolveApiUrl(`/api/jobs/${job.id}/files`), formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         uploaded++;
@@ -173,7 +174,7 @@ export default function DocumentHubModal({ isOpen, onClose, job, notify }) {
   const handleDownload = async (file) => {
     if (!job) return;
     try {
-      const res = await axios.get(`/api/jobs/${job.id}/files/${file.id}`, { responseType: 'blob' });
+      const res = await axios.get(resolveApiUrl(`/api/jobs/${job.id}/files/${file.id}`), { responseType: 'blob' });
       const url = window.URL.createObjectURL(res.data);
       const link = document.createElement('a');
       link.href = url;
@@ -190,7 +191,7 @@ export default function DocumentHubModal({ isOpen, onClose, job, notify }) {
     setViewUrl('');
     setViewContent('');
     try {
-      const res = await axios.get(`/api/jobs/${job.id}/files/${file.id}`, { responseType: 'blob' });
+      const res = await axios.get(resolveApiUrl(`/api/jobs/${job.id}/files/${file.id}`), { responseType: 'blob' });
       if (isImageFile(file.filename) || isPDFFile(file.filename)) {
         setViewUrl(window.URL.createObjectURL(res.data));
       } else if (isTextFile(file.filename)) {
@@ -219,7 +220,7 @@ export default function DocumentHubModal({ isOpen, onClose, job, notify }) {
       const tasks = visibleFiles.map(async (f) => {
         if (previewCache[f.id]) return;
         try {
-          const res = await axios.get(`/api/jobs/${job.id}/files/${f.id}`, { responseType: 'blob' });
+          const res = await axios.get(resolveApiUrl(`/api/jobs/${job.id}/files/${f.id}`), { responseType: 'blob' });
           if (isImageFile(f.filename) || isPDFFile(f.filename)) {
             if (!cancelled) setPreviewCache(prev => ({ ...prev, [f.id]: URL.createObjectURL(res.data) }));
           } else if (isTextFile(f.filename)) {
@@ -264,7 +265,7 @@ export default function DocumentHubModal({ isOpen, onClose, job, notify }) {
     if (!fileToDelete) return;
     let ok = false;
     try {
-      await axios.delete(`/api/jobs/${job.id}/files/${fileToDelete.id}`);
+      await axios.delete(resolveApiUrl(`/api/jobs/${job.id}/files/${fileToDelete.id}`));
       ok = true;
       setPreviewCache(prev => {
         const copy = { ...prev };

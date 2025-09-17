@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../api'
 // =========================== FILE: client/src/components/HQ-Dashboard/UpcomingPadsCard.jsx ===========================
 
 // =================== Imports and Dependencies ===================
@@ -119,7 +120,7 @@ export default function UpcomingPadsCard() {
   const [modalJobKey, setModalJobKey] = useState(null);
 
   useEffect(() => {
-    fetch('/api/hq/upcoming-jobs')
+    fetch(resolveApiUrl('/api/hq/upcoming-jobs'))
       .then((res) => res.json())
       .then((data) => {
         const list = dedupeJobs(data || [])

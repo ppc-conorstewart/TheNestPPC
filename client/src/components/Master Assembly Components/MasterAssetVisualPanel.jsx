@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../api'
 // ==============================
 // src/components/Master Assembly Components/MasterAssetVisualPanel.jsx
 // Visual panel — canonical slot keys, update-only toast summary,
@@ -318,7 +319,7 @@ export default function MasterAssetVisualPanel({
         }
       }
 
-      await fetch(`/api/master/save`, {
+      await fetch(resolveApiUrl(`/api/master/save`), {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -399,7 +400,7 @@ export default function MasterAssetVisualPanel({
     setCreationDate('');
     setRecertDate('');
     try {
-      await fetch(`/api/master/meta`, {
+      await fetch(resolveApiUrl(`/api/master/meta`), {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

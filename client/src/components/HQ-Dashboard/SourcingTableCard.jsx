@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../api'
 // =========================== FILE: client/src/components/HQ-Dashboard/SourcingTableCard.jsx ===========================
 // Sections: Imports • Icons • UI Bits • TableRow • Component
 
@@ -82,7 +83,7 @@ export default function SourcingTableCard() {
     if (filters.status !== 'All') params.append('status', filters.status)
     if (filters.priority !== 'All') params.append('priority', filters.priority)
     if (filters.category !== 'All') params.append('category', filters.category)
-    fetch(`/api/sourcing?${params.toString()}`)
+    fetch(resolveApiUrl(`/api/sourcing?${params.toString()}`))
       .then(r => (r.ok ? r.json() : []))
       .then(d => {
         setTickets(Array.isArray(d) ? d : [])

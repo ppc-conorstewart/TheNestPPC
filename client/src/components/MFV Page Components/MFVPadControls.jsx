@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../api'
 // ==============================
 // MFVPadControls.jsx — Circular Status Dots + Strong Selected State
 // ==============================
@@ -7,7 +8,7 @@ import { DragDropContext, Draggable, Droppable } from 'react-beautiful-dnd';
 import { showPalomaToast } from '../../utils/toastUtils';
 
 async function addPad({ pad_key, label, url, customer, lsd }) {
-  const res = await fetch('/api/mfv/pads', {
+  const res = await fetch(resolveApiUrl('/api/mfv/pads'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ pad_key, label, url, customer, lsd })
@@ -15,7 +16,7 @@ async function addPad({ pad_key, label, url, customer, lsd }) {
   return res.json();
 }
 async function importPadCsv(pad_key, headers, rows, url) {
-  const res = await fetch(`/api/mfv/pads/${pad_key}/import`, {
+  const res = await fetch(resolveApiUrl(`/api/mfv/pads/${pad_key}/import`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ headers, rows, url })
@@ -23,17 +24,17 @@ async function importPadCsv(pad_key, headers, rows, url) {
   return res.json();
 }
 async function fetchPads() {
-  const res = await fetch('/api/mfv/pads');
+  const res = await fetch(resolveApiUrl('/api/mfv/pads'));
   return res.json();
 }
 async function refreshAllPads() {
-  const res = await fetch('/api/mfv/sync-all', {
+  const res = await fetch(resolveApiUrl('/api/mfv/sync-all'), {
     method: 'POST'
   });
   return res.json();
 }
 async function setPadActive(pad_key, is_active) {
-  const res = await fetch(`/api/mfv/pads/${pad_key}/active`, {
+  const res = await fetch(resolveApiUrl(`/api/mfv/pads/${pad_key}/active`), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ is_active })

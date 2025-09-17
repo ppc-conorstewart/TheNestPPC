@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../api'
 // ===================
 // FILE: src/pages/JobPlannerComponents/TableView.jsx
 // ===================
@@ -156,7 +157,7 @@ export default function TableView({
     if (!discordModalJob) return;
     const jobId = discordModalJob.id;
     try {
-      const res = await fetch(`/api/jobs/${jobId}/discord-channel`, {
+      const res = await fetch(resolveApiUrl(`/api/jobs/${jobId}/discord-channel`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discord_channel_id: channelId }),

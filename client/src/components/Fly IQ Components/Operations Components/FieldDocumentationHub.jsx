@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../../api'
 // ==============================
 // FieldDocumentationHub.jsx — Frosted Glass Backdrop (Enter to Submit, Shift+Enter for Newline)
 // ==============================
@@ -62,7 +63,7 @@ export default function FieldDocumentationHub({ open, onClose }) {
 
   function fetchDocsForTab(tab) {
     setLoading(true);
-    fetch(`/api/field-docs?tab=${encodeURIComponent(tab)}`)
+    fetch(resolveApiUrl(`/api/field-docs?tab=${encodeURIComponent(tab)}`))
       .then((res) => res.json())
       .then((data) => {
         setDocuments(data);
@@ -89,7 +90,7 @@ export default function FieldDocumentationHub({ open, onClose }) {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("tab", activeTab);
-        await fetch("/api/field-docs", {
+        await fetch(resolveApiUrl("/api/field-docs"), {
           method: "POST",
           body: formData,
         });
@@ -109,7 +110,7 @@ export default function FieldDocumentationHub({ open, onClose }) {
       setRenamingId(null);
       return;
     }
-    const res = await fetch(`/api/field-docs/${doc.id}`, {
+    const res = await fetch(resolveApiUrl(`/api/field-docs/${doc.id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ newName: newFullName })

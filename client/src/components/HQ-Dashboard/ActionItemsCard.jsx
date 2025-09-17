@@ -1,9 +1,9 @@
+import { resolveApiUrl, resolveBotUrl } from '../../api'
 // =========================== FILE: client/src/components/HQ-Dashboard/ActionItemsCard.jsx ===========================
 // Sections: Imports • Add Modal • Edit Modal • Reminder Modal • Docs Modal • Row • Component
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { FiBell, FiCheckCircle, FiEdit2, FiPaperclip, FiPlus, FiUser, FiX } from 'react-icons/fi'
-import { resolveBotUrl } from '../../api'
 
 // ===========================
 // SECTION: Add Modal
@@ -34,9 +34,10 @@ function AddModal({ open, onClose, onSubmit }) {
     setFileUrl('')
     setFileName('')
 
-    fetch(resolveBotUrl('/members'), {
-      headers: { 'x-bot-key': process.env.REACT_APP_BOT_KEY }
-    })
+    const membersUrl = resolveBotUrl('/members')
+    const membersRequest = membersUrl ? { headers: { 'x-bot-key': process.env.REACT_APP_BOT_KEY } } : undefined
+
+    fetch(membersUrl || resolveApiUrl('/api/discord/members'), membersRequest)
       .then(r => (r.ok ? r.json() : []))
       .then(data => setMembers(Array.isArray(data) ? data : []))
       .catch(() => setMembers([]))
@@ -73,7 +74,7 @@ function AddModal({ open, onClose, onSubmit }) {
       setUploading(true)
       const fd = new FormData()
       fd.append('model', file) // server expects 'model'
-      const r = await fetch('/api/upload-model', { method: 'POST', body: fd })
+      const r = await fetch(resolveApiUrl('/api/upload-model'), { method: 'POST', body: fd })
       if (!r.ok) throw new Error('upload failed')
       const data = await r.json()
       setFileUrl(data.url || '')
@@ -550,7 +551,7 @@ export default function ActionItemsCard() {
 
   const load = () => {
     setLoading(true)
-    fetch('/api/hq/action-items')
+    fetch(resolveApiUrl('/api/hq/action-items'))
       .then(r => (r.ok ? r.json() : []))
       .then(data => {
         setItems(Array.isArray(data) ? data : [])
@@ -578,7 +579,7 @@ export default function ActionItemsCard() {
 
   const handleAdd = async (payload) => {
     try {
-      await fetch('/api/hq/action-items', {
+      await fetch(resolveApiUrl('/api/hq/action-items'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -593,7 +594,7 @@ export default function ActionItemsCard() {
   const handleSaveEdit = async (payload) => {
     if (!selected) return
     try {
-      await fetch(`/api/hq/action-items/${selected.id}`, {
+      await fetch(resolveApiUrl(`/api/hq/action-items/${selected.id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -608,7 +609,7 @@ export default function ActionItemsCard() {
   const handleReminder = async ({ when, note }) => {
     if (!selected) return
     try {
-      await fetch(`/api/hq/action-items/${selected.id}/reminders`, {
+      await fetch(resolveApiUrl(`/api/hq/action-items/${selected.id}/reminders`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ when, note })
@@ -621,7 +622,7 @@ export default function ActionItemsCard() {
   const handleCloseOut = async () => {
     if (!selected) return
     try {
-      await fetch(`/api/hq/action-items/${selected.id}/close`, { method: 'PATCH' })
+      await fetch(resolveApiUrl(`/api/hq/action-items/${selected.id}/close`), { method: 'PATCH' })
       load()
     } catch {}
   }

@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../../api'
 // ==============================
 // TorqueandServiceManualsHub.jsx
 // ==============================
@@ -160,7 +161,7 @@ export default function TorqueandServiceManualsHub({ open, onClose }) {
 
   function fetchDocsForTab(tab) {
     setLoading(true);
-    fetch(`/api/torque-manuals?tab=${encodeURIComponent(tab)}`)
+    fetch(resolveApiUrl(`/api/torque-manuals?tab=${encodeURIComponent(tab)}`))
       .then((res) => res.json())
       .then((data) => {
         setDocuments(data);
@@ -186,7 +187,7 @@ export default function TorqueandServiceManualsHub({ open, onClose }) {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("tab", activeTab);
-        await fetch("/api/torque-manuals", {
+        await fetch(resolveApiUrl("/api/torque-manuals"), {
           method: "POST",
           body: formData,
         });
@@ -206,7 +207,7 @@ export default function TorqueandServiceManualsHub({ open, onClose }) {
       setRenamingId(null);
       return;
     }
-    const res = await fetch(`/api/torque-manuals/${doc.id}`, {
+    const res = await fetch(resolveApiUrl(`/api/torque-manuals/${doc.id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ newName: newFullName })
