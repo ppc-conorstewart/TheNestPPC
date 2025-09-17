@@ -19,17 +19,50 @@ const db = require('./db')
 
 const app = express()
 
+const isProd = process.env.NODE_ENV === 'production'
+
+if (isProd) {
+  app.set('trust proxy', 1)
+}
+
+
 // ==============================
 // SECTION: CORS
 // ==============================
+const defaultCorsOrigins = [
+  FRONTEND_URL,
+  'https://thenestppc.ca',
+  process.env.FRONTEND_URL_FALLBACK,
+  process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+]
+  .filter(Boolean)
+  .map(origin => origin.replace(/\/+$, ''))
+
+const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i
+const railwayPattern = /^https?:\/\/[^\s]+\.railway\.app$/i
+const extraCors = (process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(value => value.trim())
+  .filter(Boolean)
+  .map(origin => origin.replace(/\/+$, ''))
+
+const allowedCorsOrigins = new Set([...defaultCorsOrigins, ...extraCors])
+
 app.use(cors({
-origin: (origin, callback) => {
-    
-    const allowed = [FRONTEND_URL, 'https://thenestppc.ca']
-if (!origin || allowed.includes(origin)) return callback(null, true)
-return callback(new Error('Not allowed by CORS'), false)
-},
-credentials: true
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true)
+    const normalized = origin.replace(/\/+$, '')
+    if (allowedCorsOrigins.has(normalized)) return callback(null, true)
+    if (localhostPattern.test(normalized)) return callback(null, true)
+    if (isProd && railwayPattern.test(normalized)) return callback(null, true)
+    console.warn(`[CORS] Blocked origin: ${origin}`)
+    return callback(new Error('Not allowed by CORS'), false)
+  },
+  credentials: true
 }))
 
 // ==============================
@@ -64,8 +97,8 @@ secret: SESSION_SECRET,
 resave: false,
 saveUninitialized: false,
 cookie: {
-secure: process.env.NODE_ENV === 'production',
-sameSite: 'lax'
+secure: isProd,
+sameSite: isProd ? 'none' : 'lax'
 }
 }))
 app.use(passport.initialize())
