@@ -8,6 +8,7 @@ import QRICon from '../../assets/Fly-HQ Icons/QRICon.json';
 import TrashIcon from '../../assets/Fly-HQ Icons/TrashIcon.json';
 import PalomaQRCodeModal from './PalomaQRCodeModal';
 
+import useMediaQuery from '../../hooks/useMediaQuery';
 // =================== Style Constants ===================
 const cardBorder = '1px solid #6a7257';
 const bgCard = '#000';
@@ -106,6 +107,7 @@ export default function AssetTable({
   onViewHistory,
 }) {
   const [qrAsset, setQRAsset] = useState(null);
+  const isCompact = useMediaQuery('(max-width: 1100px)');
 
   const selectedSet = new Set(selectedIds);
   const allOnPageSelected = assets.length > 0 && assets.every((a) => selectedSet.has(a.id));
@@ -136,7 +138,9 @@ export default function AssetTable({
         width: '100%',
         height: '100%',
         minHeight: 0,
-        overflow: 'hidden',
+        overflowX: isCompact ? 'auto' : 'hidden',
+        overflowY: 'hidden',
+        WebkitOverflowScrolling: isCompact ? 'touch' : 'auto',
         display: 'block',
       }}
       className="w-full"
@@ -149,7 +153,7 @@ export default function AssetTable({
           color: textMain,
           borderCollapse: 'collapse',
           width: '100%',
-          minWidth: 1100,
+          minWidth: isCompact ? 900 : 1100,
           tableLayout: 'fixed'
         }}
       >

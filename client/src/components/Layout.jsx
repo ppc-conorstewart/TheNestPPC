@@ -54,7 +54,13 @@ export default function Layout({ children, hideSidebar }) {
   return (
     <div
       className='min-h-screen flex'
-      style={{ minHeight: '100vh', flexDirection: 'row', width: '100%', background: 'transparent', overflowX: 'hidden' }}
+      style={{
+        minHeight: '100vh',
+        flexDirection: isMobile ? 'column' : 'row',
+        width: '100%',
+        background: 'transparent',
+        overflowX: isMobile ? 'auto' : 'hidden'
+      }}
     >
       {showSidebar && <Sidebar open={isMobile ? isSidebarOpen : false} />}
 
@@ -67,7 +73,8 @@ export default function Layout({ children, hideSidebar }) {
           display: 'flex',
           flexDirection: 'column',
           background: 'transparent',
-          overflowX: 'hidden'
+          overflowX: isMobile ? 'auto' : 'hidden',
+          overflowY: isMobile ? 'visible' : undefined
         }}
       >
         <main
@@ -79,8 +86,8 @@ export default function Layout({ children, hideSidebar }) {
             boxSizing: 'border-box',
             position: 'relative',
             zIndex: 2,
-            minHeight: 0,
-            overflowX: 'hidden'
+            minHeight: isMobile ? '100%' : 0,
+            overflowX: isMobile ? 'auto' : 'hidden'
           }}
         >
           {children}
@@ -119,3 +126,4 @@ export default function Layout({ children, hideSidebar }) {
     </div>
   );
 }
+
