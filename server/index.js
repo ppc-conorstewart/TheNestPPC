@@ -380,15 +380,18 @@ app.post('/api/hq/action-items', async (req, res) => {
           const raw = item.attachment_url
           if (!raw) return null
           if (/^https?:\/\//i.test(raw)) return raw
-          const preferredBase = process.env.NEST_PUBLIC_BASE_URL || process.env.NEST_PUBLIC_UPLOAD_BASE || process.env.FRONTEND_URL || ''
+
+          const envBase = (process.env.NEST_PUBLIC_UPLOAD_BASE || process.env.NEST_PUBLIC_BASE_URL || process.env.NEST_API_URL || '').trim()
           const reqOrigin = (() => {
-            if (!req || !req.get) return ''
-            const proto = req.protocol || 'https'
+            if (!req || typeof req.get !== 'function') return ''
+            const trustProxyProto = req.header('x-forwarded-proto')
+            const proto = trustProxyProto || req.protocol || 'https'
             const host = req.get('host')
             if (!host) return ''
             return `${proto}://${host}`
           })()
-          const base = (preferredBase || reqOrigin || '').replace(/\/+$/, '')
+
+          const base = (reqOrigin || envBase).replace(/\/+$/, '')
           if (!base) return null
           const suffix = raw.startsWith('/') ? raw : `/${raw}`
           return `${base}${suffix}`
