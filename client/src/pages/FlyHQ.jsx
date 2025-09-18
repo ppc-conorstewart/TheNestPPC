@@ -229,14 +229,19 @@ export default function FlyHQ() {
 
     window.addEventListener('resize', handleResize);
 
-    const ro = new ResizeObserver(() => handleResize());
-    if (tableScrollRef.current) ro.observe(tableScrollRef.current);
+    let ro;
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      ro = new window.ResizeObserver(() => handleResize());
+      if (tableScrollRef.current) ro.observe(tableScrollRef.current);
+    }
 
     return () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(raf);
       clearTimeout(t);
-      try { ro.disconnect(); } catch {}
+      if (ro) {
+        try { ro.disconnect(); } catch {}
+      }
     };
   }, [activeTab, showRightPanelAssets]);
 
@@ -716,4 +721,5 @@ export default function FlyHQ() {
     </div>
   );
 }
+
 

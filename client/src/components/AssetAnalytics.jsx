@@ -278,10 +278,21 @@ function Section({
     if(!el) return;
     const measure = () => setH(collapsed ? 0 : el.scrollHeight);
     measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
+    let ro;
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      ro = new window.ResizeObserver(measure);
+      ro.observe(el);
+    } else if (typeof window !== 'undefined') {
+      window.addEventListener('resize', measure);
+    }
     setReady(true);
-    return () => ro.disconnect();
+    return () => {
+      if (ro) {
+        ro.disconnect();
+      } else if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', measure);
+      }
+    };
   }, [collapsed, children]);
 
   const cardStyle = {
@@ -628,4 +639,5 @@ export default function AssetAnalytics({ assets = [] }) {
     </div>
   );
 }
+
 

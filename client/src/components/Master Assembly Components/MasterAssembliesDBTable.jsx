@@ -362,12 +362,24 @@ function BrandingTitle() {
       }
     };
     compute();
-    const ro = new ResizeObserver(compute);
-    if (wrapRef.current) ro.observe(wrapRef.current);
-    if (topRef.current) ro.observe(topRef.current);
-    if (dbRef.current) ro.observe(dbRef.current);
-    window.addEventListener('resize', compute);
-    return () => { ro.disconnect(); window.removeEventListener('resize', compute); };
+    let ro;
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      ro = new window.ResizeObserver(compute);
+      if (wrapRef.current) ro.observe(wrapRef.current);
+      if (topRef.current) ro.observe(topRef.current);
+      if (dbRef.current) ro.observe(dbRef.current);
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', compute);
+    }
+    return () => {
+      if (ro) {
+        ro.disconnect();
+      }
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', compute);
+      }
+    };
   }, []);
 
   return (
@@ -701,4 +713,5 @@ export default function MasterAssembliesDBTable() {
     </div>
   );
 }
+
 

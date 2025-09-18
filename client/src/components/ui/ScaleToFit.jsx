@@ -71,16 +71,25 @@ export default function ScaleToFit({
       rafId = requestAnimationFrame(measure);
     };
 
-    const ro = new ResizeObserver(scheduleMeasure);
-    ro.observe(container);
-    ro.observe(content);
+    let ro;
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      ro = new window.ResizeObserver(scheduleMeasure);
+      ro.observe(container);
+      ro.observe(content);
+    } else if (typeof window !== 'undefined') {
+      window.addEventListener('resize', scheduleMeasure);
+    }
 
     // Initial measure
     scheduleMeasure();
 
     return () => {
       cancelAnimationFrame(rafId);
-      ro.disconnect();
+      if (ro) {
+        ro.disconnect();
+      } else if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', scheduleMeasure);
+      }
     };
   }, [minScale, maxScale]);
 
@@ -114,4 +123,5 @@ export default function ScaleToFit({
     </div>
   );
 }
+
 

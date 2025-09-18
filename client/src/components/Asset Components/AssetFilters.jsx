@@ -90,12 +90,24 @@ export default function AssetFilters({
         SEARCH_H;
       setPanelHeight(totalHeight);
     };
-    const ro = new ResizeObserver(([entry]) => {
-      calc(entry.contentRect?.width || el.clientWidth);
-    });
-    ro.observe(el);
+    const handleWindowResize = () => calc(el.clientWidth);
+    let ro;
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      ro = new window.ResizeObserver(([entry]) => {
+        calc(entry.contentRect?.width || el.clientWidth);
+      });
+      ro.observe(el);
+    } else if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleWindowResize);
+    }
     calc(el.clientWidth);
-    return () => ro.disconnect();
+    return () => {
+      if (ro) {
+        ro.disconnect();
+      } else if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleWindowResize);
+      }
+    };
   }, []);
 
   return (
@@ -395,4 +407,5 @@ function ButtonAdd({ onClick, addRef, rowHeight }) {
     </button>
   );
 }
+
 
