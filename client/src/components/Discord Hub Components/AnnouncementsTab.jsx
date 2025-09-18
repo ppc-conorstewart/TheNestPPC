@@ -3,10 +3,8 @@
 // Sections: Imports • Constants • Component (fetch channels) • Layout
 // ==============================
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { resolveApiUrl, resolveBotUrl } from '../../api';
-
-const EMOJI_SET = ['🔥','✅','⚠️','📌','🛠️','🗓️','⏰','🏁','📣','🤝','✨','🔁'];
 
 export default function AnnouncementsTab() {
   const [announcements, setAnnouncements] = useState([]);
@@ -21,12 +19,6 @@ export default function AnnouncementsTab() {
   const [attachments, setAttachments] = useState([]);
   const [isSending, setIsSending] = useState(false);
   const [sendStatus, setSendStatus] = useState(null);
-
-  const [templates, setTemplates] = useState([
-    { id: 'shift-change', name: 'Shift Change', title: 'Shift Handover', message: 'Please review the handover notes and acknowledge with ✅.' },
-    { id: 'safety-tip', name: 'Daily Safety Tip', title: 'Safety Tip', message: 'Wear appropriate PPE and perform a pre-job hazard assessment.' }
-  ]);
-  const [templateSearch, setTemplateSearch] = useState('');
 
   const getBotKey = () => {
     if (typeof window !== 'undefined') {
@@ -67,12 +59,6 @@ export default function AnnouncementsTab() {
     return () => { cancelled = true; };
   }, []);
 
-  const filteredTemplates = useMemo(() => {
-    const q = templateSearch.trim().toLowerCase();
-    if (!q) return templates;
-    return templates.filter(t => (t.name + ' ' + t.title + ' ' + t.message).toLowerCase().includes(q));
-  }, [templateSearch, templates]);
-
   const handleFileUpload = e => {
     const files = Array.from(e.target.files);
     setAttachments([...attachments, ...files.map(f => f.name)]);
@@ -99,17 +85,6 @@ export default function AnnouncementsTab() {
     setAttachments([]);
   };
 
-  const handleSaveTemplate = () => {
-    const name = title || 'Untitled Template';
-    const id = `tpl-${Date.now()}`;
-    setTemplates([...templates, { id, name, title: title || '', message: message || '' }]);
-  };
-
-  const applyTemplate = tpl => {
-    setTitle(tpl.title);
-    setMessage(tpl.message);
-  };
-
   const applyMarkdown = (syntaxBefore, syntaxAfter = '') => {
     const el = messageRef.current;
     if (!el) return;
@@ -125,22 +100,6 @@ export default function AnnouncementsTab() {
     requestAnimationFrame(() => {
       el.focus();
       el.setSelectionRange(start + syntaxBefore.length, start + insert.length - syntaxAfter.length);
-    });
-  };
-
-  const insertEmoji = emo => {
-    const el = messageRef.current;
-    if (!el) return;
-    const start = el.selectionStart ?? 0;
-    const end = el.selectionEnd ?? 0;
-    const before = message.slice(0, start);
-    const after = message.slice(end);
-    const next = `${before}${emo}${after}`;
-    setMessage(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      const pos = start + emo.length;
-      el.setSelectionRange(pos, pos);
     });
   };
 
@@ -249,36 +208,6 @@ export default function AnnouncementsTab() {
           Compose Announcement
         </h2>
 
-        {/* ===== Templates Row ===== */}
-        <div className='mb-4'>
-          <div className='flex items-center gap-2 mb-2'>
-            <input
-              type='text'
-              value={templateSearch}
-              onChange={e => setTemplateSearch(e.target.value)}
-              placeholder='Search templates...'
-              className='flex-1 bg-black/70 border border-[#6a7257]/40 rounded-lg px-3 py-2 text-white text-xs placeholder-white/30 focus:border-[#b0b79f] outline-none'
-            />
-            <button
-              onClick={handleSaveTemplate}
-              className='bg-[#6a7257] text-black font-bold uppercase text-xs px-3 py-2 rounded-lg hover:opacity-90 transition'
-            >
-              Save as Template
-            </button>
-          </div>
-          <div className='flex gap-2 overflow-x-auto'>
-            {filteredTemplates.map(tpl => (
-              <button
-                key={tpl.id}
-                onClick={() => applyTemplate(tpl)}
-                className='shrink-0 bg-black/70 border border-[#6a7257]/40 hover:border-[#6a7257] text-white text-xs px-3 py-2 rounded-lg transition'
-              >
-                {tpl.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* ===== Title ===== */}
         <input
           type='text'
@@ -294,11 +223,6 @@ export default function AnnouncementsTab() {
           <button onClick={() => applyMarkdown('*','*')} className='bg-black/70 border border-[#6a7257]/40 rounded px-2 py-1 text-xs text-white hover:border-[#6a7257] transition'>Italic</button>
           <button onClick={() => applyMarkdown('`','`')} className='bg-black/70 border border-[#6a7257]/40 rounded px-2 py-1 text-xs text-white hover:border-[#6a7257] transition'>Code</button>
           <button onClick={() => applyMarkdown('- ')} className='bg-black/70 border border-[#6a7257]/40 rounded px-2 py-1 text-xs text-white hover:border-[#6a7257] transition'>Bullet</button>
-          <div className='ml-auto flex gap-1'>
-            {EMOJI_SET.map(e => (
-              <button key={e} onClick={() => insertEmoji(e)} className='bg-black/70 border border-[#6a7257]/40 rounded px-2 py-1 text-xs hover:border-[#6a7257] transition'>{e}</button>
-            ))}
-          </div>
         </div>
 
         {/* ===== Message ===== */}

@@ -295,13 +295,44 @@ app.get('/api/discord/channels', async (_req, res) => {
 app.post('/api/discord/announce', async (req, res) => {
   try {
     if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
-    const r = await fetch(`${BOT_SERVICE_URL}/announce`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-      body: JSON.stringify(req.body || {})
-    })
-    const out = await r.json().catch(() => ({}))
-    res.status(r.status).json(out)
+
+    const { channelIds, channelId, content, message } = req.body || {}
+    const collected = []
+
+    if (Array.isArray(channelIds)) collected.push(...channelIds)
+    if (channelId) collected.push(channelId)
+
+    const payloadContent = content || message || ''
+    const ids = Array.from(new Set(collected.map(id => String(id || '').trim()).filter(Boolean)))
+
+    if (!ids.length || !payloadContent) {
+      return res.status(400).json({ error: 'channelIds_and_content_required' })
+    }
+
+    const headers = { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY }
+    const results = []
+
+    for (const id of ids) {
+      try {
+        const r = await fetch(`${BOT_SERVICE_URL}/announce`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ channelId: id, message: payloadContent })
+        })
+        const out = await r.json().catch(() => ({}))
+        if (!r.ok) {
+          const reason = out?.error || out?.message || `${r.status}`
+          results.push({ id, ok: false, reason })
+        } else {
+          results.push({ id, ok: true, data: out })
+        }
+      } catch (err) {
+        results.push({ id, ok: false, reason: String(err?.message || err) })
+      }
+    }
+
+    const anyOk = results.some(r => r.ok)
+    res.status(anyOk ? 200 : 502).json({ ok: anyOk, results })
   } catch (e) {
     console.error('Discord announce proxy error:', e)
     res.status(502).json({ error: 'bot_unavailable' })
