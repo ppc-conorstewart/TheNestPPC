@@ -214,7 +214,7 @@ export default function AnnouncementsTab() {
           value={title}
           onChange={e => setTitle(e.target.value)}
           placeholder='Title'
-          className='bg-black/70 border border-[#6a7257]/40 rounded-lg px-4 py-2 text-white text-sm focus:border-[#b0b79f] outline-none placeholder-white/30 transition mb-4'
+          className='w-full bg-black/70 border border-[#6a7257]/40 rounded-lg px-4 py-2 text-white text-sm focus:border-[#b0b79f] outline-none placeholder-white/30 transition mb-4'
         />
 
         {/* ===== Markdown Toolbar + Emoji ===== */}
@@ -232,7 +232,7 @@ export default function AnnouncementsTab() {
           value={message}
           onChange={e => setMessage(e.target.value)}
           placeholder='Message content...'
-          className='bg-black/70 border border-[#6a7257]/40 rounded-lg px-4 py-2 text-white text-sm focus:border-[#b0b79f] outline-none resize-none placeholder-white/30 transition mb-4'
+          className='w-full bg-black/70 border border-[#6a7257]/40 rounded-lg px-4 py-2 text-white text-sm focus:border-[#b0b79f] outline-none resize-none placeholder-white/30 transition mb-4'
         />
 
         {/* ===== Dropdown (Live Channels) ===== */}
