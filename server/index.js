@@ -1,6 +1,5 @@
 // ==============================
 // FILE: server/index.js — Express App Entry
-// Source Baseline: :contentReference[oaicite:0]{index=0}
 // Sections: Imports • Middleware • Routers • Discord Proxy • Action Items (In-Memory) • Admin Import (Seed) • Exports
 // ==============================
 

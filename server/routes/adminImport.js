@@ -1,87 +1,62 @@
 // ==============================
-// FILE: server/index.js — Express App Entry
-// Sections: Imports • Config • Middleware • Static • Routers • Admin Import (Dev) • Exports
+// FILE: server/routes/adminImport.js
+// Sections: Imports • Config • Helpers • Routes • Exports
 // ==============================
 const express = require('express');
-const cors = require('cors');
-const session = require('express-session');
 const path = require('path');
 const fs = require('fs');
-const fetch = require('node-fetch');
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const { memoryUpload, uploadDir } = require('../utils/uploads');
 
-const { FRONTEND_URL, SESSION_SECRET } = require('./config/config');
-const passport = require('./auth/discordStrategy');
+// ------------------------------
+// Config
+// ------------------------------
+const router = express.Router();
+const ADMIN_KEY = process.env.ADMIN_IMPORT_KEY || '';
 
-const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads');
-const db = require('./db');
-
-const app = express();
-
-const isProd = process.env.NODE_ENV === 'production';
-if (isProd) {
-  app.set('trust proxy', 1);
+// ------------------------------
+// Helpers
+// ------------------------------
+function ensureParentDirs(absPath) {
+  const dir = path.dirname(absPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-// ==============================
-// SECTION: CORS
-// ==============================
-const defaultCorsOrigins = [
-  FRONTEND_URL,
-  'https://thenestppc.ca',
-  process.env.FRONTEND_URL_FALLBACK,
-  process.env.RAILWAY_PUBLIC_DOMAIN && `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`,
-].filter(Boolean);
-
-app.use(cors({
-  origin: defaultCorsOrigins,
-  credentials: true,
-}));
-
-// ==============================
-// SECTION: Core Middleware
-// ==============================
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-app.use(session({
-  secret: SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: isProd,
-    httpOnly: true,
-    sameSite: isProd ? 'none' : 'lax',
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  },
-}));
-
-app.use(passport.initialize());
-app.use(passport.session());
-
-// ==============================
-// SECTION: Static Files (Uploads)
-// ==============================
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-app.use('/uploads', express.static(uploadDir));
-
-// ==============================
-// SECTION: API Routers
-// ==============================
-app.use('/api/jobs', require('./routes/jobs'));
-app.use('/api/sourcing', require('./routes/sourcing'));
-try { app.use('/api/glb-assets', require('./routes/glbAssets')); } catch (e) { console.warn('glb-assets route not loaded:', e?.message); }
-try { app.use('/api/service-equipment', require('./routes/serviceEquipment')); } catch (e) { console.warn('service-equipment route not loaded:', e?.message); }
-try { app.use('/api/documents', require('./routes/documents')); } catch (e) { console.warn('documents route not loaded:', e?.message); }
-
-// ==============================
-// SECTION: Admin Import (Dev/One-Off Seed)
-// ==============================
-if (process.env.ADMIN_IMPORT_KEY) {
-  app.use('/api/admin', require('./routes/adminImport'));
+function authOk(req) {
+  const hdr = req.headers['x-admin-key'] || '';
+  return ADMIN_KEY && hdr === ADMIN_KEY;
 }
 
-// ==============================
-// SECTION: Exports
-// ==============================
-module.exports = app;
+// ------------------------------
+// Routes
+// ------------------------------
+// Health check
+router.get('/seed/health', (req, res) => {
+  if (!ADMIN_KEY) return res.status(500).json({ error: 'ADMIN_IMPORT_KEY not set' });
+  return res.json({ ok: true, uploadDir });
+});
+
+// Seed a single file
+// Form-Data: file=<binary>, relPath=<relative path under uploads>
+// Headers:   x-admin-key=<ADMIN_IMPORT_KEY>
+router.post('/seed', memoryUpload.single('file'), (req, res) => {
+  try {
+    if (!authOk(req)) return res.status(401).json({ error: 'unauthorized' });
+    if (!req.file || !req.body || !req.body.relPath) {
+      return res.status(400).json({ error: 'file and relPath required' });
+    }
+    const rel = String(req.body.relPath).replace(/^[/\\]+/, '');
+    const abs = path.join(uploadDir, rel);
+    ensureParentDirs(abs);
+    fs.writeFileSync(abs, req.file.buffer);
+    const publicUrl = `/uploads/${rel.replace(/\\/g, '/')}`;
+    return res.json({ ok: true, relPath: rel, url: publicUrl });
+  } catch (err) {
+    console.error('admin seed error:', err);
+    return res.status(500).json({ error: 'seed failed' });
+  }
+});
+
+// ------------------------------
+// Exports
+// ------------------------------
+module.exports = router;
