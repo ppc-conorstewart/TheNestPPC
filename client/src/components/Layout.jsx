@@ -46,6 +46,10 @@ export default function Layout({ children, hideSidebar }) {
   }, [mq])
 
   useEffect(() => {
+    setIsSidebarOpen(false)
+  }, [pathname])
+
+  useEffect(() => {
     if (typeof document === 'undefined') return
     if (isMobile && isSidebarOpen) {
       document.documentElement.style.overflow = 'hidden'
@@ -68,7 +72,7 @@ export default function Layout({ children, hideSidebar }) {
         overflowY: 'auto'
       }}
     >
-      {showSidebar && <Sidebar open={isMobile ? isSidebarOpen : false} onToggle={() => setIsSidebarOpen(v => !v)} />}
+      {showSidebar && <Sidebar open={isMobile ? isSidebarOpen : false} />}
 
       <div
         className='flex flex-col flex-1 transition-margin duration-300 relative'
@@ -83,6 +87,30 @@ export default function Layout({ children, hideSidebar }) {
           {children}
         </div>
       </div>
+
+      {showSidebar && isMobile && (
+        <>
+          <button
+            type='button'
+            aria-label='Toggle navigation menu'
+            aria-expanded={isSidebarOpen}
+            onClick={() => setIsSidebarOpen(v => !v)}
+            className='fixed top-3 left-3 z-40 rounded-md border border-[#6a7257] bg-black/70 backdrop-blur px-3 py-2 shadow-lg'
+            style={{ lineHeight: 0 }}
+          >
+            <span aria-hidden='true' className='block w-6 h-0.5 bg-white mb-1' />
+            <span aria-hidden='true' className='block w-6 h-0.5 bg-white mb-1' />
+            <span aria-hidden='true' className='block w-6 h-0.5 bg-white' />
+          </button>
+
+          {isSidebarOpen && (
+            <div
+              className='fixed inset-0 z-30 bg-black/50 backdrop-blur-sm'
+              onClick={() => setIsSidebarOpen(false)}
+            />
+          )}
+        </>
+      )}
     </div>
   )
 }
