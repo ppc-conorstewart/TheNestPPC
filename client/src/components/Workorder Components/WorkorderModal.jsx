@@ -13,6 +13,7 @@ export default function WorkorderModal({
   onNext,
   onSave,
   canNext,
+  canPublish = false,
   onGenerate,
   onClose,
   metadata,
@@ -71,6 +72,7 @@ export default function WorkorderModal({
         onGenerate={onGenerate}
         onSave={onSave}
         canNext={canNext}
+        canPublish={canPublish}
       />
     </div>
   );

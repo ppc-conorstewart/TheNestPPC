@@ -329,6 +329,16 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
   const [workorderRecordId, setWorkorderRecordId] = useState(null);
 
   const handleSave = async () => {
+    const jobPayload = {
+      customer: metadata.customer || customer,
+      surface_lsd: metadata.surfaceLSD || surfaceLSD,
+      num_wells: metadata.numberOfWells ?? numberOfWells,
+      rig_in_date: metadata.rigInDate || rigInDate,
+      well_bank_type: metadata.wellBankType,
+      workbook_revision: metadata.workbookRevision,
+      notes: (metadata.notes ?? notes) || '',
+    };
+
     const payloadSections = Object.fromEntries(
       ['dfit', 'uma', 'fca', 'sva', 'dogbones', 'zippers', 'ppl'].map(key => {
         const sec = { dfit, uma, fca, sva, dogbones, zippers, ppl }[key];
@@ -357,19 +367,12 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
     try {
       let savedJobId = workorderId;
       if (!savedJobId) {
-        const jobCreatePayload = {
-          customer, surface_lsd: surfaceLSD, num_wells: numberOfWells, rig_in_date: rigInDate,
-          well_bank_type: wellBankType, workbook_revision: workbookRevision, notes: notes || ''
-        };
-        const jobRes = await axios.post(resolveApiUrl('/api/jobs'), jobCreatePayload);
+        const jobRes = await axios.post(resolveApiUrl('/api/jobs'), jobPayload);
         savedJobId = jobRes.data?.id || jobRes.data?.jobId || jobRes.data?.ID;
         if (!savedJobId) throw new Error('Server did not return a job id!');
         alert('New Job created! Saving full workorder...');
       } else {
-        await axios.patch(resolveApiUrl(`/api/jobs/${savedJobId}`), {
-          customer, surface_lsd: surfaceLSD, num_wells: numberOfWells, rig_in_date: rigInDate,
-          well_bank_type: wellBankType, workbook_revision: workbookRevision, notes: notes || ''
-        });
+        await axios.patch(resolveApiUrl(`/api/jobs/${savedJobId}`), jobPayload);
       }
 
       await axios.post(resolveApiUrl('/api/drafts'), { user_id: userId, workorder_id: savedJobId, page_key: storageKey, payload: draftBody });
@@ -388,6 +391,11 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
   };
 
   const handlePublish = async () => {
+    if (!workorderId) {
+      alert('Please save the workorder before publishing a revision.');
+      return;
+    }
+
     try {
       const bomPayload = {
         dfitSelections: asArray(dfit.selections), dfitBuildQtys: asArray(dfit.buildQtys),
@@ -410,6 +418,8 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
         const woRes = await axios.post(resolveApiUrl('/api/workorders'), createPayload);
         if (woRes?.data?.id) setWorkorderRecordId(woRes.data.id);
       }
+
+      await axios.patch(resolveApiUrl(`/api/jobs/${workorderId}`), { work_orders: JSON.stringify(workOrdersData) });
 
       alert(`Published revision REV-${revision} for this job!`);
     } catch (err) {
@@ -455,6 +465,7 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
     : null;
   const resolvedLogo = getCustomerLogo ? getCustomerLogo(customer) : null;
   const logoSrc = logoUrl || resolvedLogo || fallbackLogo || '';
+  const canPublish = Boolean(workorderId);
 
   return (
     <>
@@ -469,6 +480,7 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
         onSave={handleSave}
         onGenerate={handlePublish}
         canNext={canNext}
+        canPublish={canPublish}
         onClose={onClose}
         metadata={metadata}
         woNumber={woNumber}

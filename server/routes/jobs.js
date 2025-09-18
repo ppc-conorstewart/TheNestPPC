@@ -86,8 +86,8 @@ router.get('/monthly-totals', async (req, res) => {
 // Add new job
 router.post('/', async (req, res) => {
   try {
-    await jobs.addJob(req.body);
-    res.status(201).json({ success: true });
+    const createdJob = await jobs.addJob(req.body);
+    res.status(201).json(createdJob);
   } catch (err) {
     console.error('Failed to add job:', err);
     res.status(500).json({ error: 'Failed to add job' });
