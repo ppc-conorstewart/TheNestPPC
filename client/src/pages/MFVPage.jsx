@@ -443,6 +443,79 @@ export default function MFVPageWrapper() {
   };
 
   // ==============================
+  // Section: Summary-level MFV Analytics (fed into panel)
+  // ==============================
+  const summaryMfvMetrics = useMemo(() => {
+    const summarySheetData = allSheets.summary || {};
+    const headers = Array.isArray(summarySheetData.headers) ? summarySheetData.headers : [];
+    const rows = Array.isArray(summarySheetData.rows) ? summarySheetData.rows : [];
+    if (!headers.length || !rows.length) return null;
+
+    const normalize = (value) => String(value ?? '').toUpperCase().replace(/[‐–—]/g, '-');
+    const findIdx = (matcher) => headers.findIndex(h => matcher(normalize(h)));
+
+    const idxSize = findIdx(text => text.includes('VALVE SIZE'));
+    const idxQual = findIdx(text => text.includes('VALVE IS QUALIFIED'));
+
+    if (idxSize === -1 || idxQual === -1) return null;
+
+    const keyVariants = (value, fallback) => {
+      const base = String(value ?? '').replace(/\s+/g, ' ').trim();
+      const list = [base];
+      if (base.endsWith(':')) list.push(base.slice(0, -1));
+      if (fallback) list.push(fallback);
+      return list.filter(Boolean);
+    };
+
+    const sizeKeys = keyVariants(headers[idxSize], 'VALVE SIZE');
+    const qualKeys = keyVariants(headers[idxQual], 'VALVE IS QUALIFIED AS AN');
+
+    const readCell = (row, index, keys) => {
+      if (Array.isArray(row)) return row[index];
+      if (row && typeof row === 'object') {
+        for (const key of keys) {
+          if (Object.prototype.hasOwnProperty.call(row, key)) return row[key];
+        }
+      }
+      return undefined;
+    };
+
+    const classifySize = (value) => {
+      const text = normalize(value);
+      if (!text) return 'OTHER';
+      if (/(5\s*[-\/]?\s*1\/8)/.test(text)) return '5-1/8';
+      if (/(7\s*[-\/]?\s*1\/16)/.test(text)) return '7-1/16';
+      return 'OTHER';
+    };
+
+    let denom518 = 0;
+    let denom716 = 0;
+    let mfv518 = 0;
+    let mfv716 = 0;
+
+    rows.forEach((row) => {
+      const sizeRaw = readCell(row, idxSize, sizeKeys);
+      const qualRaw = readCell(row, idxQual, qualKeys);
+
+      const sizeKey = classifySize(sizeRaw);
+      const isMfv = normalize(qualRaw).includes('MFV');
+
+      if (sizeKey === '5-1/8') {
+        denom518 += 1;
+        if (isMfv) mfv518 += 1;
+      } else if (sizeKey === '7-1/16') {
+        denom716 += 1;
+        if (isMfv) mfv716 += 1;
+      }
+    });
+
+    const share518 = denom518 > 0 ? (mfv518 / denom518) * 100 : 0;
+    const share716 = denom716 > 0 ? (mfv716 / denom716) * 100 : 0;
+
+    return { share518, share716, denom518, denom716, mfv518, mfv716 };
+  }, [allSheets.summary]);
+
+  // ==============================
   // Section: Analytics Panel Props (Top Submitters passthrough unchanged)
   // ==============================
   function getTop5Submitters(headers, rows) {
@@ -698,6 +771,7 @@ export default function MFVPageWrapper() {
                 rows={analyticsPanelProps.rows}
                 tabLabel={analyticsPanelProps.tabLabel}
                 qualificationStats={qualificationStats}
+                metrics={summaryMfvMetrics}
               />
             </div>
           </div>
