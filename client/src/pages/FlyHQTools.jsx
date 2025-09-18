@@ -120,48 +120,58 @@ const CollapsiblePanel = memo(function CollapsiblePanel({
           {title}
         </span>
 
-        <span
-          className='fhq-collapse-indicator'
+        <div
+          className='fhq-panel-controls'
           style={{
             position: 'absolute',
-            right: 28,
-            width: 16,
-            height: 16,
-            borderRadius: 4,
-            display: 'grid',
-            placeItems: 'center',
-            border: '1px solid rgba(106,114,87,0.6)',
-            background: 'transparent',
-            fontWeight: 900,
-            color: indicatorColor,
-            transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)',
-            transition: 'transform 160ms ease, color 160ms ease',
-            fontSize: 10,
-            lineHeight: 1
+            right: 10,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14
           }}
         >
-          {collapsed ? '+' : '–'}
-        </span>
+          <span
+            className='fhq-collapse-indicator'
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: 4,
+              display: 'grid',
+              placeItems: 'center',
+              border: '1px solid rgba(106,114,87,0.6)',
+              background: 'transparent',
+              fontWeight: 900,
+              color: indicatorColor,
+              transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)',
+              transition: 'transform 160ms ease, color 160ms ease',
+              fontSize: 10,
+              lineHeight: 1
+            }}
+          >
+            {collapsed ? '+' : '–'}
+          </span>
 
-        <span
-          className='fhq-drag-handle'
-          title='Drag to reorder'
-          style={{
-            position: 'absolute',
-            right: 6,
-            top: 2,
-            bottom: 2,
-            width: 18,
-            display: 'grid',
-            placeItems: 'center',
-            cursor: 'grab',
-            userSelect: 'none',
-            fontSize: 14,
-            opacity: 0.9
-          }}
-        >
-          ⋮⋮
-        </span>
+          <span
+            className='fhq-drag-handle'
+            title='Drag to reorder'
+            onMouseDown={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+            style={{
+              width: 22,
+              height: 24,
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'grab',
+              userSelect: 'none',
+              fontSize: 16,
+              opacity: 0.9
+            }}
+          >
+            ⋮⋮
+          </span>
+        </div>
       </div>
 
       <div

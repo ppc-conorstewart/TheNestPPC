@@ -105,7 +105,7 @@ export default function Layout({ children, hideSidebar }) {
 
           {isSidebarOpen && (
             <div
-              className='fixed inset-0 z-30 bg-black/50 backdrop-blur-sm'
+              className='fixed inset-0 z-20 bg-black/50 backdrop-blur-sm'
               onClick={() => setIsSidebarOpen(false)}
             />
           )}
