@@ -34,13 +34,36 @@ function AddModal({ open, onClose, onSubmit }) {
     setFileUrl('')
     setFileName('')
 
-    const membersUrl = resolveBotUrl('/members')
-    const membersRequest = membersUrl ? { headers: { 'x-bot-key': process.env.REACT_APP_BOT_KEY } } : undefined
+    let cancelled = false
+    const loadMembers = async () => {
+      const resolvedDirect = resolveBotUrl('/members')
+      const directUrl = resolvedDirect && /^https?:\/\//i.test(resolvedDirect) ? resolvedDirect : ''
+      const fallbackUrl = resolveApiUrl('/api/discord/members')
+      const storedKey = typeof window !== 'undefined' ? window.localStorage?.getItem('bot_key') : null
+      const botKey = storedKey || process.env.REACT_APP_BOT_KEY || 'Paloma2025*'
 
-    fetch(membersUrl || resolveApiUrl('/api/discord/members'), membersRequest)
-      .then(r => (r.ok ? r.json() : []))
-      .then(data => setMembers(Array.isArray(data) ? data : []))
-      .catch(() => setMembers([]))
+      const attempt = async (url, options) => {
+        if (!url) return null
+        try {
+          const res = await fetch(url, options)
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          const data = await res.json()
+          return Array.isArray(data) ? data : null
+        } catch (err) {
+          console.warn('Failed to load Discord members from', url, err)
+          return null
+        }
+      }
+
+      const headers = botKey ? { 'x-bot-key': botKey } : {}
+      let list = await attempt(directUrl, directUrl ? { headers } : undefined)
+      if (!list) list = await attempt(fallbackUrl)
+      if (!cancelled) setMembers(list || [])
+    }
+
+    loadMembers()
+
+    return () => { cancelled = true }
   }, [open])
 
   const suggestions = useMemo(() => {

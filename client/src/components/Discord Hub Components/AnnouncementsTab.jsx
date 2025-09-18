@@ -4,7 +4,7 @@
 // ==============================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { resolveApiUrl } from '../../api';
+import { resolveApiUrl, resolveBotUrl } from '../../api';
 
 const EMOJI_SET = ['🔥','✅','⚠️','📌','🛠️','🗓️','⏰','🏁','📣','🤝','✨','🔁'];
 
@@ -19,6 +19,8 @@ export default function AnnouncementsTab() {
   const [schedule, setSchedule] = useState('');
   const [recurrence, setRecurrence] = useState('none');
   const [attachments, setAttachments] = useState([]);
+  const [isSending, setIsSending] = useState(false);
+  const [sendStatus, setSendStatus] = useState(null);
 
   const [templates, setTemplates] = useState([
     { id: 'shift-change', name: 'Shift Change', title: 'Shift Handover', message: 'Please review the handover notes and acknowledge with ✅.' },
@@ -26,18 +28,43 @@ export default function AnnouncementsTab() {
   ]);
   const [templateSearch, setTemplateSearch] = useState('');
 
+  const getBotKey = () => {
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage?.getItem('bot_key');
+      if (stored) return stored;
+    }
+    return process.env.REACT_APP_BOT_KEY || 'Paloma2025*';
+  };
+
   useEffect(() => {
-    (async () => {
-      const endpoint = resolveApiUrl('/api/discord/channels');
-      if (!endpoint) return;
-      try {
-        const res = await fetch(endpoint, {
-          headers: { 'x-bot-key': localStorage.getItem('bot_key') || 'Paloma2025*' }
-        });
-        const data = await res.json();
-        if (Array.isArray(data)) setChannels(data);
-      } catch {}
-    })();
+    let cancelled = false;
+    const loadChannels = async () => {
+      const resolvedDirect = resolveBotUrl('/channels');
+      const directUrl = resolvedDirect && /^https?:\/\//i.test(resolvedDirect) ? resolvedDirect : '';
+      const fallbackUrl = resolveApiUrl('/api/discord/channels');
+      const botKey = getBotKey();
+
+      const attempt = async (url, options) => {
+        if (!url) return null;
+        try {
+          const res = await fetch(url, options);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          return Array.isArray(data) ? data : null;
+        } catch (err) {
+          console.warn('Failed to load Discord channels from', url, err);
+          return null;
+        }
+      };
+
+      const headers = botKey ? { 'x-bot-key': botKey } : undefined;
+      let list = await attempt(directUrl, directUrl ? { headers } : undefined);
+      if (!list) list = await attempt(fallbackUrl);
+      if (!cancelled && Array.isArray(list)) setChannels(list);
+    };
+
+    loadChannels();
+    return () => { cancelled = true; };
   }, []);
 
   const filteredTemplates = useMemo(() => {
@@ -115,6 +142,78 @@ export default function AnnouncementsTab() {
       const pos = start + emo.length;
       el.setSelectionRange(pos, pos);
     });
+  };
+
+  const handleSendNow = async () => {
+    const trimmedTitle = title.trim();
+    const trimmedMessage = message.trim();
+    const contentParts = [];
+    if (trimmedTitle) contentParts.push(`**${trimmedTitle}**`);
+    if (trimmedMessage) contentParts.push(trimmedMessage);
+    const content = contentParts.join('\n');
+
+    if (!channelId || !content) {
+      setSendStatus({ type: 'error', note: 'Select a channel and add a title or message before sending.' });
+      return;
+    }
+
+    setIsSending(true);
+    setSendStatus(null);
+
+    const channel = channels.find(ch => ch.id === channelId);
+    const apiUrl = resolveApiUrl('/api/discord/announce');
+    const resolvedDirect = resolveBotUrl('/announce');
+    const directUrl = resolvedDirect && /^https?:\/\//i.test(resolvedDirect) ? resolvedDirect : '';
+    const botKey = getBotKey();
+
+    const errors = [];
+
+    const attemptServer = async () => {
+      if (!apiUrl) throw new Error('Missing API endpoint');
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channelIds: [channelId], content })
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`API ${res.status} ${detail}`.trim());
+      }
+      return res.json().catch(() => ({}));
+    };
+
+    const attemptDirect = async () => {
+      if (!directUrl) throw new Error('Missing direct bot service URL');
+      const headers = { 'Content-Type': 'application/json' };
+      if (botKey) headers['x-bot-key'] = botKey;
+      const res = await fetch(directUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ channelId, message: content })
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`Bot ${res.status} ${detail}`.trim());
+      }
+      return res.json().catch(() => ({}));
+    };
+
+    try {
+      await attemptServer();
+      setSendStatus({ type: 'success', note: `Message sent to #${channel?.name || 'channel'}.` });
+    } catch (firstErr) {
+      errors.push(firstErr);
+      try {
+        await attemptDirect();
+        setSendStatus({ type: 'success', note: `Message sent via bot to #${channel?.name || 'channel'}.` });
+      } catch (directErr) {
+        errors.push(directErr);
+        const last = errors[errors.length - 1];
+        setSendStatus({ type: 'error', note: last?.message || 'Failed to send message.' });
+      }
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -261,15 +360,29 @@ export default function AnnouncementsTab() {
         {attachments.length > 0 && (
           <div className='flex flex-wrap gap-2 mt-2'>
             {attachments.map((file, i) => (
-              <span key={i} className='bg-[#6a7257]/30 text-white/80 text-xs px-2 py-1 rounded shadow-inner'>{file}</span>
+              <span key={i} className='bg-[#6a7257]/30 text-white/80 text-xs px-2 py-1 rounded shadow-inner'>📎 {file}</span>
             ))}
           </div>
         )}
 
-        {/* ===== Add To Queue ===== */}
+        {/* ===== Actions ===== */}
+        {sendStatus && (
+          <div
+            className={`mt-4 text-xs font-semibold px-3 py-2 rounded-lg border ${sendStatus.type === 'success' ? 'text-[#b6ffb6] border-[#3f5d3f] bg-black/60' : 'text-[#ffb6b6] border-[#5d3f3f] bg-black/60'}`}
+          >
+            {sendStatus.note}
+          </div>
+        )}
+        <button
+          onClick={handleSendNow}
+          disabled={isSending}
+          className='mt-4 w-full bg-gradient-to-r from-[#ffe066] to-[#b0b79f] text-black font-bold uppercase text-sm px-5 py-2 rounded-lg shadow-md hover:scale-[1.02] hover:shadow-lg transition disabled:opacity-60 disabled:hover:scale-100'
+        >
+          {isSending ? 'Sending…' : 'Send Message Now'}
+        </button>
         <button
           onClick={handleAddAnnouncement}
-          className='mt-4 w-full bg-gradient-to-r from-[#6a7257] to-[#b0b79f] text-black font-bold uppercase text-sm px-5 py-2 rounded-lg shadow-md hover:scale-[1.02] hover:shadow-lg transition'
+          className='mt-3 w-full bg-gradient-to-r from-[#6a7257] to-[#b0b79f] text-black font-bold uppercase text-sm px-5 py-2 rounded-lg shadow-md hover:scale-[1.02] hover:shadow-lg transition'
         >
           Add to Queue
         </button>
