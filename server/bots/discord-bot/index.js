@@ -9,7 +9,7 @@
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
-const { Client, GatewayIntentBits, Partials, ChannelType } = require('discord.js')
+const { Client, GatewayIntentBits, Partials, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js')
 const fetch = require('node-fetch')
 const { token, nestApiUrl, nestBotKey, guildId, port } = require('./config')
 
@@ -56,6 +56,34 @@ const fetchAttachmentBuffers = async (attachmentList) => {
     }
   }
   return files
+}
+
+const buildComponents = (rawRows) => {
+  if (!Array.isArray(rawRows)) return []
+  const rows = []
+  for (const rawRow of rawRows) {
+    if (!rawRow || !Array.isArray(rawRow.components)) continue
+    const rowBuilder = new ActionRowBuilder()
+    for (const rawComponent of rawRow.components) {
+      if (!rawComponent) continue
+      if ((rawComponent.type ?? rawComponent.component_type) !== 2) continue
+      const customId = rawComponent.custom_id || rawComponent.customId
+      if (!customId) continue
+      try {
+        const button = new ButtonBuilder()
+          .setCustomId(customId)
+          .setLabel(rawComponent.label || 'Button')
+          .setStyle(typeof rawComponent.style === 'number' ? rawComponent.style : ButtonStyle.Secondary)
+        if (rawComponent.disabled) button.setDisabled(true)
+        if (rawComponent.emoji) button.setEmoji(rawComponent.emoji)
+        rowBuilder.addComponents(button)
+      } catch (err) {
+        console.error('[BOT] Failed to build button component:', err)
+      }
+    }
+    if (rowBuilder.components.length) rows.push(rowBuilder)
+  }
+  return rows
 }
 
 // ==============================
@@ -138,7 +166,7 @@ app.get('/channels', async (_req, res) => {
 // Post an announcement to a channel by id or name
 app.post('/announce', async (req, res) => {
   try {
-    const { channelId, channelName, message, embed, attachments } = req.body || {}
+    const { channelId, channelName, message, embed, attachments, components } = req.body || {}
     if (!message || (!channelId && !channelName)) {
       return res.status(400).json({ error: 'channel_and_message_required' })
     }
@@ -155,9 +183,11 @@ app.post('/announce', async (req, res) => {
 
     const attachmentList = normalizeAttachments(attachments)
     const files = await fetchAttachmentBuffers(attachmentList)
+    const componentRows = buildComponents(components)
 
     const payload = embed ? { content: message, embeds: [embed] } : { content: message }
     if (files.length) payload.files = files
+    if (componentRows.length) payload.components = componentRows
     const sent = await channel.send(payload)
     res.json({ ok: true, id: sent.id })
   } catch (e) {
@@ -204,8 +234,11 @@ app.post('/dm', async (req, res) => {
       try {
         const user = await client.users.fetch(id)
         if (!user) throw new Error('user_not_found')
-        const files = retrievedFiles.map(file => ({ attachment: file.attachment, name: file.name }))
-        const payload = files.length ? { content: message, files } : { content: message }
+        const files = retrievedFiles.map(file => ({ attachment: Buffer.from(file.attachment), name: file.name }))
+        const componentRows = buildComponents(req.body.components)
+        const payload = { content: message }
+        if (files.length) payload.files = files
+        if (componentRows.length) payload.components = componentRows
         const sent = await user.send(payload)
         results.push({ userId: id, ok: true, messageId: sent.id })
       } catch (err) {
@@ -219,6 +252,62 @@ app.post('/dm', async (req, res) => {
   } catch (e) {
     console.error('[BOT] /dm error:', e)
     res.status(500).json({ error: 'failed_to_dm' })
+  }
+})
+
+client.on('interactionCreate', async interaction => {
+  try {
+    if (!interaction.isButton()) return
+    if (!interaction.customId || !interaction.customId.startsWith('ack:')) return
+    if (!nestApiUrl) {
+      await interaction.reply({ content: 'Action item service unavailable.', ephemeral: true })
+      return
+    }
+
+    const [, itemId, token] = interaction.customId.split(':')
+    if (!itemId || !token) {
+      await interaction.reply({ content: 'Invalid acknowledgement payload.', ephemeral: true })
+      return
+    }
+
+    let response
+    try {
+      const ackRes = await fetch(`${nestApiUrl.replace(/\/+$/, '')}/api/hq/action-items/${itemId}/ack`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-bot-key': nestBotKey },
+        body: JSON.stringify({ token, userId: interaction.user.id })
+      })
+      response = await ackRes.json().catch(() => ({}))
+      if (!ackRes.ok) {
+        const note = response?.error || `Failed with status ${ackRes.status}`
+        await interaction.reply({ content: `Unable to acknowledge: ${note}`, ephemeral: true })
+        return
+      }
+    } catch (err) {
+      console.error('[BOT] Ack request failed:', err)
+      await interaction.reply({ content: 'Unable to acknowledge at this time.', ephemeral: true })
+      return
+    }
+
+    const updatedComponents = interaction.message.components?.map(row => {
+      const rowBuilder = new ActionRowBuilder()
+      row.components.forEach(component => {
+        if (component.type !== 2) return
+        const button = ButtonBuilder.from(component)
+        if ((component.customId || component.custom_id) === interaction.customId) {
+          button.setLabel('Acknowledged').setStyle(ButtonStyle.Success).setDisabled(true)
+        } else {
+          button.setDisabled(true)
+        }
+        rowBuilder.addComponents(button)
+      })
+      return rowBuilder
+    }).filter(row => row && row.components.length) || []
+
+    await interaction.update({ components: updatedComponents })
+    await interaction.followUp({ content: 'Acknowledged. Thank you!', ephemeral: true })
+  } catch (err) {
+    console.error('[BOT] interaction handler error:', err)
   }
 })
 

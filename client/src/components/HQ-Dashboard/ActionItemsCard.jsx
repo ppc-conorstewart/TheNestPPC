@@ -2,7 +2,7 @@ import { resolveApiUrl, resolveBotUrl } from '../../api'
 // =========================== FILE: client/src/components/HQ-Dashboard/ActionItemsCard.jsx ===========================
 // Sections: Imports • Add Modal • Edit Modal • Reminder Modal • Docs Modal • Row • Component
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FiBell, FiCheckCircle, FiEdit2, FiPaperclip, FiPlus, FiUser, FiX } from 'react-icons/fi'
 
 // ===========================
@@ -131,6 +131,10 @@ function AddModal({ open, onClose, onSubmit }) {
             e.preventDefault()
             const stakeholders = Object.values(picked).map(m => m.displayName || m.username)
             const stakeholder_ids = Object.keys(picked)
+            const stakeholder_objects = Object.values(picked).map(m => ({
+              id: m.id,
+              name: m.displayName || m.username || ''
+            }))
             onSubmit({
               description: form.description,
               priority: form.priority,
@@ -138,6 +142,7 @@ function AddModal({ open, onClose, onSubmit }) {
               due_date: form.due_date || null,
               stakeholders,
               stakeholder_ids,
+              stakeholder_objects,
               attachment_url: fileUrl || null,
               attachment_name: fileName || null
             })
@@ -550,12 +555,31 @@ function Row({ item, selected, onSelect }) {
         </span>
       </div>
       <div className='px-2 flex flex-wrap gap-1 items-center'>
-        {(item.stakeholders || []).map((s, i) => (
-          <span key={i} className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#3a3d33] text-[10px] text-[#b0b79f]'>
-            <FiUser className='opacity-80' /> {s}
-          </span>
-        ))}
-        {(!item.stakeholders || !item.stakeholders.length) && <span className='text-[11px] text-[#6a7257] italic'>None</span>}
+        {(() => {
+          const detailList = Array.isArray(item.stakeholders_detail) && item.stakeholders_detail.length
+            ? item.stakeholders_detail
+            : (item.stakeholders || []).map(name => ({ name }))
+          if (!detailList.length) {
+            return <span className='text-[11px] text-[#6a7257] italic'>None</span>
+          }
+          return detailList.map((detail, i) => {
+            const acknowledged = Boolean(detail.acknowledged)
+            const baseCls = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold transition-colors'
+            const ackCls = acknowledged
+              ? 'border-[#2f4a31] bg-[#1b2d1b] text-[#8fffbb]'
+              : 'border-[#3a3d33] bg-transparent text-[#b0b79f]'
+            return (
+              <span
+                key={`${detail.id || detail.name || i}`}
+                className={`${baseCls} ${ackCls}`}
+                title={acknowledged ? 'Acknowledged' : 'Awaiting acknowledgement'}
+              >
+                {acknowledged ? <FiCheckCircle className='text-[#8fffbb]' size={10} /> : <FiUser className='opacity-80' size={10} />}
+                {detail.name || 'Stakeholder'}
+              </span>
+            )
+          })
+        })()}
       </div>
     </div>
   )
@@ -573,12 +597,30 @@ export default function ActionItemsCard() {
   const [openRemind, setOpenRemind] = useState(false)
   const [openDocs, setOpenDocs] = useState(false)
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true)
     fetch(resolveApiUrl('/api/hq/action-items'))
       .then(r => (r.ok ? r.json() : []))
       .then(data => {
-        setItems(Array.isArray(data) ? data : [])
+        const normalized = Array.isArray(data) ? data.map(item => {
+          const detail = Array.isArray(item.stakeholders_detail) ? item.stakeholders_detail : []
+          const mappedDetail = detail.map(entry => ({
+            id: entry?.id ? String(entry.id) : null,
+            name: entry?.name || '',
+            acknowledged: Boolean(entry?.acknowledged),
+            acknowledged_at: entry?.acknowledged_at || null
+          }))
+          const stakeholders = Array.isArray(item.stakeholders) && item.stakeholders.length
+            ? item.stakeholders
+            : mappedDetail.map(entry => entry.name).filter(Boolean)
+          return {
+            ...item,
+            stakeholders,
+            stakeholders_detail: mappedDetail,
+            acknowledged_ids: Array.isArray(item.acknowledged_ids) ? item.acknowledged_ids : mappedDetail.filter(entry => entry.acknowledged && entry.id).map(entry => entry.id)
+          }
+        }) : []
+        setItems(normalized)
         setLoading(false)
         setSelected(null)
       })
@@ -587,9 +629,13 @@ export default function ActionItemsCard() {
         setLoading(false)
         setSelected(null)
       })
-  }
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    const timer = setInterval(load, 15000)
+    return () => clearInterval(timer)
+  }, [load])
 
   const header = useMemo(() => (
     <div className='grid grid-cols-[1fr_110px_140px_140px_1.2fr] items-center pb-1 pt-2 border-b border-[#393c32] mb-1 font-bold text-[#b0b79f] text-xs uppercase tracking-wider'>
