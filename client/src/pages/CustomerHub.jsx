@@ -18,11 +18,60 @@ import CustomerProgramInfo from '../components/Customer Hub Components/CustomerP
 import { API_BASE_URL } from '../api';
 
 
-const API_BASE = API_BASE_URL || '';
+const API_BASE = (API_BASE_URL || '').replace(/\/+$/, '');
 
 // ===== CONSTANTS =====
 const API_URL = `${API_BASE}/api/customers`;
-const IMG_BASE = API_BASE;
+const WINDOW_ORIGIN = typeof window !== 'undefined' ? window.location.origin : '';
+const IMG_BASE = (API_BASE || WINDOW_ORIGIN || '').replace(/\/+$/, '');
+const LOGO_PATH_PREFIX = '/assets/logos/';
+
+const resolveLogoUrl = (value) => {
+  if (!value || typeof value !== 'string') return null;
+  if (value.startsWith('blob:')) return value;
+
+  const base = IMG_BASE;
+  if (base && value.startsWith(base)) return value;
+
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      const parsed = new URL(value);
+      const path = parsed.pathname || '';
+      if (path.startsWith(LOGO_PATH_PREFIX)) {
+        return base ? `${base}${path}` : path;
+      }
+      return value;
+    } catch {
+      return value;
+    }
+  }
+
+  const normalized = value.startsWith('/') ? value : `/${value}`;
+  if (base) return `${base}${normalized}`;
+  return normalized;
+};
+
+const normalizeCustomer = (customer) => {
+  if (!customer) return null;
+  const logo = resolveLogoUrl(customer.logo_url);
+  return { ...customer, logo_url: logo || null };
+};
+
+const prepareLogoForSubmit = (value) => {
+  if (!value || typeof value !== 'string') return '';
+  if (value.startsWith('blob:')) return '';
+  if (/^https?:\/\//i.test(value)) {
+    try {
+      const parsed = new URL(value);
+      const path = parsed.pathname || '';
+      if (path.startsWith(LOGO_PATH_PREFIX)) return path;
+      return value;
+    } catch {
+      return value;
+    }
+  }
+  return value.startsWith('/') ? value : `/${value}`;
+};
 
 // ===== COMPONENT =====
 export default function CustomerHub() {
@@ -51,12 +100,24 @@ export default function CustomerHub() {
     try {
       const res = await fetch(API_URL);
       const data = await res.json();
-      setCustomers(data);
+      const normalized = Array.isArray(data) ? data.map(normalizeCustomer) : [];
+      setCustomers(normalized);
       setLoading(false);
       if (selected) {
-        const stillExists = data.find(c => c.id === selected.id);
+        const stillExists = normalized.find(c => c.id === selected.id);
         if (!stillExists) setSelected(null);
-        else setSelected(data.find(c => c.id === selected.id));
+        else {
+          setSelected(stillExists);
+          setForm({
+            name: stillExists.name,
+            logo_url: stillExists.logo_url || '',
+            logoFile: null,
+            category: stillExists.category || '',
+            head_office_address: stillExists.head_office_address || '',
+            head_of_completions: stillExists.head_of_completions || '',
+            head_office_phone: stillExists.head_office_phone || ''
+          });
+        }
       }
     } catch {
       setLoading(false);
@@ -64,16 +125,17 @@ export default function CustomerHub() {
   };
 
   const handleSelect = (customer) => {
-    setSelected(customer);
+    const normalized = normalizeCustomer(customer);
+    setSelected(normalized);
     setEditMode(false);
     setForm({
-      name: customer.name,
-      logo_url: customer.logo_url,
+      name: normalized.name,
+      logo_url: normalized.logo_url || '',
       logoFile: null,
-      category: customer.category || '',
-      head_office_address: customer.head_office_address || '',
-      head_of_completions: customer.head_of_completions || '',
-      head_office_phone: customer.head_office_phone || ''
+      category: normalized.category || '',
+      head_office_address: normalized.head_office_address || '',
+      head_of_completions: normalized.head_of_completions || '',
+      head_office_phone: normalized.head_office_phone || ''
     });
   };
 
@@ -81,7 +143,7 @@ export default function CustomerHub() {
     setEditMode(true);
     setForm({
       name: selected.name,
-      logo_url: selected.logo_url,
+      logo_url: selected.logo_url || '',
       logoFile: null,
       category: selected.category || '',
       head_office_address: selected.head_office_address || '',
@@ -94,7 +156,7 @@ export default function CustomerHub() {
     setEditMode(false);
     setForm({
       name: selected.name,
-      logo_url: selected.logo_url,
+      logo_url: selected.logo_url || '',
       logoFile: null,
       category: selected.category || '',
       head_office_address: selected.head_office_address || '',
@@ -107,7 +169,7 @@ export default function CustomerHub() {
     const data = new FormData();
     data.append('name', form.name);
     if (form.logoFile) data.append('logo', form.logoFile);
-    else data.append('logo_url', form.logo_url || '');
+    else data.append('logo_url', prepareLogoForSubmit(form.logo_url));
     data.append('head_office_address', form.head_office_address || '');
     data.append('head_of_completions', form.head_of_completions || '');
     data.append('head_office_phone', form.head_office_phone || '');
@@ -118,10 +180,11 @@ export default function CustomerHub() {
       body: data,
     });
     if (res.ok) {
-      const updatedCustomers = await fetch(API_URL).then(r => r.json());
-      setCustomers(updatedCustomers);
-      const updated = updatedCustomers.find(c => c.id === selected.id);
-      setSelected(updated || null);
+      const updatedCustomersRaw = await fetch(API_URL).then(r => r.json());
+      const normalized = Array.isArray(updatedCustomersRaw) ? updatedCustomersRaw.map(normalizeCustomer) : [];
+      setCustomers(normalized);
+      const updated = normalized.find(c => c.id === selected.id) || null;
+      setSelected(updated);
       setEditMode(false);
       setForm({
         name: updated?.name || '',
@@ -149,10 +212,11 @@ export default function CustomerHub() {
       body: data,
     });
     if (res.ok) {
-      const updatedCustomers = await fetch(API_URL).then(r => r.json());
-      setCustomers(updatedCustomers);
-      const updated = updatedCustomers.find(c => c.name === form.name);
-      setSelected(updated || null);
+      const updatedCustomersRaw = await fetch(API_URL).then(r => r.json());
+      const normalized = Array.isArray(updatedCustomersRaw) ? updatedCustomersRaw.map(normalizeCustomer) : [];
+      setCustomers(normalized);
+      const updated = normalized.find(c => c.name === form.name) || null;
+      setSelected(updated);
       setShowAdd(false);
       setEditMode(false);
       setPendingCategory('');
@@ -191,6 +255,10 @@ export default function CustomerHub() {
     setForm(f => ({ ...f, [field]: value }));
   };
 
+  const handleNameChange = (value) => {
+    setForm(f => ({ ...f, name: value }));
+  };
+
   const getSelectedCard = () => {
     if (!selected) return null;
     if (form.logoFile && form.logo_url) {
@@ -198,11 +266,7 @@ export default function CustomerHub() {
     }
     return {
       ...selected,
-      logo_url: selected.logo_url
-        ? (selected.logo_url.startsWith('http')
-          ? selected.logo_url
-          : IMG_BASE + selected.logo_url)
-        : null
+      logo_url: resolveLogoUrl(selected.logo_url)
     };
   };
 
@@ -230,14 +294,7 @@ export default function CustomerHub() {
           <div className='flex flex-row gap-4 h-full'>
             {/* Left: Customer List */}
             <CustomerListPanel
-              customers={customers.map(c => ({
-                ...c,
-                logo_url: c.logo_url
-                  ? (c.logo_url.startsWith('http')
-                      ? c.logo_url
-                      : IMG_BASE + c.logo_url)
-                  : null
-              }))}
+              customers={customers}
               selected={selected}
               loading={loading}
               onSelect={handleSelect}
@@ -258,6 +315,7 @@ export default function CustomerHub() {
                     onDelete={deleteCustomer}
                     onLogoChange={handleLogoChange}
                     onLogoDelete={handleLogoDelete}
+                    onNameChange={handleNameChange}
                   />
                   <div className='mx-6 w-[2px] bg-[#949C7F] h-full opacity-40 rounded' />
                   <CustomerGeneralInfoPanel
