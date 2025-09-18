@@ -472,4 +472,3 @@ const ghostBtn = {
   borderRadius: 6,
   cursor: 'pointer',
 };
-

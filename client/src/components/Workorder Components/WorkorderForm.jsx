@@ -86,7 +86,7 @@ function computeSpecs(selectedAssets, assets, assetSpecs) {
   return { totalWeight: totalWeight * 2.20462, totalVolume, totalOAL, torqueSpecsArr: uniqueTorqueSpecs };
 }
 
-export default function WorkorderForm({ initialData, onClose }) {
+export default function WorkorderForm({ initialData, onClose, getCustomerLogo }) {
   const pages = [
     { title: 'Customer Info' },
     { title: 'Site Measurements' },
@@ -450,7 +450,11 @@ export default function WorkorderForm({ initialData, onClose }) {
   const prevLabel = pages[pageIndex - 1]?.title || '';
   const nextLabel = pages[pageIndex + 1]?.title || '';
   const canNext = pageIndex < pages.length - 1;
-  const logoSrc = logoUrl || `/assets/logos/${customer.replace(/\s+/g, '-').toLowerCase()}.png`;
+  const fallbackLogo = customer
+    ? `/assets/logos/${customer.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`
+    : null;
+  const resolvedLogo = getCustomerLogo ? getCustomerLogo(customer) : null;
+  const logoSrc = logoUrl || resolvedLogo || fallbackLogo || '';
 
   return (
     <>

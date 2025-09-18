@@ -16,61 +16,17 @@ import CustomerListPanel from '../components/Customer Hub Components/CustomerLis
 import CustomerLogoCard from '../components/Customer Hub Components/CustomerLogoCard';
 import CustomerProgramInfo from '../components/Customer Hub Components/CustomerProgramInfo';
 import { API_BASE_URL } from '../api';
+import { prepareCustomerLogoForSubmit, resolveCustomerLogo } from '../utils/customerLogos';
 
 
 const API_BASE = (API_BASE_URL || '').replace(/\/+$/, '');
 
 // ===== CONSTANTS =====
 const API_URL = `${API_BASE}/api/customers`;
-const WINDOW_ORIGIN = typeof window !== 'undefined' ? window.location.origin : '';
-const IMG_BASE = (API_BASE || WINDOW_ORIGIN || '').replace(/\/+$/, '');
-const LOGO_PATH_PREFIX = '/assets/logos/';
-
-const resolveLogoUrl = (value) => {
-  if (!value || typeof value !== 'string') return null;
-  if (value.startsWith('blob:')) return value;
-
-  const base = IMG_BASE;
-  if (base && value.startsWith(base)) return value;
-
-  if (/^https?:\/\//i.test(value)) {
-    try {
-      const parsed = new URL(value);
-      const path = parsed.pathname || '';
-      if (path.startsWith(LOGO_PATH_PREFIX)) {
-        return base ? `${base}${path}` : path;
-      }
-      return value;
-    } catch {
-      return value;
-    }
-  }
-
-  const normalized = value.startsWith('/') ? value : `/${value}`;
-  if (base) return `${base}${normalized}`;
-  return normalized;
-};
-
 const normalizeCustomer = (customer) => {
   if (!customer) return null;
-  const logo = resolveLogoUrl(customer.logo_url);
+  const logo = resolveCustomerLogo(customer.logo_url);
   return { ...customer, logo_url: logo || null };
-};
-
-const prepareLogoForSubmit = (value) => {
-  if (!value || typeof value !== 'string') return '';
-  if (value.startsWith('blob:')) return '';
-  if (/^https?:\/\//i.test(value)) {
-    try {
-      const parsed = new URL(value);
-      const path = parsed.pathname || '';
-      if (path.startsWith(LOGO_PATH_PREFIX)) return path;
-      return value;
-    } catch {
-      return value;
-    }
-  }
-  return value.startsWith('/') ? value : `/${value}`;
 };
 
 // ===== COMPONENT =====
@@ -169,7 +125,7 @@ export default function CustomerHub() {
     const data = new FormData();
     data.append('name', form.name);
     if (form.logoFile) data.append('logo', form.logoFile);
-    else data.append('logo_url', prepareLogoForSubmit(form.logo_url));
+    else data.append('logo_url', prepareCustomerLogoForSubmit(form.logo_url));
     data.append('head_office_address', form.head_office_address || '');
     data.append('head_of_completions', form.head_of_completions || '');
     data.append('head_office_phone', form.head_office_phone || '');
@@ -202,6 +158,7 @@ export default function CustomerHub() {
     const data = new FormData();
     data.append('name', form.name);
     if (form.logoFile) data.append('logo', form.logoFile);
+    else data.append('logo_url', prepareCustomerLogoForSubmit(form.logo_url));
     data.append('head_office_address', form.head_office_address || '');
     data.append('head_of_completions', form.head_of_completions || '');
     data.append('head_office_phone', form.head_office_phone || '');
@@ -266,7 +223,7 @@ export default function CustomerHub() {
     }
     return {
       ...selected,
-      logo_url: resolveLogoUrl(selected.logo_url)
+      logo_url: resolveCustomerLogo(selected.logo_url)
     };
   };
 
@@ -303,50 +260,58 @@ export default function CustomerHub() {
 
             {/* Right: Customer Info + Program Info */}
             <div className='flex flex-col flex-1 gap-4'>
-              <div className='flex flex-row gap-4'>
-                <div className='glass-card p-6 flex flex-row items-start min-h-[210px] justify-start relative w-full'>
-                  <CustomerLogoCard
-                    selected={getSelectedCard()}
-                    form={form}
-                    editMode={editMode}
-                    onEdit={startEdit}
-                    onSave={saveEdit}
-                    onCancel={cancelEdit}
-                    onDelete={deleteCustomer}
-                    onLogoChange={handleLogoChange}
-                    onLogoDelete={handleLogoDelete}
-                    onNameChange={handleNameChange}
-                  />
-                  <div className='mx-6 w-[2px] bg-[#949C7F] h-full opacity-40 rounded' />
-                  <CustomerGeneralInfoPanel
-                    selected={selected}
-                    editMode={editMode}
-                    form={form}
-                    onFormChange={handleFormChange}
-                  />
-                </div>
-              </div>
+              {selected ? (
+                <>
+                  <div className='flex flex-row gap-4'>
+                    <div className='glass-card p-6 flex flex-row items-start min-h-[210px] justify-start relative w-full'>
+                      <CustomerLogoCard
+                        selected={getSelectedCard()}
+                        form={form}
+                        editMode={editMode}
+                        onEdit={startEdit}
+                        onSave={saveEdit}
+                        onCancel={cancelEdit}
+                        onDelete={deleteCustomer}
+                        onLogoChange={handleLogoChange}
+                        onLogoDelete={handleLogoDelete}
+                        onNameChange={handleNameChange}
+                      />
+                      <div className='mx-6 w-[2px] bg-[#949C7F] h-full opacity-40 rounded' />
+                      <CustomerGeneralInfoPanel
+                        selected={selected}
+                        editMode={editMode}
+                        form={form}
+                        onFormChange={handleFormChange}
+                      />
+                    </div>
+                  </div>
 
-              <div className='flex flex-row gap-4 flex-1'>
-                {/* If missile, show assigned missiles; else show field contacts */}
-                {selected && selected.category === 'missile' ? (
-                  <div className='glass-card p-6 min-h-[210px] flex-1'>
-                    <div className='text-xl text-center mb-4 text-[#b3b99a]' style={{ fontFamily: 'var(--font-varien, varien, sans-serif)' }}>
-                      Assigned Missile/s
-                    </div>
-                    <div className='text-base text-[#e6e8df] opacity-70'>
-                      [Coming soon: List of assigned missiles for this customer]
-                    </div>
+                  <div className='flex flex-row gap-4 flex-1'>
+                    {/* If missile, show assigned missiles; else show field contacts */}
+                    {selected && selected.category === 'missile' ? (
+                      <div className='glass-card p-6 min-h-[210px] flex-1'>
+                        <div className='text-xl text-center mb-4 text-[#b3b99a]' style={{ fontFamily: 'var(--font-varien, varien, sans-serif)' }}>
+                          Assigned Missile/s
+                        </div>
+                        <div className='text-base text-[#e6e8df] opacity-70'>
+                          [Coming soon: List of assigned missiles for this customer]
+                        </div>
+                      </div>
+                    ) : (
+                      <div className='flex-1'>
+                        <div className='glass-card p-4 h-full'>
+                          <CustomerFieldContacts />
+                        </div>
+                      </div>
+                    )}
+                    <CustomerProgramInfo />
                   </div>
-                ) : (
-                  <div className='flex-1'>
-                    <div className='glass-card p-4 h-full'>
-                      <CustomerFieldContacts />
-                    </div>
-                  </div>
-                )}
-                <CustomerProgramInfo />
-              </div>
+                </>
+              ) : (
+                <div className='glass-card flex-1 min-h-[280px] flex items-center justify-center border border-[#6a7257] text-[#949C7F] text-2xl uppercase tracking-[0.35em]'>
+                  Select a Customer
+                </div>
+              )}
             </div>
           </div>
 

@@ -12,14 +12,18 @@ export default function WorkorderCard({
   onEdit = () => {},
   onSubmit = () => {},
   onRemove = () => {},
+  getCustomerLogo,
   asTableRow = false
 }) {
   const customer = (job.customer || job.Customer || job.client || '').trim();
   const surfaceLSD = (job.surface_lsd || job.surfaceLSD || job.lsd || '').trim();
 
   const slug = (s = '') => s.trim().replace(/\s+/g, '-');
-  const logoFilename = customer.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const logoSrc = `/assets/logos/${logoFilename}.png`;
+  const fallbackLogo = customer
+    ? `/assets/logos/${customer.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`
+    : null;
+  const resolvedLogo = getCustomerLogo ? getCustomerLogo(customer) : null;
+  const logoSrc = resolvedLogo || fallbackLogo;
 
   const wellsRaw = job.num_wells ?? job.numberOfWells;
   const wells = wellsRaw != null && !isNaN(Number(wellsRaw)) ? Math.round(Number(wellsRaw)) : 'N/A';
@@ -97,7 +101,7 @@ export default function WorkorderCard({
     return (
       <tr className='odd:bg-[#1a1a1a] even:bg-[#111] text-white hover:bg-[#1f1f1f] transition'>
         <td className='border border-[#6a7257] px-3 py-2 text-center bg-white'>
-          {customer && (
+          {customer && logoSrc && (
             <img src={logoSrc} alt={`${customer} logo`} className='h-9 mx-auto object-contain' onError={(e) => { e.currentTarget.style.display = 'none'; }} />
           )}
         </td>
