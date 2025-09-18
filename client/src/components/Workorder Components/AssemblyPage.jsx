@@ -264,7 +264,21 @@ export default function AssemblyPage({
     return arr;
   }, [selectedAssetNames]);
 
-  const storageKey = (woNumber || 'WO') + '::' + (title || 'Assembly') + '::TAB' + String(activeTab);
+  const slug = (s = '') => s.toString().trim().toLowerCase().replace(/\s+/g, '-');
+  const customerName =
+    (selections?.customer || selections?.Customer || savedItems?.customer || savedItems?.Customer || '').toString().trim();
+  const lsdVal =
+    (selections?.lsd ||
+      selections?.surface_lsd ||
+      selections?.surfaceLSD ||
+      savedItems?.lsd ||
+      savedItems?.surface_lsd ||
+      savedItems?.surfaceLSD ||
+      '').toString().trim();
+  const jobId = Number.isFinite(Number(selections?.jobId)) ? Number(selections?.jobId) : Number(savedItems?.jobId) || null;
+  const uniqueScope = jobId ? `job${jobId}` : `${slug(customerName)}_${lsdVal || 'no-lsd'}`;
+
+  const storageKey = `wo_${uniqueScope}::${title || 'Assembly'}::TAB${String(activeTab)}`;
   const currentBuildQty = Number(buildQtys?.[activeTab]) || 0;
 
   return (

@@ -8,7 +8,6 @@ import { useDropzone } from 'react-dropzone';
 import GlbLibraryModal from './GlbLibraryModal';
 import { API_BASE_URL } from '../../api';
 
-
 const API_BASE = API_BASE_URL || '';
 
 // ==============================
@@ -284,7 +283,8 @@ export default function SimpleViewer({
     const onUp = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
-      try { localStorage.setItem(savedLabelsKey, JSON.stringify(labels)); } catch {}
+      // (Intentionally no immediate localStorage write here;
+      // persistence is handled by the labels effect to avoid stale saves.)
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
@@ -411,7 +411,7 @@ export default function SimpleViewer({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          zIndex: 50,            // <-- Lift the toolbar above the drop overlay so buttons remain clickable
+          zIndex: 50,
           pointerEvents: 'none'
         }}
       >

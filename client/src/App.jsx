@@ -37,6 +37,8 @@ import SourcingPage from './pages/SourcingPage';
 import TrainingHub from './pages/TrainingHub';
 import ValveReports from './pages/ValveReports';
 import WorkorderHub from './pages/WorkorderHub';
+import FlySales from './pages/FlySales';
+import QuoteLogPage from './components/Fly Sales Components/QuoteLogPage';
 
 // === Global Glass Styles ===
 import './styles/glass.css';
@@ -89,7 +91,7 @@ export default function App() {
 
         <Routes>
           <Route
-            path="/fly-iq"
+            path='/fly-iq'
             element={
               <Layout hideSidebar>
                 <ProtectedRoute>
@@ -99,7 +101,7 @@ export default function App() {
             }
           />
           <Route
-            path="/fly-hq-tools"
+            path='/fly-hq-tools'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -109,7 +111,7 @@ export default function App() {
             }
           />
           <Route
-            path="/fly-hq"
+            path='/fly-hq'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -119,7 +121,7 @@ export default function App() {
             }
           />
           <Route
-            path="/fly-hq/mfv"
+            path='/fly-hq/mfv'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -129,7 +131,7 @@ export default function App() {
             }
           />
           <Route
-            path="/discord-hub"
+            path='/discord-hub'
             element={
               <Layout hideSidebar>
                 <ProtectedRoute>
@@ -139,7 +141,7 @@ export default function App() {
             }
           />
           <Route
-            path="/job-planner"
+            path='/job-planner'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -149,7 +151,7 @@ export default function App() {
             }
           />
           <Route
-            path="/workorder-hub"
+            path='/workorder-hub'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -159,7 +161,7 @@ export default function App() {
             }
           />
           <Route
-            path="/sourcing"
+            path='/sourcing'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -169,7 +171,7 @@ export default function App() {
             }
           />
           <Route
-            path="/documentation"
+            path='/documentation'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -179,7 +181,7 @@ export default function App() {
             }
           />
           <Route
-            path="/fly-mfv"
+            path='/fly-mfv'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -189,7 +191,7 @@ export default function App() {
             }
           />
           <Route
-            path="/fly-mfv/summary"
+            path='/fly-mfv/summary'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -199,7 +201,7 @@ export default function App() {
             }
           />
           <Route
-            path="/fly-mfv/documentation"
+            path='/fly-mfv/documentation'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -209,7 +211,7 @@ export default function App() {
             }
           />
           <Route
-            path="/fly-mfv/field"
+            path='/fly-mfv/field'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -219,7 +221,7 @@ export default function App() {
             }
           />
           <Route
-            path="/fly-mfv/valve-reports"
+            path='/fly-mfv/valve-reports'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -229,7 +231,7 @@ export default function App() {
             }
           />
           <Route
-            path="/fly-mfv/valve-reports/:padKey"
+            path='/fly-mfv/valve-reports/:padKey'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -239,7 +241,7 @@ export default function App() {
             }
           />
           <Route
-            path="/job-map"
+            path='/job-map'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -249,7 +251,7 @@ export default function App() {
             }
           />
           <Route
-            path="/projects"
+            path='/projects'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -259,7 +261,7 @@ export default function App() {
             }
           />
           <Route
-            path="/pad-overwatch"
+            path='/pad-overwatch'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -269,7 +271,7 @@ export default function App() {
             }
           />
           <Route
-            path="/training-hub"
+            path='/training-hub'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -279,7 +281,7 @@ export default function App() {
             }
           />
           <Route
-            path="/interactive-training"
+            path='/interactive-training'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -289,7 +291,7 @@ export default function App() {
             }
           />
           <Route
-            path="/customer-hub"
+            path='/customer-hub'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -299,7 +301,7 @@ export default function App() {
             }
           />
           <Route
-            path="/service-equipment"
+            path='/service-equipment'
             element={
               <Layout>
                 <ProtectedRoute>
@@ -308,8 +310,31 @@ export default function App() {
               </Layout>
             }
           />
+
+          {/* ============================== SALES ============================== */}
           <Route
-            path="/"
+            path='/sales'
+            element={
+              <Layout>
+                <ProtectedRoute>
+                  <FlySales />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+          <Route
+            path='/sales/quotes'
+            element={
+              <Layout>
+                <ProtectedRoute>
+                  <QuoteLogPage />
+                </ProtectedRoute>
+              </Layout>
+            }
+          />
+
+          <Route
+            path='/'
             element={
               <Layout>
                 <LandingPage />
@@ -317,11 +342,11 @@ export default function App() {
             }
           />
           <Route
-            path="*"
+            path='*'
             element={
               <Layout>
                 <ProtectedRoute>
-                  <div className="bg-black text-white p-10">
+                  <div className='bg-black text-white p-10'>
                     Page Not Found
                   </div>
                 </ProtectedRoute>
@@ -331,8 +356,8 @@ export default function App() {
         </Routes>
 
         <ToastContainer
-          containerId="paloma"
-          position="bottom-right"
+          containerId='paloma'
+          position='bottom-right'
           autoClose={4100}
           hideProgressBar={false}
           newestOnTop
@@ -341,7 +366,7 @@ export default function App() {
           pauseOnFocusLoss
           draggable
           pauseOnHover
-          theme="dark"
+          theme='dark'
           limit={4}
           transition={Slide}
         />
