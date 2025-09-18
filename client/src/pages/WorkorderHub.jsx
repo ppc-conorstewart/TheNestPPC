@@ -203,7 +203,7 @@ export default function WorkorderHub() {
     >
       <div className="h-full border border-[#6a7257] bg-black/60 rounded-md overflow-hidden flex flex-col">
         {/* HEADER */}
-        <div className="px-4 py-0 border-b border-[#6a7257] bg-black/80 flex items-center justify-between shrink-0" style={{ fontFamily: 'Punoer, sans-serif' }}>
+        <div className="px-4 py-0 border-b border-[#6a7257] bg-black/80 flex items-center uppercase justify-between shrink-0" style={{ fontFamily: 'Punoer, sans-serif' }}>
           <div className="flex items-center gap-0">
             <img
               src="/assets/Paloma_Logo_White_Rounded3.png"
@@ -216,14 +216,14 @@ export default function WorkorderHub() {
           <div className="flex gap-2">
             <button
               onClick={() => setView('HUB')}
-              className={`px-3 py-1.5 border rounded-md text-sm font-bold ${view === 'HUB' ? 'bg-[#6a7257] text-black border-[#6a7257]' : 'bg-black text-[#6a7257] border-[#6a7257]'}`}
+              className={`px-3 py-1.5 border rounded-md uppercase text-lg font-bold ${view === 'HUB' ? 'bg-[#6a7257] text-black border-[#6a7257]' : 'bg-black text-[#6a7257] border-[#6a7257]'}`}
               title="Workorders"
             >
               Workorders
             </button>
             <button
               onClick={() => setView('GLB')}
-              className={`px-3 py-1.5 border rounded-md text-sm font-bold ${view === 'GLB' ? 'bg-[#6a7257] text-black border-[#6a7257]' : 'bg-black text-[#6a7257] border-[#6a7257]'}`}
+              className={`px-3 py-1.5 border rounded-md text-lg uppercase  font-bold ${view === 'GLB' ? 'bg-[#6a7257] text-black border-[#6a7257]' : 'bg-black text-[#6a7257] border-[#6a7257]'}`}
               title="GLB Asset Library"
             >
               GLB Asset Library
@@ -245,7 +245,7 @@ export default function WorkorderHub() {
                       key={key}
                       onClick={() => setSelectedTab(key)}
                       className={`
-                        px-3 py-1.5 border border-[#6a7257] rounded-md text-sm
+                        px-3 py-1.5 border border-[#6a7257] uppercase rounded-md text-sm
                         ${key === selectedTab ? 'bg[#6a7257] text-black' : 'bg-black text-[#6a7257] hover:bg-[#444]'}
                         ${isPast && key !== selectedTab ? 'opacity-50 text-gray-400 hover:opacity-80' : ''}
                         transition

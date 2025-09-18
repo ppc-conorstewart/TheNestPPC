@@ -319,7 +319,7 @@ export default function AssemblyPage({
           )}
         </div>
 
-        <div className='flex gap-4 mb-24 overflow-auto'>
+        <div className='flex gap-4 mb-4 overflow-auto'>
           <div className='flex-1'>
             <h4 className='text-[#6a7257] uppercase font-bold text-[14px] mb-2 text-center'>SELECT ASSET (1–5)</h4>
             {Array.from({ length: 5 }, (_, i) => (

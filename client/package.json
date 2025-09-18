@@ -73,7 +73,9 @@
     "tippy.js": "^6.3.7",
     "tsparticles": "^3.8.1",
     "use-image": "^1.1.4",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "docx-preview": "^0.3.6",
+    "luckysheet": "^2.1.13"
   },
   "scripts": {
     "start": "serve -s build -l $PORT",

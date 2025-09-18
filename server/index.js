@@ -134,6 +134,8 @@ const serviceEquipmentRouter = require('./routes/serviceEquipment')
 const workordersRouter = require('./routes/workorders')
 const glbAssetsRouter = require('./routes/glbAssets')
 
+const fieldEmployeesRouter = require('./routes/fieldEmployees')
+
 app.use('/api/mfv', mfvPadsRouter)
 app.use('/api', draftsRouter)
 app.use('/api/transfers', transfersRouter)
@@ -152,6 +154,7 @@ app.use('/api/documents', documentsRouter)
 app.use('/api/service-equipment', serviceEquipmentRouter)
 app.use('/api/workorders', workordersRouter)
 app.use('/api/glb-assets', glbAssetsRouter)
+app.use('/api/field-employees', fieldEmployeesRouter)
 
 // ==============================
 // SECTION: Universal Upload
