@@ -52,6 +52,20 @@ const RESPAWN_RING_FACTOR = 1.42;
 const RESPAWN_SPEED = 0.35;
 
 // ==============================
+// NEW: SUBTLE GLOW AROUND LOGO + HALO
+// ==============================
+const GLOW_RADIUS_OUT = 1.45;         // how far the soft green glow extends beyond logo radius
+const GLOW_RADIUS_IN = 0.18;          // inner hard-ish core before falloff
+const GLOW_OPACITY_BASE = 0.10;       // base alpha of the glow
+const GLOW_OPACITY_PULSE = 0.06;      // additional pulse on top of base
+const GLOW_PULSE_SPEED = 0.0020;      // animation speed (ms-based)
+const GLOW_COMPOSITE = 'lighter';     // additive feel to keep subtle and soft
+
+const HALO_GLOW_BLUR = 26;            // soft blur on halo glow
+const HALO_GLOW_ALPHA = 0.20;         // halo glow stroke alpha
+const HALO_GLOW_PULSE_RATIO = 0.75;   // how much of the logo pulse to apply to halo
+
+// ==============================
 // HELPERS
 // ==============================
 const now = () => performance.now();
@@ -186,9 +200,9 @@ export default function BackgroundFX() {
 
       const t = now();
       if (t >= nextSparkleAtRef.current) {
-        const ps = particlesRef.current;
+        const ps0 = particlesRef.current;
         for (let i = 0; i < SPARKLE_COUNT; i++) {
-          const idx = (Math.random() * ps.length) | 0;
+          const idx = (Math.random() * ps0.length) | 0;
           sparkleUntilRef.current.set(idx, t + SPARKLE_TTL_MS);
         }
         nextSparkleAtRef.current = t + rand(SPARKLE_MIN_MS, SPARKLE_MAX_MS);
@@ -362,13 +376,34 @@ export default function BackgroundFX() {
       }
 
       // ==============================
-      // LOGO + HALO
+      // LOGO + SUBTLE GREEN GLOW + HALO
       // ==============================
       if (logoBox && logo) {
+        // --- pulsing amount for glow ---
+        const pulse = GLOW_OPACITY_BASE + Math.sin(t * GLOW_PULSE_SPEED) * GLOW_OPACITY_PULSE;
+
+        // --- soft green glow BEHIND logo (radial gradient) ---
+        ctx.save();
+        ctx.globalCompositeOperation = GLOW_COMPOSITE;
+        const rg = ctx.createRadialGradient(
+          logoBox.cx, logoBox.cy, logoBox.r * GLOW_RADIUS_IN,
+          logoBox.cx, logoBox.cy, logoBox.r * GLOW_RADIUS_OUT
+        );
+        rg.addColorStop(0.00, rgba(PALOMA_GREEN.r, PALOMA_GREEN.g, PALOMA_GREEN.b, pulse));
+        rg.addColorStop(0.50, rgba(PALOMA_GREEN.r, PALOMA_GREEN.g, PALOMA_GREEN.b, pulse * 0.55));
+        rg.addColorStop(1.00, 'rgba(0,0,0,0)');
+        ctx.beginPath();
+        ctx.arc(logoBox.cx, logoBox.cy, logoBox.r * GLOW_RADIUS_OUT, 0, Math.PI * 2);
+        ctx.fillStyle = rg;
+        ctx.fill();
+        ctx.restore();
+
+        // --- actual logo (on top of glow) ---
         ctx.globalAlpha = LOGO_OPACITY;
         ctx.drawImage(logo, logoBox.x, logoBox.y, logoBox.size, logoBox.size);
         ctx.globalAlpha = 1;
 
+        // --- rotating dotted-ish conic halo ---
         haloAngleRef.current += HALO_ROT_SPEED;
         const haloR = logoBox.size * HALO_RADIUS_FACTOR;
         ctx.save();
@@ -383,6 +418,18 @@ export default function BackgroundFX() {
         grad.addColorStop(1.00, 'rgba(255,255,255,0)');
         ctx.strokeStyle = grad;
         ctx.lineWidth = HALO_LINE_WIDTH;
+        ctx.beginPath();
+        ctx.arc(logoBox.cx, logoBox.cy, haloR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+
+        // --- subtle halo glow (soft outer light around the ring) ---
+        ctx.save();
+        ctx.globalCompositeOperation = GLOW_COMPOSITE;
+        ctx.shadowColor = rgba(PALOMA_GREEN.r, PALOMA_GREEN.g, PALOMA_GREEN.b, HALO_GLOW_ALPHA + pulse * HALO_GLOW_PULSE_RATIO * 0.5);
+        ctx.shadowBlur = HALO_GLOW_BLUR;
+        ctx.strokeStyle = rgba(PALOMA_GREEN.r, PALOMA_GREEN.g, PALOMA_GREEN.b, HALO_GLOW_ALPHA * 0.65);
+        ctx.lineWidth = HALO_LINE_WIDTH * 1.6;
         ctx.beginPath();
         ctx.arc(logoBox.cx, logoBox.cy, haloR, 0, Math.PI * 2);
         ctx.stroke();

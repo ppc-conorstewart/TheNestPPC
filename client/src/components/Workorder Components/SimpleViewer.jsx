@@ -9,6 +9,7 @@ import GlbLibraryModal from './GlbLibraryModal';
 import { API_BASE_URL } from '../../api';
 
 const API_BASE = API_BASE_URL || '';
+const MAX_MODEL_BYTES = 500 * 1024 * 1024; // 500 MB limit for glb uploads
 
 // ==============================
 // ======= DEV URL HELPER =======
@@ -211,8 +212,22 @@ export default function SimpleViewer({
     }
   }, [onUrlChange]);
 
+  const handleRejected = useCallback(rejections => {
+    if (!Array.isArray(rejections) || !rejections.length) return;
+    const [{ file, errors }] = rejections;
+    const tooLarge = errors?.some(err => err.code === 'file-too-large');
+    if (tooLarge) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+      alert(`File is too large (${sizeMb} MB). Maximum supported size is 500 MB.`);
+    } else {
+      alert('Unsupported file. Please upload a .glb model or image.');
+    }
+  }, []);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected: handleRejected,
+    maxSize: MAX_MODEL_BYTES,
     accept: {
       'model/gltf-binary': ['.glb'],
       'image/jpeg': ['.jpg', '.jpeg'],
