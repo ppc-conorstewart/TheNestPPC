@@ -296,7 +296,7 @@ app.post('/api/discord/announce', async (req, res) => {
   try {
     if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
 
-    const { channelIds, channelId, content, message } = req.body || {}
+    const { channelIds, channelId, content, message, attachments: incomingAttachments } = req.body || {}
     const collected = []
 
     if (Array.isArray(channelIds)) collected.push(...channelIds)
@@ -304,6 +304,32 @@ app.post('/api/discord/announce', async (req, res) => {
 
     const payloadContent = content || message || ''
     const ids = Array.from(new Set(collected.map(id => String(id || '').trim()).filter(Boolean)))
+
+    const resolveAttachmentUrlServer = (raw) => {
+      if (!raw) return null
+      if (/^https?:\/\//i.test(raw)) return raw
+      const envBase = (process.env.NEST_PUBLIC_UPLOAD_BASE || process.env.NEST_PUBLIC_BASE_URL || process.env.NEST_API_URL || '').trim()
+      const reqOrigin = (() => {
+        if (!req || typeof req.get !== 'function') return ''
+        const proto = req.header('x-forwarded-proto') || req.protocol || 'https'
+        const host = req.get('host')
+        if (!host) return ''
+        return `${proto}://${host}`
+      })()
+      const base = (envBase || reqOrigin).replace(/\/+$/, '')
+      if (!base) return null
+      const suffix = raw.startsWith('/') ? raw : `/${raw}`
+      return `${base}${suffix}`
+    }
+
+    const attachments = Array.isArray(incomingAttachments)
+      ? incomingAttachments
+          .map(att => ({
+            url: resolveAttachmentUrlServer(att && att.url ? String(att.url) : null),
+            name: att && att.name ? String(att.name) : undefined
+          }))
+          .filter(att => att.url)
+      : []
 
     if (!ids.length || !payloadContent) {
       return res.status(400).json({ error: 'channelIds_and_content_required' })
@@ -317,7 +343,7 @@ app.post('/api/discord/announce', async (req, res) => {
         const r = await fetch(`${BOT_SERVICE_URL}/announce`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({ channelId: id, message: payloadContent })
+          body: JSON.stringify({ channelId: id, message: payloadContent, attachments })
         })
         const out = await r.json().catch(() => ({}))
         if (!r.ok) {

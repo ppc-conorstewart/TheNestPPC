@@ -22,6 +22,42 @@ const resolveAttachmentUrl = (rawUrl) => {
   return `${base}${suffix}`
 }
 
+const normalizeAttachments = (attachments) => {
+  const list = []
+  if (Array.isArray(attachments)) {
+    for (const entry of attachments) {
+      if (!entry) continue
+      if (typeof entry === 'string') list.push({ url: entry })
+      else if (entry.url) list.push({ url: entry.url, name: entry.name })
+    }
+  } else if (attachments && typeof attachments === 'object') {
+    if (attachments.url) list.push({ url: attachments.url, name: attachments.name })
+  }
+  return list
+}
+
+const fetchAttachmentBuffers = async (attachmentList) => {
+  const files = []
+  for (const att of attachmentList) {
+    const resolved = resolveAttachmentUrl(att.url)
+    if (!resolved) {
+      console.warn('[BOT] Skipping attachment without resolvable URL:', att)
+      continue
+    }
+    try {
+      const response = await fetch(resolved)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const arrayBuffer = await response.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+      const fallbackName = att.name || resolved.split('/').filter(Boolean).pop() || `attachment-${files.length + 1}`
+      files.push({ attachment: buffer, name: fallbackName })
+    } catch (err) {
+      console.error(`[BOT] Failed to fetch attachment from ${resolved}:`, err)
+    }
+  }
+  return files
+}
+
 // ==============================
 // Config
 // ==============================
@@ -102,7 +138,7 @@ app.get('/channels', async (_req, res) => {
 // Post an announcement to a channel by id or name
 app.post('/announce', async (req, res) => {
   try {
-    const { channelId, channelName, message, embed } = req.body || {}
+    const { channelId, channelName, message, embed, attachments } = req.body || {}
     if (!message || (!channelId && !channelName)) {
       return res.status(400).json({ error: 'channel_and_message_required' })
     }
@@ -117,7 +153,11 @@ app.post('/announce', async (req, res) => {
     }
     if (!channel) return res.status(404).json({ error: 'channel_not_found' })
 
+    const attachmentList = normalizeAttachments(attachments)
+    const files = await fetchAttachmentBuffers(attachmentList)
+
     const payload = embed ? { content: message, embeds: [embed] } : { content: message }
+    if (files.length) payload.files = files
     const sent = await channel.send(payload)
     res.json({ ok: true, id: sent.id })
   } catch (e) {
@@ -156,35 +196,8 @@ app.post('/dm', async (req, res) => {
       return res.status(400).json({ error: 'userIds_and_message_required' })
     }
 
-    const attachmentList = []
-    if (Array.isArray(attachments)) {
-      for (const entry of attachments) {
-        if (!entry) continue
-        if (typeof entry === 'string') attachmentList.push({ url: entry })
-        else if (entry.url) attachmentList.push({ url: entry.url, name: entry.name })
-      }
-    } else if (attachments && typeof attachments === 'object') {
-      if (attachments.url) attachmentList.push({ url: attachments.url, name: attachments.name })
-    }
-
-    const retrievedFiles = []
-    for (const att of attachmentList) {
-      const resolved = resolveAttachmentUrl(att.url)
-      if (!resolved) {
-        console.warn('[BOT] Skipping attachment without resolvable URL:', att)
-        continue
-      }
-      try {
-        const response = await fetch(resolved)
-        if (!response.ok) throw new Error(`HTTP ${response.status}`)
-        const arrayBuffer = await response.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        const fallbackName = att.name || resolved.split('/').filter(Boolean).pop() || `attachment-${retrievedFiles.length + 1}`
-        retrievedFiles.push({ attachment: buffer, name: fallbackName })
-      } catch (err) {
-        console.error(`[BOT] Failed to fetch DM attachment from ${resolved}:`, err)
-      }
-    }
+    const attachmentList = normalizeAttachments(attachments)
+    const retrievedFiles = await fetchAttachmentBuffers(attachmentList)
 
     const results = []
     for (const id of ids) {

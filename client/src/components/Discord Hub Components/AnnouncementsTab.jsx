@@ -17,6 +17,7 @@ export default function AnnouncementsTab() {
   const [schedule, setSchedule] = useState('');
   const [recurrence, setRecurrence] = useState('none');
   const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendStatus, setSendStatus] = useState(null);
 
@@ -59,9 +60,38 @@ export default function AnnouncementsTab() {
     return () => { cancelled = true; };
   }, []);
 
-  const handleFileUpload = e => {
-    const files = Array.from(e.target.files);
-    setAttachments([...attachments, ...files.map(f => f.name)]);
+  const uploadAttachment = async (file) => {
+    try {
+      const fd = new FormData();
+      fd.append('model', file);
+      const res = await fetch(resolveApiUrl('/api/upload-model'), { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data?.url) throw new Error('Upload response missing URL');
+      return { name: file.name, url: data.url };
+    } catch (err) {
+      console.error('Failed to upload attachment', err);
+      setSendStatus({ type: 'error', note: `Failed to upload ${file.name}` });
+      return null;
+    }
+  };
+
+  const handleFileUpload = async e => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    const uploaded = [];
+    for (const file of files) {
+      const result = await uploadAttachment(file);
+      if (result) uploaded.push(result);
+    }
+    setAttachments(prev => [...prev, ...uploaded]);
+    setUploading(false);
+    if (e.target) e.target.value = '';
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleAddAnnouncement = () => {
@@ -74,7 +104,7 @@ export default function AnnouncementsTab() {
       channel: ch ? `#${ch.name}` : '',
       schedule,
       recurrence,
-      attachments
+      attachments: attachments.map(att => ({ ...att }))
     };
     setAnnouncements([newItem, ...announcements]);
     setTitle('');
@@ -116,6 +146,11 @@ export default function AnnouncementsTab() {
       return;
     }
 
+    if (uploading) {
+      setSendStatus({ type: 'error', note: 'Please wait for attachments to finish uploading.' });
+      return;
+    }
+
     setIsSending(true);
     setSendStatus(null);
 
@@ -127,12 +162,14 @@ export default function AnnouncementsTab() {
 
     const errors = [];
 
+    const payload = { channelIds: [channelId], content, attachments };
+
     const attemptServer = async () => {
       if (!apiUrl) throw new Error('Missing API endpoint');
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channelIds: [channelId], content })
+        body: JSON.stringify(payload)
       });
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
@@ -148,7 +185,7 @@ export default function AnnouncementsTab() {
       const res = await fetch(directUrl, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ channelId, message: content })
+        body: JSON.stringify({ channelId, message: content, attachments })
       });
       if (!res.ok) {
         const detail = await res.text().catch(() => '');
@@ -277,14 +314,34 @@ export default function AnnouncementsTab() {
         </div>
 
         {/* ===== Attachments ===== */}
-        <label className='text-xs uppercase font-bold text-[#b0b79f]'>
+        <label className='text-xs uppercase font-bold text-[#b0b79f] flex flex-col'>
           Attach Files
           <input type='file' multiple onChange={handleFileUpload} className='mt-1 block text-white/70 text-xs' />
         </label>
         {attachments.length > 0 && (
           <div className='flex flex-wrap gap-2 mt-2'>
             {attachments.map((file, i) => (
-              <span key={i} className='bg-[#6a7257]/30 text-white/80 text-xs px-2 py-1 rounded shadow-inner'>📎 {file}</span>
+              <span
+                key={`${file.url}-${i}`}
+                className='bg-[#6a7257]/30 text-white/80 text-xs px-2 py-1 rounded shadow-inner flex items-center gap-2'
+              >
+                <span>📎 {file.name}</span>
+                <a
+                  href={resolveApiUrl(file.url)}
+                  target='_blank'
+                  rel='noreferrer'
+                  className='underline text-white/70 hover:text-white'
+                >
+                  open
+                </a>
+                <button
+                  type='button'
+                  onClick={() => removeAttachment(i)}
+                  className='text-white/70 hover:text-white font-bold'
+                >
+                  ×
+                </button>
+              </span>
             ))}
           </div>
         )}
@@ -299,10 +356,10 @@ export default function AnnouncementsTab() {
         )}
         <button
           onClick={handleSendNow}
-          disabled={isSending}
+          disabled={isSending || uploading}
           className='mt-4 w-full bg-gradient-to-r from-[#ffe066] to-[#b0b79f] text-black font-bold uppercase text-sm px-5 py-2 rounded-lg shadow-md hover:scale-[1.02] hover:shadow-lg transition disabled:opacity-60 disabled:hover:scale-100'
         >
-          {isSending ? 'Sending…' : 'Send Message Now'}
+          {isSending ? 'Sending…' : uploading ? 'Uploading…' : 'Send Message Now'}
         </button>
         <button
           onClick={handleAddAnnouncement}
@@ -323,7 +380,7 @@ export default function AnnouncementsTab() {
           {attachments.length > 0 && (
             <div className='flex flex-wrap gap-2'>
               {attachments.map((file, i) => (
-                <div key={i} className='bg-[#6a7257]/30 border border-[#6a7257]/40 rounded px-3 py-1 text-xs text-white shadow-sm'>📎 {file}</div>
+                <div key={`${file.url}-${i}`} className='bg-[#6a7257]/30 border border-[#6a7257]/40 rounded px-3 py-1 text-xs text-white shadow-sm'>📎 {file.name}</div>
               ))}
             </div>
           )}
