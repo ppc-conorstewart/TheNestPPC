@@ -102,7 +102,13 @@ export default function WorkorderCard({
       <tr className='odd:bg-[#1a1a1a] even:bg-[#111] text-white hover:bg-[#1f1f1f] transition'>
         <td className='border border-[#6a7257] px-3 py-2 text-center bg-white'>
           {customer && logoSrc && (
-            <img src={logoSrc} alt={`${customer} logo`} className='h-9 mx-auto object-contain' onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+            <img
+              src={logoSrc}
+              alt={`${customer} logo`}
+              className='h-12 mx-auto object-contain'
+              style={{ maxWidth: 120, padding: 2, background: '#fff', borderRadius: 10 }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
           )}
         </td>
         <td className='border border-[#6a7257] px-3 py-2 font-bold uppercase'>{customer || 'Unknown'}</td>

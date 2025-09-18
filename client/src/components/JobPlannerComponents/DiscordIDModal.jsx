@@ -58,7 +58,7 @@ export default function DiscordIDModal({
             <img
               src={customerLogoPath}
               alt={`${job.customer} logo`}
-              className="h-10 w-auto object-contain rounded mb-2"
+              className="h-14 w-auto object-contain rounded mb-2"
               style={{ maxWidth: "96px", background: "transparent" }}
               onError={(e) => (e.currentTarget.style.display = "none")}
             />

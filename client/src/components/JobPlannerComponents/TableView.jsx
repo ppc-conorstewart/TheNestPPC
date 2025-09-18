@@ -413,8 +413,8 @@ export default function TableView({
                                   <img
                                     src={logoSrc}
                                     alt={`${job.customer} logo`}
-                                    className='h-10 w-28 object-contain drop-shadow-xl rounded-md hover:scale-110 transition-transform duration-300'
-                                    style={{ background: '#fff', padding: 0, borderRadius: 8 }}
+                                    className='h-12 w-32 object-contain drop-shadow-xl rounded-md hover:scale-110 transition-transform duration-300'
+                                    style={{ background: '#fff', padding: 2, borderRadius: 10 }}
                                     onError={(e) => (e.currentTarget.style.display = 'none')}
                                   />
                                 ) : null;

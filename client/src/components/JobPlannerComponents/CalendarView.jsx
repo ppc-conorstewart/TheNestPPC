@@ -62,7 +62,7 @@ export default function CalendarView({
             const img = document.createElement('img');
             img.src = logoPath;
             img.alt = 'logo';
-            img.className = 'h-10 w-10 object-contain';
+            img.className = 'h-12 w-12 object-contain';
             img.onerror = (e) => (e.currentTarget.style.display = 'none');
             wrapper.appendChild(img);
           }
@@ -88,7 +88,7 @@ export default function CalendarView({
             ${(() => {
               const logo = getCustomerLogo ? getCustomerLogo(job.customer) : `/assets/logos/${job.customer?.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`;
               if (!logo) return '';
-              return `<img src='${logo}' alt='logo' style='height: 54px; width: 54px; object-fit: contain;' onerror="this.style.display='none'" />`;
+              return `<img src='${logo}' alt='logo' style='height: 64px; width: 64px; object-fit: contain;' onerror="this.style.display='none'" />`;
             })()}
           </div>
           <div style='margin-bottom: 4px;'>LSD: ${job.surface_lsd || 'N/A'}</div>
