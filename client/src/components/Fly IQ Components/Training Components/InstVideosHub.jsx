@@ -33,8 +33,14 @@ export default function InstVideosHub({ onClose }) {
     fetch(resolveApiUrl(`/api/instructional-videos-hub?tab=${encodeURIComponent(tab)}`))
       .then((res) => res.json())
       .then((data) => {
-        setVideos(data);
-        setActiveVideo(data[0] || null);
+        const normalized = Array.isArray(data)
+          ? data.map(video => ({
+              ...video,
+              file_url: resolveApiUrl(video?.file_url || '')
+            }))
+          : [];
+        setVideos(normalized);
+        setActiveVideo(normalized[0] || null);
         setLoading(false);
       })
       .catch(() => setLoading(false));
