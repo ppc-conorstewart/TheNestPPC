@@ -1,6 +1,7 @@
 // ==============================
 // FILE: server/index.js — Express App Entry
-// Sections: Imports • Middleware • Routers • Discord Proxy • Action Items (In-Memory) • Exports
+// Source Baseline: :contentReference[oaicite:0]{index=0}
+// Sections: Imports • Middleware • Routers • Discord Proxy • Action Items (In-Memory) • Admin Import (Seed) • Exports
 // ==============================
 
 const express = require('express')
@@ -502,4 +503,14 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
+// ==============================
+// SECTION: Admin Import (Seed)
+// ==============================
+if (process.env.ADMIN_IMPORT_KEY) {
+  app.use('/api/admin', require('./routes/adminImport'))
+}
+
+// ==============================
+// SECTION: Exports
+// ==============================
 module.exports = app
