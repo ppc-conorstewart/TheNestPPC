@@ -19,12 +19,37 @@ function isConfigured () {
   return Boolean(token && guildId)
 }
 
+function resolveAvatarUrl (member) {
+  const user = member?.user || {}
+  const userId = user.id
+  if (member?.avatar && userId) {
+    const hash = member.avatar
+    const ext = hash.startsWith('a_') ? 'gif' : 'png'
+    return `https://cdn.discordapp.com/guilds/${guildId}/users/${userId}/avatars/${hash}.${ext}?size=64`
+  }
+  if (user.avatar && userId) {
+    const hash = user.avatar
+    const ext = hash.startsWith('a_') ? 'gif' : 'png'
+    return `https://cdn.discordapp.com/avatars/${userId}/${hash}.${ext}?size=64`
+  }
+  const discriminator = typeof user.discriminator === 'string' ? user.discriminator : null
+  let idx = 0
+  if (discriminator && discriminator !== '0') {
+    idx = Number(discriminator) % 5
+  } else if (userId) {
+    const last = userId.slice(-1)
+    idx = Number.isInteger(Number(last)) ? Number(last) % 5 : 0
+  }
+  return `https://cdn.discordapp.com/embed/avatars/${idx}.png`
+}
+
 function shapeMember (member) {
   const user = member?.user || {}
   return {
     id: user.id,
     username: user.username,
-    displayName: member.nick || user.global_name || user.display_name || user.username || ''
+    displayName: member.nick || user.global_name || user.display_name || user.username || '',
+    avatar: resolveAvatarUrl(member)
   }
 }
 
