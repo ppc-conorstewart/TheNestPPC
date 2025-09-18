@@ -119,8 +119,8 @@ function AddModal({ open, onClose, onSubmit }) {
 
   if (!open) return null
   return (
-    <div className='absolute inset-0 z-50'>
-      <div className='bg-black rounded-2xl border-2 border-[#6a7257] w-full h-full flex flex-col overflow-hidden'>
+    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'>
+      <div className='bg-black rounded-2xl border-2 border-[#6a7257] w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden'>
         <div className='flex items-center justify-between px-4 pt-3 pb-2'>
           <h3 className='text-base font-extrabold text-[#e6e8df]'>Add Action Item</h3>
           <button className='text-gray-400 hover:text-[#f00] font-bold text-lg leading-none' onClick={onClose}>×</button>
@@ -142,158 +142,159 @@ function AddModal({ open, onClose, onSubmit }) {
               attachment_name: fileName || null
             })
           }}
-          className='px-4 pb-3'
+          className='flex flex-col flex-1 px-4 pb-3'
         >
-          <div className='grid grid-cols-2 gap-3'>
-            <div className='grid gap-3'>
-              <label className='text-xs font-bold text-[#e6e8df]'>
-                Description
-                <textarea
-                  rows={2}
-                  className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs resize-none'
-                  value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  required
-                />
-              </label>
-
-              <div className='grid grid-cols-3 gap-3'>
+          <div className='flex-1 overflow-y-auto pr-1'>
+            <div className='grid grid-cols-2 gap-3'>
+              <div className='grid gap-3'>
                 <label className='text-xs font-bold text-[#e6e8df]'>
-                  Priority
-                  <select
-                    className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
-                    value={form.priority}
-                    onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                  >
-                    <option>Low</option>
-                    <option>Normal</option>
-                    <option>High</option>
-                    <option>Urgent</option>
-                  </select>
-                </label>
-                <label className='text-xs font-bold text-[#e6e8df]'>
-                  Category
-                  <select
-                    className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
-                    value={form.category}
-                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                  >
-                    <option>General</option>
-                    <option>Operations</option>
-                    <option>Safety</option>
-                    <option>Logistics</option>
-                    <option>Finance</option>
-                  </select>
-                </label>
-                <label className='text-xs font-bold text-[#e6e8df]'>
-                  Due Date
-                  <input
-                    type='date'
-                    className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
-                    value={form.due_date}
-                    onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
+                  Description
+                  <textarea
+                    rows={2}
+                    className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs resize-none'
+                    value={form.description}
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                    required
                   />
                 </label>
+
+                <div className='grid grid-cols-3 gap-3'>
+                  <label className='text-xs font-bold text-[#e6e8df]'>
+                    Priority
+                    <select
+                      className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
+                      value={form.priority}
+                      onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
+                    >
+                      <option>Low</option>
+                      <option>Normal</option>
+                      <option>High</option>
+                      <option>Urgent</option>
+                    </select>
+                  </label>
+                  <label className='text-xs font-bold text-[#e6e8df]'>
+                    Category
+                    <select
+                      className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
+                      value={form.category}
+                      onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    >
+                      <option>General</option>
+                      <option>Operations</option>
+                      <option>Safety</option>
+                      <option>Logistics</option>
+                      <option>Finance</option>
+                    </select>
+                  </label>
+                  <label className='text-xs font-bold text-[#e6e8df]'>
+                    Due Date
+                    <input
+                      type='date'
+                      className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
+                      value={form.due_date}
+                      onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
+                    />
+                  </label>
+                </div>
+
+                <div className='grid gap-2'>
+                  <div className='text-xs font-bold text-[#e6e8df]'>Selected Stakeholders</div>
+                  <div className='flex flex-wrap gap-1'>
+                    {Object.values(picked).map(m => (
+                      <span key={m.id} className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#3a3d33] text-[11px] text-[#b0b79f]'>
+                        <FiUser className='opacity-80' /> {(m.displayName || m.username)}
+                        <button type='button' className='ml-1 text-[#6a7257] hover:text-[#ffe066] font-bold' onClick={() => removePick(m.id)}>×</button>
+                      </span>
+                    ))}
+                    {Object.keys(picked).length === 0 && (
+                      <span className='text-[11px] text-[#6a7257] italic'>None</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className='grid gap-2'>
-                <div className='text-xs font-bold text-[#e6e8df]'>Selected Stakeholders</div>
-                <div className='flex flex-wrap gap-1'>
-                  {Object.values(picked).map(m => (
-                    <span key={m.id} className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#3a3d33] text-[11px] text-[#b0b79f]'>
-                      <FiUser className='opacity-80' /> {(m.displayName || m.username)}
-                      <button type='button' className='ml-1 text-[#6a7257] hover:text-[#ffe066] font-bold' onClick={() => removePick(m.id)}>×</button>
-                    </span>
-                  ))}
-                  {Object.keys(picked).length === 0 && (
-                    <span className='text-[11px] text-[#6a7257] italic'>None</span>
+                <div className='text-xs font-bold text-[#e6e8df]'>Discord Members</div>
+
+                <div className='relative grid gap-0'>
+                  <input
+                    className='w-full px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs mt-0'
+                    placeholder='Search members...'
+                    value={query}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setTimeout(() => setFocused(false), 150)}
+                    onChange={e => setQuery(e.target.value)}
+                  />
+
+                  {focused && suggestions.length > 0 && (
+                    <div className='absolute left-0 right-0 top-[30px] rounded-lg border-2 border-[#3a3d33] bg-[#171a14] p-1 z-10'>
+                      {suggestions.map(m => (
+                        <label key={m.id} className='flex items-center gap-2 py-1 px-2 text-[12px] text-[#cfd3c3] cursor-pointer hover:bg-[#20241a] rounded'>
+                          <input
+                            type='checkbox'
+                            checked={!!picked[m.id]}
+                            onChange={() => togglePick(m)}
+                            className='accent-[#6a7257]'
+                          />
+                          {m.avatar ? <img src={m.avatar} alt='' className='w-5 h-5 rounded-full' /> : <FiUser className='opacity-70' />}
+                          <span className='font-bold'>{m.displayName || m.username}</span>
+                        </label>
+                      ))}
+                    </div>
                   )}
+                </div>
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+                  onDrop={onDrop}
+                  className='rounded-xl border-2 border-dashed border-[#3a3d33] bg-[#171a14] px-3 py-3'
+                  style={{ minHeight: 140 }}
+                >
+                  {!fileUrl ? (
+                    <div className='flex items-center gap-2 text-[12px] text-[#cfd3c3]'>
+                      <FiPaperclip className='opacity-80' />
+                      <span className='font-bold'>Drag & drop file here, or</span>
+                      <button
+                        type='button'
+                        onClick={() => inputRef.current?.click()}
+                        className='underline'
+                      >
+                        browse
+                      </button>
+                      {uploading && <span className='italic text-[#6a7257]'>uploading…</span>}
+                    </div>
+                  ) : (
+                    <div className='flex items-center justify-between'>
+                      <div className='flex items-center gap-2 text-[12px] text-[#cfd3c3]'>
+                        <FiPaperclip className='opacity-80' />
+                        <span className='font-bold'>{fileName}</span>
+                        <span className='text-[#6a7257] font-mono'>{fileUrl}</span>
+                      </div>
+                      <button
+                        type='button'
+                        onClick={() => { setFileUrl(''); setFileName('') }}
+                        className='text-[#ffe066] hover:text-white'
+                        title='Remove'
+                      >
+                        <FiX />
+                      </button>
+                    </div>
+                  )}
+                  <input
+                    ref={inputRef}
+                    type='file'
+                    className='hidden'
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) doUpload(f)
+                      e.currentTarget.value = ''
+                    }}
+                  />
                 </div>
               </div>
             </div>
-
-            <div className='grid gap-2'>
-              <div className='text-xs font-bold text-[#e6e8df]'>Discord Members</div>
-
-              <div className='relative grid gap-0'>
-                <input
-                  className='w-full px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs mt-0'
-                  placeholder='Search members...'
-                  value={query}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => setTimeout(() => setFocused(false), 150)}
-                  onChange={e => setQuery(e.target.value)}
-                />
-
-                {focused && suggestions.length > 0 && (
-                  <div className='absolute left-0 right-0 top-[30px] rounded-lg border-2 border-[#3a3d33] bg-[#171a14] p-1 z-10'>
-                    {suggestions.map(m => (
-                      <label key={m.id} className='flex items-center gap-2 py-1 px-2 text-[12px] text-[#cfd3c3] cursor-pointer hover:bg-[#20241a] rounded'>
-                        <input
-                          type='checkbox'
-                          checked={!!picked[m.id]}
-                          onChange={() => togglePick(m)}
-                          className='accent-[#6a7257]'
-                        />
-                        {m.avatar ? <img src={m.avatar} alt='' className='w-5 h-5 rounded-full' /> : <FiUser className='opacity-70' />}
-                        <span className='font-bold'>{m.displayName || m.username}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div
-                onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
-                onDrop={onDrop}
-                className='rounded-xl border-2 border-dashed border-[#3a3d33] bg-[#171a14] px-3 py-3'
-                style={{ minHeight: 140 }}
-              >
-                {!fileUrl ? (
-                  <div className='flex items-center gap-2 text-[12px] text-[#cfd3c3]'>
-                    <FiPaperclip className='opacity-80' />
-                    <span className='font-bold'>Drag & drop file here, or</span>
-                    <button
-                      type='button'
-                      onClick={() => inputRef.current?.click()}
-                      className='underline'
-                    >
-                      browse
-                    </button>
-                    {uploading && <span className='italic text-[#6a7257]'>uploading…</span>}
-                  </div>
-                ) : (
-                  <div className='flex items-center justify-between'>
-                    <div className='flex items-center gap-2 text-[12px] text-[#cfd3c3]'>
-                      <FiPaperclip className='opacity-80' />
-                      <span className='font-bold'>{fileName}</span>
-                      <span className='text-[#6a7257] font-mono'>{fileUrl}</span>
-                    </div>
-                    <button
-                      type='button'
-                      onClick={() => { setFileUrl(''); setFileName('') }}
-                      className='text-[#ffe066] hover:text-white'
-                      title='Remove'
-                    >
-                      <FiX />
-                    </button>
-                  </div>
-                )}
-                <input
-                  ref={inputRef}
-                  type='file'
-                  className='hidden'
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]
-                    if (f) doUpload(f)
-                    e.currentTarget.value = ''
-                  }}
-                />
-              </div>
-            </div>
           </div>
-
-          <div className='mt-3 flex justify-end gap-2'>
+          <div className='mt-3 flex justify-end gap-2 shrink-0'>
             <button
               type='button'
               className='px-3 py-1 rounded font-bold text-xs'
