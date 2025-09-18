@@ -3,7 +3,7 @@
 // ==============================
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import ResourcesSidebar from '../SiteMeasurementsCanvasComponents/ResourcesSidebar';
+import ResourcesSidebar from './ResourcesSidebar';
 import SiteMeasurementsCanvas from './SiteMeasurementsCanvas';
 
 // ==============================

@@ -133,8 +133,8 @@ const documentsRouter = require('./routes/documents')
 const serviceEquipmentRouter = require('./routes/serviceEquipment')
 const workordersRouter = require('./routes/workorders')
 const glbAssetsRouter = require('./routes/glbAssets')
-
 const fieldEmployeesRouter = require('./routes/fieldEmployees')
+const libraryRouter = require('./routes/library')
 
 app.use('/api/mfv', mfvPadsRouter)
 app.use('/api', draftsRouter)
@@ -155,6 +155,7 @@ app.use('/api/service-equipment', serviceEquipmentRouter)
 app.use('/api/workorders', workordersRouter)
 app.use('/api/glb-assets', glbAssetsRouter)
 app.use('/api/field-employees', fieldEmployeesRouter)
+app.use('/api/library', libraryRouter)
 
 // ==============================
 // SECTION: Universal Upload
@@ -452,8 +453,7 @@ app.post('/api/hq/action-items', async (req, res) => {
     })
 
     rawStakeholderNames.forEach(name => {
-      if (!name) return
-      registerDetail(null, name)
+      if (name) registerDetail(null, name)
     })
 
     const stakeholderNames = stakeholderDetails.map(detail => detail.name).filter(Boolean)
@@ -537,7 +537,7 @@ app.post('/api/hq/action-items', async (req, res) => {
             await fetch(`${BOT_SERVICE_URL}/dm`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-              body: JSON.stringify({ userId: detail.id, message, attachments, components: buttonComponents })
+              body: JSON.stringify({ userId: detail.id, message, attachments })
             })
           } catch (err) {
             console.error(`Failed to dispatch action item DM to ${detail.id}:`, err)
