@@ -376,8 +376,30 @@ app.post('/api/hq/action-items', async (req, res) => {
       const attachments = []
       if (item.attachment_url) {
         const attachmentLabel = item.attachment_name || 'Attachment'
-        message += `\n**${attachmentLabel}:** Attached`
-        attachments.push({ url: item.attachment_url, name: item.attachment_name || undefined })
+        const absoluteUrl = (() => {
+          const raw = item.attachment_url
+          if (!raw) return null
+          if (/^https?:\/\//i.test(raw)) return raw
+          const preferredBase = process.env.NEST_PUBLIC_BASE_URL || process.env.NEST_PUBLIC_UPLOAD_BASE || process.env.FRONTEND_URL || ''
+          const reqOrigin = (() => {
+            if (!req || !req.get) return ''
+            const proto = req.protocol || 'https'
+            const host = req.get('host')
+            if (!host) return ''
+            return `${proto}://${host}`
+          })()
+          const base = (preferredBase || reqOrigin || '').replace(/\/+$/, '')
+          if (!base) return null
+          const suffix = raw.startsWith('/') ? raw : `/${raw}`
+          return `${base}${suffix}`
+        })()
+
+        if (absoluteUrl) {
+          message += `\n**${attachmentLabel}:** Attached — ${absoluteUrl}`
+          attachments.push({ url: absoluteUrl, name: item.attachment_name || undefined })
+        } else {
+          message += `\n**${attachmentLabel}:** ${item.attachment_url}`
+        }
       }
 
       if (BOT_SERVICE_URL) {
