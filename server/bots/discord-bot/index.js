@@ -28,9 +28,10 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.DirectMessages
   ],
-  partials: [Partials.Channel, Partials.GuildMember, Partials.Message]
+  partials: [Partials.Channel, Partials.GuildMember, Partials.Message, Partials.User]
 })
 
 client.once('ready', () => {
@@ -128,6 +129,42 @@ app.post('/announce/test', async (req, res) => {
   } catch (e) {
     console.error('[BOT] /announce/test error:', e)
     res.status(500).json({ error: 'failed_to_test' })
+  }
+})
+
+// Send direct messages to one or more users
+app.post('/dm', async (req, res) => {
+  try {
+    const { userId, userIds, message } = req.body || {}
+    const ids = new Set()
+    if (userId) ids.add(String(userId))
+    if (Array.isArray(userIds)) {
+      for (const id of userIds) {
+        if (id) ids.add(String(id))
+      }
+    }
+    if (!ids.size || !message) {
+      return res.status(400).json({ error: 'userIds_and_message_required' })
+    }
+
+    const results = []
+    for (const id of ids) {
+      try {
+        const user = await client.users.fetch(id)
+        if (!user) throw new Error('user_not_found')
+        const sent = await user.send({ content: message })
+        results.push({ userId: id, ok: true, messageId: sent.id })
+      } catch (err) {
+        console.error(`[BOT] DM to ${id} failed:`, err)
+        results.push({ userId: id, ok: false, reason: String(err?.message || err) })
+      }
+    }
+
+    const ok = results.some(r => r.ok)
+    res.status(ok ? 200 : 500).json({ ok, results })
+  } catch (e) {
+    console.error('[BOT] /dm error:', e)
+    res.status(500).json({ error: 'failed_to_dm' })
   }
 })
 

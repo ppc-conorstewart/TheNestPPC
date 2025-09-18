@@ -368,18 +368,27 @@ app.post('/api/hq/action-items', async (req, res) => {
 
     if (dmIds.size) {
       const dateStr = item.due_date ? new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A'
-      const message =
+      let message =
 `You have been Added to an Action Item:\n` +
 `**Description:** ${item.description}\n` +
 `**Priority:** ${item.priority}\n` +
-`**Due Date:** ${dateStr}` +
-`${item.attachment_url ? `\n**Attached File:** ${item.attachment_name || 'attachment'}` : ''}`
+`**Due Date:** ${dateStr}`
+      if (item.attachment_url) {
+        const attachmentLabel = item.attachment_name || 'Attachment'
+        message += `\n**${attachmentLabel}:** ${item.attachment_url}`
+      }
+
       if (BOT_SERVICE_URL) {
-        try { await fetch(`${BOT_SERVICE_URL}/dm`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-          body: JSON.stringify({ userId: Array.from(dmIds)[0], message, attachmentUrl: item.attachment_url, attachmentName: item.attachment_name })
-        }) } catch {}
+        const recipients = Array.from(dmIds)
+        try {
+          await fetch(`${BOT_SERVICE_URL}/dm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
+            body: JSON.stringify({ userIds: recipients, message })
+          })
+        } catch (err) {
+          console.error('Failed to dispatch action item DM:', err)
+        }
       }
     }
 
