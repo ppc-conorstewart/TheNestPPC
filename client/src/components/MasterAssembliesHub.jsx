@@ -8,6 +8,7 @@ import { API } from '../api';
 import AssembliesNav from '../components/Master Assembly Components/AssembliesNav';
 import MasterAssetVisualPanel from '../components/Master Assembly Components/MasterAssetVisualPanel';
 import { showPalomaToast } from '../utils/toastUtils';
+import { getStoredDiscordName } from '../utils/currentUser';
 
 // =================== Assemblies Catalog ===================
 const ASSEMBLIES = [
@@ -65,6 +66,7 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [preAssignedByAssembly, setPreAssignedByAssembly] = useState({});
   const [updateStatus, setUpdateStatus] = useState('idle');
+  const currentUserName = useMemo(() => getStoredDiscordName(), []);
 
   // =================== Derived: selection from URL ===================
   const assemblyParam = searchParams.get('assembly') || 'Dog Bones';
@@ -196,10 +198,10 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(entry),
+        body: JSON.stringify({ ...entry, user: entry?.user || currentUserName }),
       });
     } catch {}
-  }, []);
+  }, [currentUserName]);
   const fetchMasterHistory = useCallback(async () => {
     try {
       const res = await fetch(API + '/api/master/history', { credentials: 'include' });
@@ -221,7 +223,7 @@ export default function MasterAssembliesHub({ historyOpen = false, setHistoryOpe
           slot: entry.slot,
           asset_id: entry.assetId,
           asset_name: entry.assetName,
-          user: entry.user || 'Current User',
+          user: entry.user || currentUserName,
         });
       }
       await fetchMasterHistory();

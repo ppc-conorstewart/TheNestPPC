@@ -47,6 +47,7 @@ import {
 } from './Support Files/masterMetaApi';
 
 import { showPalomaToast } from '../../utils/toastUtils';
+import { getStoredDiscordName } from '../../utils/currentUser';
 import { makeGroupings } from './Support Files/maDerived';
 
 // ==============================
@@ -97,6 +98,7 @@ export default function MasterAssetVisualPanel({
   const [savedState, setSavedState] = useState({});
   const [savedGaskets, setSavedGaskets] = useState({});
   const [savedMeta, setSavedMeta] = useState({ status: 'Inactive', creationDate: '', recertDate: '' });
+  const currentUserName = useMemo(() => getStoredDiscordName(), []);
 
   const rowRefs = useRef({});
   const [isSaving, setIsSaving] = useState(false);
@@ -331,7 +333,7 @@ export default function MasterAssetVisualPanel({
           recert_date: recertDate || null,
           assignments,
           gaskets,
-          updated_by: 'Current User'
+          updated_by: currentUserName
         })
       });
 
@@ -381,7 +383,7 @@ export default function MasterAssetVisualPanel({
           slot: slotKey,
           assetId,
           assetName: '',
-          user: 'Current User',
+          user: currentUserName,
         }]);
       }
     } catch (e) {
@@ -410,7 +412,7 @@ export default function MasterAssetVisualPanel({
           status: statusRef.current,
           creation_date: null,
           recert_date: null,
-          updated_by: 'Current User'
+          updated_by: currentUserName
         })
       });
       setSavedMeta({ status: statusRef.current, creationDate: '', recertDate: '' });

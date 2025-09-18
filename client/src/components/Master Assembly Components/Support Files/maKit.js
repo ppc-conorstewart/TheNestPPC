@@ -3,6 +3,7 @@
 // ==============================
 import { useState } from 'react';
 import { API } from '../../../api';
+import { getStoredDiscordName } from '../../../utils/currentUser';
 import {
   cardBg,
   DIGIT_COLOR,
@@ -25,12 +26,14 @@ export async function apiFetchAssignments(assemblyTitle, selectedChild) {
   if (!res.ok) return [];
   return res.json();
 }
+const currentUserName = () => getStoredDiscordName();
+
 export async function apiUpsertAssignment({ assembly, child, slot, asset_id }) {
   await fetch(`${API}/api/master/assignment`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ assembly, child, slot, asset_id, updated_by: 'Current User' }),
+    body: JSON.stringify({ assembly, child, slot, asset_id, updated_by: currentUserName() }),
   });
 }
 export async function apiDeleteAssignment({ assembly, child, slot, new_status, notes }) {
@@ -38,7 +41,7 @@ export async function apiDeleteAssignment({ assembly, child, slot, new_status, n
     method: 'DELETE',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ assembly, child, slot, new_status, notes, updated_by: 'Current User' }),
+    body: JSON.stringify({ assembly, child, slot, new_status, notes, updated_by: currentUserName() }),
   });
 }
 export async function apiUpdateAssetStatus(assetId, status) {

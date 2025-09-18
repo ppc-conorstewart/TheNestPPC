@@ -4,6 +4,7 @@
 // ==============================
 
 import { resolveApiUrl } from '../../../api';
+import { getStoredDiscordName } from '../../../utils/currentUser';
 const MASTER_BASE = '/api/master';
 const masterUrl = (suffix = '') => resolveApiUrl(`${MASTER_BASE}${suffix}`);
 
@@ -40,14 +41,15 @@ export async function apiFetchMeta(assembly, child) {
   return normDates(data);
 }
 
-export async function apiSaveMeta({ assembly, child, status, creation_date, recert_date, updated_by = 'Current User' }) {
+export async function apiSaveMeta({ assembly, child, status, creation_date, recert_date, updated_by } ) {
+  const userName = updated_by || getStoredDiscordName();
   const body = {
     assembly,
     child,
     status,
     creation_date: normDate(creation_date),
     recert_date: normDate(recert_date),
-    updated_by
+    updated_by: userName
   };
   const res = await fetch(masterUrl('/meta'), {
     method: 'PUT',
@@ -69,7 +71,7 @@ export async function apiFetchGaskets(assembly, child) {
   return await res.json();
 }
 
-export async function apiSaveGasketsBulk({ assembly, child, items, updated_by = 'Current User' }) {
+export async function apiSaveGasketsBulk({ assembly, child, items, updated_by }) {
   const payload = items.map(i => ({
     ...i,
     gasket_date: normDate(i.gasket_date)
@@ -78,7 +80,7 @@ export async function apiSaveGasketsBulk({ assembly, child, items, updated_by = 
     method: 'PUT',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ assembly, child, items: payload, updated_by })
+    body: JSON.stringify({ assembly, child, items: payload, updated_by: updated_by || getStoredDiscordName() })
   });
   if (!res.ok) throw new Error('Failed to save gaskets');
   return await res.json();

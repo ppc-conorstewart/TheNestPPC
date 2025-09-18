@@ -3,6 +3,7 @@
 // ==============================
 import { useState } from 'react';
 import { API } from '../../../api';
+import { getStoredDiscordName } from '../../../utils/currentUser';
 
 // ==============================
 // Colors & Constants
@@ -76,12 +77,14 @@ export async function apiFetchAssignments(assemblyTitle, selectedChild) {
   }
 }
 
+const currentUserName = () => getStoredDiscordName();
+
 export async function apiUpsertAssignment({ assembly, child, slot, asset_id }) {
   await fetch(`${API}/api/master/assignment`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ assembly, child, slot, asset_id, updated_by: 'Current User' }),
+    body: JSON.stringify({ assembly, child, slot, asset_id, updated_by: currentUserName() }),
   });
 }
 
@@ -90,7 +93,7 @@ export async function apiDeleteAssignment({ assembly, child, slot, new_status, n
     method: 'DELETE',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ assembly, child, slot, new_status, notes, updated_by: 'Current User' }),
+    body: JSON.stringify({ assembly, child, slot, new_status, notes, updated_by: currentUserName() }),
   });
 }
 
