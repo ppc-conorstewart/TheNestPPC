@@ -3,9 +3,8 @@
 // Sections: Imports • Constants • Component (fetch channels) • Layout
 // ==============================
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-
-const EMOJI_SET = ['🔥','✅','⚠️','📌','🛠️','🗓️','⏰','🏁','📣','🤝','✨','🔁'];
+import { useEffect, useRef, useState } from 'react';
+import { resolveApiUrl, resolveBotUrl } from '../../api';
 
 export default function AnnouncementsTab() {
   const [announcements, setAnnouncements] = useState([]);
@@ -18,32 +17,81 @@ export default function AnnouncementsTab() {
   const [schedule, setSchedule] = useState('');
   const [recurrence, setRecurrence] = useState('none');
   const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [sendStatus, setSendStatus] = useState(null);
 
-  const [templates, setTemplates] = useState([
-    { id: 'shift-change', name: 'Shift Change', title: 'Shift Handover', message: 'Please review the handover notes and acknowledge with ✅.' },
-    { id: 'safety-tip', name: 'Daily Safety Tip', title: 'Safety Tip', message: 'Wear appropriate PPE and perform a pre-job hazard assessment.' }
-  ]);
-  const [templateSearch, setTemplateSearch] = useState('');
+  const getBotKey = () => {
+    if (typeof window !== 'undefined') {
+      const stored = window.localStorage?.getItem('bot_key');
+      if (stored) return stored;
+    }
+    return process.env.REACT_APP_BOT_KEY || 'Paloma2025*';
+  };
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('http://localhost:3020/channels', { headers: { 'x-bot-key': localStorage.getItem('bot_key') || 'Paloma2025*' } });
-        const data = await res.json();
-        if (Array.isArray(data)) setChannels(data);
-      } catch {}
-    })();
+    let cancelled = false;
+    const loadChannels = async () => {
+      const resolvedDirect = resolveBotUrl('/channels');
+      const directUrl = resolvedDirect && /^https?:\/\//i.test(resolvedDirect) ? resolvedDirect : '';
+      const fallbackUrl = resolveApiUrl('/api/discord/channels');
+      const botKey = getBotKey();
+
+      const attempt = async (url, options) => {
+        if (!url) return null;
+        try {
+          const res = await fetch(url, options);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          return Array.isArray(data) ? data : null;
+        } catch (err) {
+          console.warn('Failed to load Discord channels from', url, err);
+          return null;
+        }
+      };
+
+      const headers = botKey ? { 'x-bot-key': botKey } : undefined;
+      let list = await attempt(directUrl, directUrl ? { headers } : undefined);
+      if (!list) list = await attempt(fallbackUrl);
+      if (!cancelled && Array.isArray(list)) setChannels(list);
+    };
+
+    loadChannels();
+    return () => { cancelled = true; };
   }, []);
 
-  const filteredTemplates = useMemo(() => {
-    const q = templateSearch.trim().toLowerCase();
-    if (!q) return templates;
-    return templates.filter(t => (t.name + ' ' + t.title + ' ' + t.message).toLowerCase().includes(q));
-  }, [templateSearch, templates]);
+  const uploadAttachment = async (file) => {
+    try {
+      const fd = new FormData();
+      fd.append('model', file);
+      const res = await fetch(resolveApiUrl('/api/upload-model'), { method: 'POST', body: fd });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (!data?.url) throw new Error('Upload response missing URL');
+      return { name: file.name, url: data.url };
+    } catch (err) {
+      console.error('Failed to upload attachment', err);
+      setSendStatus({ type: 'error', note: `Failed to upload ${file.name}` });
+      return null;
+    }
+  };
 
-  const handleFileUpload = e => {
-    const files = Array.from(e.target.files);
-    setAttachments([...attachments, ...files.map(f => f.name)]);
+  const handleFileUpload = async e => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setUploading(true);
+    const uploaded = [];
+    for (const file of files) {
+      const result = await uploadAttachment(file);
+      if (result) uploaded.push(result);
+    }
+    setAttachments(prev => [...prev, ...uploaded]);
+    setUploading(false);
+    if (e.target) e.target.value = '';
+  };
+
+  const removeAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleAddAnnouncement = () => {
@@ -56,7 +104,7 @@ export default function AnnouncementsTab() {
       channel: ch ? `#${ch.name}` : '',
       schedule,
       recurrence,
-      attachments
+      attachments: attachments.map(att => ({ ...att }))
     };
     setAnnouncements([newItem, ...announcements]);
     setTitle('');
@@ -65,17 +113,6 @@ export default function AnnouncementsTab() {
     setSchedule('');
     setRecurrence('none');
     setAttachments([]);
-  };
-
-  const handleSaveTemplate = () => {
-    const name = title || 'Untitled Template';
-    const id = `tpl-${Date.now()}`;
-    setTemplates([...templates, { id, name, title: title || '', message: message || '' }]);
-  };
-
-  const applyTemplate = tpl => {
-    setTitle(tpl.title);
-    setMessage(tpl.message);
   };
 
   const applyMarkdown = (syntaxBefore, syntaxAfter = '') => {
@@ -96,20 +133,83 @@ export default function AnnouncementsTab() {
     });
   };
 
-  const insertEmoji = emo => {
-    const el = messageRef.current;
-    if (!el) return;
-    const start = el.selectionStart ?? 0;
-    const end = el.selectionEnd ?? 0;
-    const before = message.slice(0, start);
-    const after = message.slice(end);
-    const next = `${before}${emo}${after}`;
-    setMessage(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      const pos = start + emo.length;
-      el.setSelectionRange(pos, pos);
-    });
+  const handleSendNow = async () => {
+    const trimmedTitle = title.trim();
+    const trimmedMessage = message.trim();
+    const contentParts = [];
+    if (trimmedTitle) contentParts.push(`**${trimmedTitle}**`);
+    if (trimmedMessage) contentParts.push(trimmedMessage);
+    const content = contentParts.join('\n');
+
+    if (!channelId || !content) {
+      setSendStatus({ type: 'error', note: 'Select a channel and add a title or message before sending.' });
+      return;
+    }
+
+    if (uploading) {
+      setSendStatus({ type: 'error', note: 'Please wait for attachments to finish uploading.' });
+      return;
+    }
+
+    setIsSending(true);
+    setSendStatus(null);
+
+    const channel = channels.find(ch => ch.id === channelId);
+    const apiUrl = resolveApiUrl('/api/discord/announce');
+    const resolvedDirect = resolveBotUrl('/announce');
+    const directUrl = resolvedDirect && /^https?:\/\//i.test(resolvedDirect) ? resolvedDirect : '';
+    const botKey = getBotKey();
+
+    const errors = [];
+
+    const payload = { channelIds: [channelId], content, attachments };
+
+    const attemptServer = async () => {
+      if (!apiUrl) throw new Error('Missing API endpoint');
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`API ${res.status} ${detail}`.trim());
+      }
+      return res.json().catch(() => ({}));
+    };
+
+    const attemptDirect = async () => {
+      if (!directUrl) throw new Error('Missing direct bot service URL');
+      const headers = { 'Content-Type': 'application/json' };
+      if (botKey) headers['x-bot-key'] = botKey;
+      const res = await fetch(directUrl, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ channelId, message: content, attachments })
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => '');
+        throw new Error(`Bot ${res.status} ${detail}`.trim());
+      }
+      return res.json().catch(() => ({}));
+    };
+
+    try {
+      await attemptServer();
+      setSendStatus({ type: 'success', note: `Message sent to #${channel?.name || 'channel'}.` });
+    } catch (firstErr) {
+      errors.push(firstErr);
+      try {
+        await attemptDirect();
+        setSendStatus({ type: 'success', note: `Message sent via bot to #${channel?.name || 'channel'}.` });
+      } catch (directErr) {
+        errors.push(directErr);
+        const last = errors[errors.length - 1];
+        setSendStatus({ type: 'error', note: last?.message || 'Failed to send message.' });
+      }
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -145,43 +245,13 @@ export default function AnnouncementsTab() {
           Compose Announcement
         </h2>
 
-        {/* ===== Templates Row ===== */}
-        <div className='mb-4'>
-          <div className='flex items-center gap-2 mb-2'>
-            <input
-              type='text'
-              value={templateSearch}
-              onChange={e => setTemplateSearch(e.target.value)}
-              placeholder='Search templates...'
-              className='flex-1 bg-black/70 border border-[#6a7257]/40 rounded-lg px-3 py-2 text-white text-xs placeholder-white/30 focus:border-[#b0b79f] outline-none'
-            />
-            <button
-              onClick={handleSaveTemplate}
-              className='bg-[#6a7257] text-black font-bold uppercase text-xs px-3 py-2 rounded-lg hover:opacity-90 transition'
-            >
-              Save as Template
-            </button>
-          </div>
-          <div className='flex gap-2 overflow-x-auto'>
-            {filteredTemplates.map(tpl => (
-              <button
-                key={tpl.id}
-                onClick={() => applyTemplate(tpl)}
-                className='shrink-0 bg-black/70 border border-[#6a7257]/40 hover:border-[#6a7257] text-white text-xs px-3 py-2 rounded-lg transition'
-              >
-                {tpl.name}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* ===== Title ===== */}
         <input
           type='text'
           value={title}
           onChange={e => setTitle(e.target.value)}
           placeholder='Title'
-          className='bg-black/70 border border-[#6a7257]/40 rounded-lg px-4 py-2 text-white text-sm focus:border-[#b0b79f] outline-none placeholder-white/30 transition mb-4'
+          className='w-full bg-black/70 border border-[#6a7257]/40 rounded-lg px-4 py-2 text-white text-sm focus:border-[#b0b79f] outline-none placeholder-white/30 transition mb-4'
         />
 
         {/* ===== Markdown Toolbar + Emoji ===== */}
@@ -190,11 +260,6 @@ export default function AnnouncementsTab() {
           <button onClick={() => applyMarkdown('*','*')} className='bg-black/70 border border-[#6a7257]/40 rounded px-2 py-1 text-xs text-white hover:border-[#6a7257] transition'>Italic</button>
           <button onClick={() => applyMarkdown('`','`')} className='bg-black/70 border border-[#6a7257]/40 rounded px-2 py-1 text-xs text-white hover:border-[#6a7257] transition'>Code</button>
           <button onClick={() => applyMarkdown('- ')} className='bg-black/70 border border-[#6a7257]/40 rounded px-2 py-1 text-xs text-white hover:border-[#6a7257] transition'>Bullet</button>
-          <div className='ml-auto flex gap-1'>
-            {EMOJI_SET.map(e => (
-              <button key={e} onClick={() => insertEmoji(e)} className='bg-black/70 border border-[#6a7257]/40 rounded px-2 py-1 text-xs hover:border-[#6a7257] transition'>{e}</button>
-            ))}
-          </div>
         </div>
 
         {/* ===== Message ===== */}
@@ -204,7 +269,7 @@ export default function AnnouncementsTab() {
           value={message}
           onChange={e => setMessage(e.target.value)}
           placeholder='Message content...'
-          className='bg-black/70 border border-[#6a7257]/40 rounded-lg px-4 py-2 text-white text-sm focus:border-[#b0b79f] outline-none resize-none placeholder-white/30 transition mb-4'
+          className='w-full bg-black/70 border border-[#6a7257]/40 rounded-lg px-4 py-2 text-white text-sm focus:border-[#b0b79f] outline-none resize-none placeholder-white/30 transition mb-4'
         />
 
         {/* ===== Dropdown (Live Channels) ===== */}
@@ -249,22 +314,56 @@ export default function AnnouncementsTab() {
         </div>
 
         {/* ===== Attachments ===== */}
-        <label className='text-xs uppercase font-bold text-[#b0b79f]'>
+        <label className='text-xs uppercase font-bold text-[#b0b79f] flex flex-col'>
           Attach Files
           <input type='file' multiple onChange={handleFileUpload} className='mt-1 block text-white/70 text-xs' />
         </label>
         {attachments.length > 0 && (
           <div className='flex flex-wrap gap-2 mt-2'>
             {attachments.map((file, i) => (
-              <span key={i} className='bg-[#6a7257]/30 text-white/80 text-xs px-2 py-1 rounded shadow-inner'>{file}</span>
+              <span
+                key={`${file.url}-${i}`}
+                className='bg-[#6a7257]/30 text-white/80 text-xs px-2 py-1 rounded shadow-inner flex items-center gap-2'
+              >
+                <span>📎 {file.name}</span>
+                <a
+                  href={resolveApiUrl(file.url)}
+                  target='_blank'
+                  rel='noreferrer'
+                  className='underline text-white/70 hover:text-white'
+                >
+                  open
+                </a>
+                <button
+                  type='button'
+                  onClick={() => removeAttachment(i)}
+                  className='text-white/70 hover:text-white font-bold'
+                >
+                  ×
+                </button>
+              </span>
             ))}
           </div>
         )}
 
-        {/* ===== Add To Queue ===== */}
+        {/* ===== Actions ===== */}
+        {sendStatus && (
+          <div
+            className={`mt-4 text-xs font-semibold px-3 py-2 rounded-lg border ${sendStatus.type === 'success' ? 'text-[#b6ffb6] border-[#3f5d3f] bg-black/60' : 'text-[#ffb6b6] border-[#5d3f3f] bg-black/60'}`}
+          >
+            {sendStatus.note}
+          </div>
+        )}
+        <button
+          onClick={handleSendNow}
+          disabled={isSending || uploading}
+          className='mt-4 w-full bg-gradient-to-r from-[#ffe066] to-[#b0b79f] text-black font-bold uppercase text-sm px-5 py-2 rounded-lg shadow-md hover:scale-[1.02] hover:shadow-lg transition disabled:opacity-60 disabled:hover:scale-100'
+        >
+          {isSending ? 'Sending…' : uploading ? 'Uploading…' : 'Send Message Now'}
+        </button>
         <button
           onClick={handleAddAnnouncement}
-          className='mt-4 w-full bg-gradient-to-r from-[#6a7257] to-[#b0b79f] text-black font-bold uppercase text-sm px-5 py-2 rounded-lg shadow-md hover:scale-[1.02] hover:shadow-lg transition'
+          className='mt-3 w-full bg-gradient-to-r from-[#6a7257] to-[#b0b79f] text-black font-bold uppercase text-sm px-5 py-2 rounded-lg shadow-md hover:scale-[1.02] hover:shadow-lg transition'
         >
           Add to Queue
         </button>
@@ -281,7 +380,7 @@ export default function AnnouncementsTab() {
           {attachments.length > 0 && (
             <div className='flex flex-wrap gap-2'>
               {attachments.map((file, i) => (
-                <div key={i} className='bg-[#6a7257]/30 border border-[#6a7257]/40 rounded px-3 py-1 text-xs text-white shadow-sm'>📎 {file}</div>
+                <div key={`${file.url}-${i}`} className='bg-[#6a7257]/30 border border-[#6a7257]/40 rounded px-3 py-1 text-xs text-white shadow-sm'>📎 {file.name}</div>
               ))}
             </div>
           )}

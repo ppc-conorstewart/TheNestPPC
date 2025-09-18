@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../api'
 // ===================
 // FILE: src/pages/JobPlannerComponents/TableView.jsx
 // ===================
@@ -117,6 +118,7 @@ export default function TableView({
   onShowBOM,
   handleOpenDocHub,
   onDiscordIdUpdated,
+  getCustomerLogo,
   onAddJob // <-- opens JobModal from parent
 }) {
   const lottieRefs = useRef({});
@@ -156,7 +158,7 @@ export default function TableView({
     if (!discordModalJob) return;
     const jobId = discordModalJob.id;
     try {
-      const res = await fetch(`/api/jobs/${jobId}/discord-channel`, {
+      const res = await fetch(resolveApiUrl(`/api/jobs/${jobId}/discord-channel`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ discord_channel_id: channelId }),
@@ -405,13 +407,18 @@ export default function TableView({
                         <tr key={job.id} className={rowClass}>
                           <td className={`px-1 py-0 border border-[#6a7257] rounded font-bold text-grey bg-white ${BASE_TEXT}`}>
                             <div className='flex flex-col items-center'>
-                              <img
-                                src={`/assets/logos/${job.customer.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`}
-                                alt={`${job.customer} logo`}
-                                className='h-10 w-28 object-contain drop-shadow-xl rounded-md hover:scale-110 transition-transform duration-300'
-                                style={{ background: '#fff', padding: 0, borderRadius: 8 }}
-                                onError={(e) => (e.currentTarget.style.display = 'none')}
-                              />
+                              {(() => {
+                                const logoSrc = getCustomerLogo ? getCustomerLogo(job.customer) : null;
+                                return logoSrc ? (
+                                  <img
+                                    src={logoSrc}
+                                    alt={`${job.customer} logo`}
+                                    className='h-12 w-32 object-contain drop-shadow-xl rounded-md hover:scale-110 transition-transform duration-300'
+                                    style={{ background: '#fff', padding: 2, borderRadius: 10 }}
+                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                  />
+                                ) : null;
+                              })()}
                             </div>
                           </td>
                           <td className={`px-2 py-0 border border-[#232429] text-center font-medium ${textClass}`}>
@@ -690,6 +697,9 @@ export default function TableView({
           isOpen={showDiscordModal}
           onClose={() => setShowDiscordModal(false)}
           onSave={handleSaveDiscordChannel}
+          existingId={discordModalJob.discord_channel_id}
+          job={discordModalJob}
+          getCustomerLogo={getCustomerLogo}
         />
       )}
     </div>

@@ -1,7 +1,9 @@
 // client/src/components/AuditChecklistModal.jsx
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { API_BASE_URL } from '../api';
 
+const API_BASE = API_BASE_URL || '';
 export default function AuditChecklistModal({ isOpen, onClose, job }) {
   const [file, setFile] = useState(null);
 
@@ -16,7 +18,7 @@ export default function AuditChecklistModal({ isOpen, onClose, job }) {
     formData.append('jobId', job.id);
 
     try {
-      const res = await fetch(`http://localhost:3001/api/jobs/${job.id}/audit-checklist`, {
+      const res = await fetch(`${API_BASE}/api/jobs/${job.id}/audit-checklist`, {
         method: 'POST',
         body: formData,
       });

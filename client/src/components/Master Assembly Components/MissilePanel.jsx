@@ -8,6 +8,7 @@ import imgPod1 from '../../assets/Master Assemblies/PNG/doublebarrel1.png';
 import imgBleedOff from '../../assets/Master Assemblies/PNG/doublebarrelut.png';
 import AssetSelector from './AssetSelector';
 import ClearAssetStatusModal from './ClearAssetStatusModal';
+import { getStoredDiscordName } from '../../utils/currentUser';
 
 // ---- Constants
 import {
@@ -52,6 +53,7 @@ export default function MissilePanel({
 
   const [clearModalOpen, setClearModalOpen] = useState(false);
   const [clearTarget, setClearTarget] = useState({ assetId: '', assetName: '', slotKey: '', slotLabel: '' });
+  const currentUserName = useMemo(() => getStoredDiscordName(), []);
   const [savedState, setSavedState] = useState({});
   const rowRefs = useRef({});
   const [highlightLabel, setHighlightLabel] = useState(null);
@@ -142,7 +144,7 @@ export default function MissilePanel({
                   slot: `${selectedChild}-${slotLabel(label)}`,
                   assetId,
                   assetName: '',
-                  user: 'Current User',
+                  user: currentUserName,
                 }
               : null;
           })
@@ -187,7 +189,7 @@ export default function MissilePanel({
             slot: sKey,
             assetId,
             assetName: clearTarget.assetName || '',
-            user: 'Current User',
+            user: currentUserName,
           },
         ]);
       }

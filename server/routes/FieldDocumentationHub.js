@@ -27,6 +27,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
+function resolveStoredFileName(filePath) {
+    if (!filePath) return '';
+    const normalized = String(filePath).trim().replace(/\\/g, '/');
+    return path.basename(normalized);
+}
+
 // ==============================
 // Fetch all documents for a tab
 // ==============================
@@ -39,7 +45,7 @@ router.get('/', async (req, res) => {
         const result = await db.query(
             `SELECT id, file_name, file_path, file_size, mime_type, uploaded_at, tab
              FROM field_documentation_hub_documents
-             WHERE tab = $1 AND deleted = FALSE
+             WHERE tab = $1 AND (deleted IS NOT TRUE)
              ORDER BY uploaded_at DESC`,
             [tab]
         );
@@ -61,13 +67,17 @@ router.get('/files/:id', async (req, res) => {
     const id = req.params.id;
     try {
         const result = await db.query(
-            `SELECT file_name, file_path, mime_type FROM field_documentation_hub_documents WHERE id = $1 AND deleted = FALSE`, [id]
+            `SELECT file_name, file_path, mime_type FROM field_documentation_hub_documents WHERE id = $1 AND (deleted IS NOT TRUE)`, [id]
         );
         if (!result.rows.length) {
             return res.status(404).send('File not found');
         }
         const doc = result.rows[0];
-        const fullPath = path.join(UPLOAD_FOLDER, path.basename(doc.file_path));
+        const storedName = resolveStoredFileName(doc.file_path);
+        if (!storedName) {
+            return res.status(404).send('File missing from disk');
+        }
+        const fullPath = path.join(UPLOAD_FOLDER, storedName);
         if (!fs.existsSync(fullPath)) {
             return res.status(404).send('File missing from disk');
         }
@@ -114,10 +124,12 @@ router.patch('/:id', async (req, res) => {
     try {
         // Get old info
         const result = await db.query(
-            `SELECT file_path FROM field_documentation_hub_documents WHERE id = $1 AND deleted = FALSE`, [id]
+            `SELECT file_path FROM field_documentation_hub_documents WHERE id = $1 AND (deleted IS NOT TRUE)`, [id]
         );
         if (!result.rows.length) return res.status(404).json({ error: 'Document not found' });
         const oldPath = result.rows[0].file_path;
+        const oldStoredName = resolveStoredFileName(oldPath);
+        if (!oldStoredName) return res.status(404).json({ error: 'Document file missing' });
 
         // extract extension from old file and apply to new name if missing
         const oldExt = path.extname(oldPath);
@@ -126,7 +138,7 @@ router.patch('/:id', async (req, res) => {
 
         const sanitized = finalName.replace(/[^a-z0-9.\-_]/gi, '_');
         const newPath = `${Date.now()}__${sanitized}`;
-        const fullOld = path.join(UPLOAD_FOLDER, oldPath);
+        const fullOld = path.join(UPLOAD_FOLDER, oldStoredName);
         const fullNew = path.join(UPLOAD_FOLDER, newPath);
 
         fs.renameSync(fullOld, fullNew);

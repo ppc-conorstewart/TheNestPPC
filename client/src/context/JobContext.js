@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../api'
 // ==============================
 // JobContext.js — Global Job State Context (with Overwatch Sync, History, Required Items)
 // ==============================
@@ -77,7 +78,7 @@ export function JobProvider({ children }) {
     async function fetchJobs() {
       setLoading(true);
       try {
-        const resJobs = await fetch("/api/hq/active-jobs");
+        const resJobs = await fetch(resolveApiUrl("/api/hq/active-jobs"));
         const jobsData = await resJobs.json();
 
         const inProgress = (Array.isArray(jobsData) ? jobsData : []).filter(
@@ -119,7 +120,7 @@ export function JobProvider({ children }) {
     if (!isVisible()) return null;
     if (isAnyMenuOpen()) return null;
 
-    const res = await fetch(`/api/jobs/${jobId}/overwatch`);
+    const res = await fetch(resolveApiUrl(`/api/jobs/${jobId}/overwatch`));
     if (!res.ok) return null;
     const ow = await res.json();
 
@@ -170,7 +171,7 @@ export function JobProvider({ children }) {
       }));
     }
 
-    await fetch(`/api/jobs/${jobId}/update`, {
+    await fetch(resolveApiUrl(`/api/jobs/${jobId}/update`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -186,7 +187,7 @@ export function JobProvider({ children }) {
   // Add Required Item
   // ==============================
   const addRequiredItem = useCallback(async (jobId, { item_text, qty, status }) => {
-    const res = await fetch(`/api/jobs/${jobId}/required-items`, {
+    const res = await fetch(resolveApiUrl(`/api/jobs/${jobId}/required-items`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ item_text, qty, status })
@@ -199,7 +200,7 @@ export function JobProvider({ children }) {
   // Delete Required Item
   // ==============================
   const deleteRequiredItem = useCallback(async (jobId, itemId) => {
-    await fetch(`/api/jobs/${jobId}/required-items/${itemId}`, { method: "DELETE" });
+    await fetch(resolveApiUrl(`/api/jobs/${jobId}/required-items/${itemId}`), { method: "DELETE" });
     await fetchOverwatch(jobId);
   }, [fetchOverwatch]);
 

@@ -15,13 +15,19 @@ import CustomerGeneralInfoPanel from '../components/Customer Hub Components/Cust
 import CustomerListPanel from '../components/Customer Hub Components/CustomerListPanel';
 import CustomerLogoCard from '../components/Customer Hub Components/CustomerLogoCard';
 import CustomerProgramInfo from '../components/Customer Hub Components/CustomerProgramInfo';
+import { API_BASE_URL } from '../api';
+import { prepareCustomerLogoForSubmit, resolveCustomerLogo } from '../utils/customerLogos';
+
+
+const API_BASE = (API_BASE_URL || '').replace(/\/+$/, '');
 
 // ===== CONSTANTS =====
-const API_URL = '/api/customers';
-const IMG_BASE =
-  process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3001'
-    : '';
+const API_URL = `${API_BASE}/api/customers`;
+const normalizeCustomer = (customer) => {
+  if (!customer) return null;
+  const logo = resolveCustomerLogo(customer.logo_url);
+  return { ...customer, logo_url: logo || null };
+};
 
 // ===== COMPONENT =====
 export default function CustomerHub() {
@@ -50,12 +56,24 @@ export default function CustomerHub() {
     try {
       const res = await fetch(API_URL);
       const data = await res.json();
-      setCustomers(data);
+      const normalized = Array.isArray(data) ? data.map(normalizeCustomer) : [];
+      setCustomers(normalized);
       setLoading(false);
       if (selected) {
-        const stillExists = data.find(c => c.id === selected.id);
+        const stillExists = normalized.find(c => c.id === selected.id);
         if (!stillExists) setSelected(null);
-        else setSelected(data.find(c => c.id === selected.id));
+        else {
+          setSelected(stillExists);
+          setForm({
+            name: stillExists.name,
+            logo_url: stillExists.logo_url || '',
+            logoFile: null,
+            category: stillExists.category || '',
+            head_office_address: stillExists.head_office_address || '',
+            head_of_completions: stillExists.head_of_completions || '',
+            head_office_phone: stillExists.head_office_phone || ''
+          });
+        }
       }
     } catch {
       setLoading(false);
@@ -63,16 +81,17 @@ export default function CustomerHub() {
   };
 
   const handleSelect = (customer) => {
-    setSelected(customer);
+    const normalized = normalizeCustomer(customer);
+    setSelected(normalized);
     setEditMode(false);
     setForm({
-      name: customer.name,
-      logo_url: customer.logo_url,
+      name: normalized.name,
+      logo_url: normalized.logo_url || '',
       logoFile: null,
-      category: customer.category || '',
-      head_office_address: customer.head_office_address || '',
-      head_of_completions: customer.head_of_completions || '',
-      head_office_phone: customer.head_office_phone || ''
+      category: normalized.category || '',
+      head_office_address: normalized.head_office_address || '',
+      head_of_completions: normalized.head_of_completions || '',
+      head_office_phone: normalized.head_office_phone || ''
     });
   };
 
@@ -80,7 +99,7 @@ export default function CustomerHub() {
     setEditMode(true);
     setForm({
       name: selected.name,
-      logo_url: selected.logo_url,
+      logo_url: selected.logo_url || '',
       logoFile: null,
       category: selected.category || '',
       head_office_address: selected.head_office_address || '',
@@ -93,7 +112,7 @@ export default function CustomerHub() {
     setEditMode(false);
     setForm({
       name: selected.name,
-      logo_url: selected.logo_url,
+      logo_url: selected.logo_url || '',
       logoFile: null,
       category: selected.category || '',
       head_office_address: selected.head_office_address || '',
@@ -106,7 +125,7 @@ export default function CustomerHub() {
     const data = new FormData();
     data.append('name', form.name);
     if (form.logoFile) data.append('logo', form.logoFile);
-    else data.append('logo_url', form.logo_url || '');
+    else data.append('logo_url', prepareCustomerLogoForSubmit(form.logo_url));
     data.append('head_office_address', form.head_office_address || '');
     data.append('head_of_completions', form.head_of_completions || '');
     data.append('head_office_phone', form.head_office_phone || '');
@@ -117,10 +136,11 @@ export default function CustomerHub() {
       body: data,
     });
     if (res.ok) {
-      const updatedCustomers = await fetch(API_URL).then(r => r.json());
-      setCustomers(updatedCustomers);
-      const updated = updatedCustomers.find(c => c.id === selected.id);
-      setSelected(updated || null);
+      const updatedCustomersRaw = await fetch(API_URL).then(r => r.json());
+      const normalized = Array.isArray(updatedCustomersRaw) ? updatedCustomersRaw.map(normalizeCustomer) : [];
+      setCustomers(normalized);
+      const updated = normalized.find(c => c.id === selected.id) || null;
+      setSelected(updated);
       setEditMode(false);
       setForm({
         name: updated?.name || '',
@@ -138,6 +158,7 @@ export default function CustomerHub() {
     const data = new FormData();
     data.append('name', form.name);
     if (form.logoFile) data.append('logo', form.logoFile);
+    else data.append('logo_url', prepareCustomerLogoForSubmit(form.logo_url));
     data.append('head_office_address', form.head_office_address || '');
     data.append('head_of_completions', form.head_of_completions || '');
     data.append('head_office_phone', form.head_office_phone || '');
@@ -148,10 +169,11 @@ export default function CustomerHub() {
       body: data,
     });
     if (res.ok) {
-      const updatedCustomers = await fetch(API_URL).then(r => r.json());
-      setCustomers(updatedCustomers);
-      const updated = updatedCustomers.find(c => c.name === form.name);
-      setSelected(updated || null);
+      const updatedCustomersRaw = await fetch(API_URL).then(r => r.json());
+      const normalized = Array.isArray(updatedCustomersRaw) ? updatedCustomersRaw.map(normalizeCustomer) : [];
+      setCustomers(normalized);
+      const updated = normalized.find(c => c.name === form.name) || null;
+      setSelected(updated);
       setShowAdd(false);
       setEditMode(false);
       setPendingCategory('');
@@ -190,6 +212,10 @@ export default function CustomerHub() {
     setForm(f => ({ ...f, [field]: value }));
   };
 
+  const handleNameChange = (value) => {
+    setForm(f => ({ ...f, name: value }));
+  };
+
   const getSelectedCard = () => {
     if (!selected) return null;
     if (form.logoFile && form.logo_url) {
@@ -197,11 +223,7 @@ export default function CustomerHub() {
     }
     return {
       ...selected,
-      logo_url: selected.logo_url
-        ? (selected.logo_url.startsWith('http')
-          ? selected.logo_url
-          : IMG_BASE + selected.logo_url)
-        : null
+      logo_url: resolveCustomerLogo(selected.logo_url)
     };
   };
 
@@ -229,14 +251,7 @@ export default function CustomerHub() {
           <div className='flex flex-row gap-4 h-full'>
             {/* Left: Customer List */}
             <CustomerListPanel
-              customers={customers.map(c => ({
-                ...c,
-                logo_url: c.logo_url
-                  ? (c.logo_url.startsWith('http')
-                      ? c.logo_url
-                      : IMG_BASE + c.logo_url)
-                  : null
-              }))}
+              customers={customers}
               selected={selected}
               loading={loading}
               onSelect={handleSelect}
@@ -245,49 +260,58 @@ export default function CustomerHub() {
 
             {/* Right: Customer Info + Program Info */}
             <div className='flex flex-col flex-1 gap-4'>
-              <div className='flex flex-row gap-4'>
-                <div className='glass-card p-6 flex flex-row items-start min-h-[210px] justify-start relative w-full'>
-                  <CustomerLogoCard
-                    selected={getSelectedCard()}
-                    form={form}
-                    editMode={editMode}
-                    onEdit={startEdit}
-                    onSave={saveEdit}
-                    onCancel={cancelEdit}
-                    onDelete={deleteCustomer}
-                    onLogoChange={handleLogoChange}
-                    onLogoDelete={handleLogoDelete}
-                  />
-                  <div className='mx-6 w-[2px] bg-[#949C7F] h-full opacity-40 rounded' />
-                  <CustomerGeneralInfoPanel
-                    selected={selected}
-                    editMode={editMode}
-                    form={form}
-                    onFormChange={handleFormChange}
-                  />
-                </div>
-              </div>
+              {selected ? (
+                <>
+                  <div className='flex flex-row gap-4'>
+                    <div className='glass-card p-6 flex flex-row items-start min-h-[210px] justify-start relative w-full'>
+                      <CustomerLogoCard
+                        selected={getSelectedCard()}
+                        form={form}
+                        editMode={editMode}
+                        onEdit={startEdit}
+                        onSave={saveEdit}
+                        onCancel={cancelEdit}
+                        onDelete={deleteCustomer}
+                        onLogoChange={handleLogoChange}
+                        onLogoDelete={handleLogoDelete}
+                        onNameChange={handleNameChange}
+                      />
+                      <div className='mx-6 w-[2px] bg-[#949C7F] h-full opacity-40 rounded' />
+                      <CustomerGeneralInfoPanel
+                        selected={selected}
+                        editMode={editMode}
+                        form={form}
+                        onFormChange={handleFormChange}
+                      />
+                    </div>
+                  </div>
 
-              <div className='flex flex-row gap-4 flex-1'>
-                {/* If missile, show assigned missiles; else show field contacts */}
-                {selected && selected.category === 'missile' ? (
-                  <div className='glass-card p-6 min-h-[210px] flex-1'>
-                    <div className='text-xl text-center mb-4 text-[#b3b99a]' style={{ fontFamily: 'var(--font-varien, varien, sans-serif)' }}>
-                      Assigned Missile/s
-                    </div>
-                    <div className='text-base text-[#e6e8df] opacity-70'>
-                      [Coming soon: List of assigned missiles for this customer]
-                    </div>
+                  <div className='flex flex-row gap-4 flex-1'>
+                    {/* If missile, show assigned missiles; else show field contacts */}
+                    {selected && selected.category === 'missile' ? (
+                      <div className='glass-card p-6 min-h-[210px] flex-1'>
+                        <div className='text-xl text-center mb-4 text-[#b3b99a]' style={{ fontFamily: 'var(--font-varien, varien, sans-serif)' }}>
+                          Assigned Missile/s
+                        </div>
+                        <div className='text-base text-[#e6e8df] opacity-70'>
+                          [Coming soon: List of assigned missiles for this customer]
+                        </div>
+                      </div>
+                    ) : (
+                      <div className='flex-1'>
+                        <div className='glass-card p-4 h-full'>
+                          <CustomerFieldContacts />
+                        </div>
+                      </div>
+                    )}
+                    <CustomerProgramInfo />
                   </div>
-                ) : (
-                  <div className='flex-1'>
-                    <div className='glass-card p-4 h-full'>
-                      <CustomerFieldContacts />
-                    </div>
-                  </div>
-                )}
-                <CustomerProgramInfo />
-              </div>
+                </>
+              ) : (
+                <div className='glass-card flex-1 min-h-[280px] flex items-center justify-center border border-[#6a7257] text-[#949C7F] text-2xl uppercase tracking-[0.35em]'>
+                  Select a Customer
+                </div>
+              )}
             </div>
           </div>
 
@@ -307,3 +331,5 @@ export default function CustomerHub() {
     </div>
   );
 }
+
+

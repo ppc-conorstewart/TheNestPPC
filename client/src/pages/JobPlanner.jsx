@@ -2,7 +2,7 @@
 // FLY-HQ JOB PLANNER — PAGE
 // ==============================
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { API } from '../api';
@@ -14,6 +14,8 @@ import JobModal from '../components/JobPlannerComponents/JobModal';
 import SourcingModal from '../components/JobPlannerComponents/SourcingModal';
 import TableView from '../components/JobPlannerComponents/TableView';
 import { showPalomaToast } from '../utils/toastUtils';
+import useCustomerLogos from '../hooks/useCustomerLogos';
+import { getCustomerLogo as mapCustomerLogo } from '../utils/customerLogos';
 
 export default function JobPlanner() {
   const [jobs, setJobs] = useState([]);
@@ -60,6 +62,12 @@ export default function JobPlanner() {
   const currentYear = new Date().getFullYear();
   const [showDocHubModal, setShowDocHubModal] = useState(false);
   const [selectedDocHubJob, setSelectedDocHubJob] = useState(null);
+
+  const { logoMap: customerLogoMap } = useCustomerLogos();
+  const getCustomerLogo = useCallback(
+    (name) => mapCustomerLogo(customerLogoMap, name),
+    [customerLogoMap]
+  );
 
   const unlockMonth = (monthKey) => setUnlockedMonths((prev) => ({ ...prev, [monthKey]: true }));
   const lockMonth = (monthKey) => setUnlockedMonths((prev) => { const copy = { ...prev }; delete copy[monthKey]; return copy; });
@@ -314,8 +322,6 @@ export default function JobPlanner() {
            (selectedMonthKey === "Full Year" || !selectedMonthKey || selectedMonthKey === jobMonth);
   });
 
-  const customers = [...new Set(jobs.map(j => j.customer))].sort();
-
   const renderMonthTabs = () => (
     <div className="flex items-center justify-between overflow-x-auto space-x-1 scrollbar-hide w-full">
       {/* Left: Month tabs */}
@@ -454,6 +460,7 @@ export default function JobPlanner() {
                 onShowBOM={handleShowBOM}
                 handleOpenDocHub={handleOpenDocHub}
                 onDiscordIdUpdated={fetchJobs}
+                getCustomerLogo={getCustomerLogo}
                 /* >>> per-month buttons open the same JobModal <<< */
                 onAddJob={() => setShowModal(true)}
               />
@@ -473,6 +480,7 @@ export default function JobPlanner() {
                   allDay: true,
                   extendedProps: { ...job },
                 }))}
+                getCustomerLogo={getCustomerLogo}
               />
             </div>
           </div>
@@ -485,7 +493,6 @@ export default function JobPlanner() {
         onClose={resetForm}
         onSave={handleCreateOrUpdate}
         existingJob={editMode ? newJob : null}
-        customers={customers}
       />
 
       <SourcingModal

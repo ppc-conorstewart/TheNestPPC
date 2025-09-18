@@ -11,6 +11,10 @@ import 'react-calendar/dist/Calendar.css';
 import useAssetOptions from '../hooks/useAssetOptions';
 import '../styles/Calendar.css';
 import DownedAssetEditModal from './Asset Components/Downed Asset Components/DownedAssetEditModal';
+import { API_BASE_URL } from '../api';
+
+
+const API_BASE = API_BASE_URL || '';
 
 // ==============================
 // DOWNED ASSETS TAB — THEME CONSTANTS
@@ -241,7 +245,7 @@ export default function DownedAssetsTab({ allAssets = [], activityLogs = [] }) {
     try {
       await Promise.all(
         ids.map((id) =>
-          fetch('http://localhost:3001/api/assets/' + encodeURIComponent(id), {
+          fetch(`${API_BASE}/api/assets/` + encodeURIComponent(id), {
             method: 'PUT',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
@@ -273,7 +277,7 @@ export default function DownedAssetsTab({ allAssets = [], activityLogs = [] }) {
   async function handleSubmitDowned() {
     if (!addSelectedId) return;
     try {
-      const res = await fetch('http://localhost:3001/api/assets/' + encodeURIComponent(addSelectedId), {
+      const res = await fetch(`${API_BASE}/api/assets/` + encodeURIComponent(addSelectedId), {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -735,3 +739,4 @@ export default function DownedAssetsTab({ allAssets = [], activityLogs = [] }) {
     </div>
   );
 }
+

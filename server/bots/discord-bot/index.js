@@ -1,28 +1,100 @@
 // ==============================
-// FILE: bots/nest-bot/index.js
-// Sections: Env • Discord Setup • Caching • Server Fetch Helpers • Event Handlers • HTTP API (Health • Members • DM • Channels • Announce • Server Data Proxies) • Startup
+// FILE: index.js — Paloma Discord Bot Service
+// SECTIONS: Imports • Config • Discord Client • Express App • Auth Middleware • REST Endpoints • Startup
 // ==============================
 
-require('dotenv').config({ path: __dirname + '/.env' });
+// ==============================
+// Imports
+// ==============================
+require('dotenv').config()
+const express = require('express')
+const cors = require('cors')
+const { Client, GatewayIntentBits, Partials, ChannelType, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js')
+const fetch = require('node-fetch')
+const { token, nestApiUrl, nestBotKey, guildId, port } = require('./config')
 
-const { Client, GatewayIntentBits, Partials, ChannelType } = require('discord.js');
-const fetch = require('node-fetch');
-const FormData = require('form-data');
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
+const resolveAttachmentUrl = (rawUrl) => {
+  if (!rawUrl) return null
+  if (/^https?:\/\//i.test(rawUrl)) return rawUrl
+  if (!nestApiUrl) return null
+  const base = nestApiUrl.replace(/\/+$/, '')
+  const suffix = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`
+  return `${base}${suffix}`
+}
+
+const normalizeAttachments = (attachments) => {
+  const list = []
+  if (Array.isArray(attachments)) {
+    for (const entry of attachments) {
+      if (!entry) continue
+      if (typeof entry === 'string') list.push({ url: entry })
+      else if (entry.url) list.push({ url: entry.url, name: entry.name })
+    }
+  } else if (attachments && typeof attachments === 'object') {
+    if (attachments.url) list.push({ url: attachments.url, name: attachments.name })
+  }
+  return list
+}
+
+const fetchAttachmentBuffers = async (attachmentList) => {
+  const files = []
+  for (const att of attachmentList) {
+    const resolved = resolveAttachmentUrl(att.url)
+    if (!resolved) {
+      console.warn('[BOT] Skipping attachment without resolvable URL:', att)
+      continue
+    }
+    try {
+      const response = await fetch(resolved)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const arrayBuffer = await response.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+      const fallbackName = att.name || resolved.split('/').filter(Boolean).pop() || `attachment-${files.length + 1}`
+      files.push({ attachment: buffer, name: fallbackName })
+    } catch (err) {
+      console.error(`[BOT] Failed to fetch attachment from ${resolved}:`, err)
+    }
+  }
+  return files
+}
+
+const buildComponents = (rawRows) => {
+  if (!Array.isArray(rawRows)) return []
+  const rows = []
+  for (const rawRow of rawRows) {
+    if (!rawRow || !Array.isArray(rawRow.components)) continue
+    const rowBuilder = new ActionRowBuilder()
+    for (const rawComponent of rawRow.components) {
+      if (!rawComponent) continue
+      if ((rawComponent.type ?? rawComponent.component_type) !== 2) continue
+      const customId = rawComponent.custom_id || rawComponent.customId
+      if (!customId) continue
+      try {
+        const button = new ButtonBuilder()
+          .setCustomId(customId)
+          .setLabel(rawComponent.label || 'Button')
+          .setStyle(typeof rawComponent.style === 'number' ? rawComponent.style : ButtonStyle.Secondary)
+        if (rawComponent.disabled) button.setDisabled(true)
+        if (rawComponent.emoji) button.setEmoji(rawComponent.emoji)
+        rowBuilder.addComponents(button)
+      } catch (err) {
+        console.error('[BOT] Failed to build button component:', err)
+      }
+    }
+    if (rowBuilder.components.length) rows.push(rowBuilder)
+  }
+  return rows
+}
 
 // ==============================
-// Env
+// Config
 // ==============================
-const DISCORD_TOKEN   = process.env.DISCORD_TOKEN;
-const GUILD_ID        = process.env.DISCORD_GUILD_ID;
-const API_BASE_URL    = (process.env.NEST_API_URL || 'http://localhost:3001/api').replace(/\/+$/,'');
-const API_BOT_KEY     = process.env.NEST_BOT_KEY || 'Paloma2025*';
-const BOT_HTTP_PORT   = Number(process.env.BOT_HTTP_PORT || 3020);
+const app = express()
+app.use(cors())
+app.use(express.json())
 
 // ==============================
-// Discord Setup
+// Discord Client
 // ==============================
 const client = new Client({
   intents: [
@@ -32,380 +104,228 @@ const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.DirectMessages
   ],
-  partials: [Partials.Channel, Partials.GuildMember, Partials.Message]
-});
+  partials: [Partials.Channel, Partials.GuildMember, Partials.Message, Partials.User]
+})
+
+client.once('ready', () => {
+  console.log(`[BOT] Logged in as ${client.user.tag}`)
+})
 
 // ==============================
-// Caching
+// Express App — Auth Middleware
 // ==============================
-const cache = new Map(); // key -> { at, ttl, value }
-function setCache(key, value, ttlMs = 60_000) {
-  cache.set(key, { at: Date.now(), ttl: ttlMs, value });
-}
-function getCache(key) {
-  const hit = cache.get(key);
-  if (!hit) return null;
-  if (Date.now() - hit.at > hit.ttl) { cache.delete(key); return null; }
-  return hit.value;
-}
-
-// ==============================
-// Server Fetch Helpers
-// ==============================
-async function apiGet(pathname) {
-  const url = `${API_BASE_URL}${pathname}`;
-  const r = await fetch(url, { headers: { 'x-bot-key': API_BOT_KEY } });
-  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-  return r.json();
-}
-async function apiPost(pathname, body) {
-  const url = `${API_BASE_URL}${pathname}`;
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-bot-key': API_BOT_KEY },
-    body: JSON.stringify(body || {})
-  });
-  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-  return r.json();
-}
-async function downloadBuffer(url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`Fetch failed: ${r.status}`);
-  return Buffer.from(await r.arrayBuffer());
-}
-function shouldUpload(file) {
-  const url = file.url || file.attachment;
-  const name = file.name || '';
-  const ext = path.extname(name).toLowerCase();
-  if (ext === '.gif') return false;
-  if (url && (url.includes('emojis') || url.includes('stickers'))) return false;
-  return true;
-}
-
-// ==============================
-// Event Handlers
-// ==============================
-client.on('messageCreate', async (message) => {
-  try {
-    if (message.author.bot) return;
-    if (!message.attachments || message.attachments.size === 0) return;
-
-    // Pull jobs list from server and map discord_channel_id -> job.id
-    const jobsKey = 'jobs:list';
-    let jobs = getCache(jobsKey);
-    if (!jobs) {
-      jobs = await apiGet('/jobs');
-      setCache(jobsKey, jobs, 60_000);
-    }
-    const match = jobs.find(j => String(j.discord_channel_id) === String(message.channel.id));
-    if (!match) return;
-
-    for (const [, file] of message.attachments) {
-      if (!shouldUpload(file)) continue;
-      try {
-        const buf = await downloadBuffer(file.url || file.attachment);
-        const form = new FormData();
-        form.append('file', buf, file.name || file.filename || 'file');
-        form.append('tab', 'Equipment');
-        form.append('uploaded_by', message.author.username || 'DiscordBot');
-
-        const r = await fetch(`${API_BASE_URL}/jobs/${match.id}/files`, {
-          method: 'POST',
-          headers: { 'x-bot-key': API_BOT_KEY, ...form.getHeaders() },
-          body: form
-        });
-        if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
-        console.log(`[BOT] Uploaded "${file.name}" to job ${match.id}`);
-      } catch (err) {
-        console.error('[BOT] File upload failed:', err);
-      }
-    }
-  } catch (err) {
-    console.error('[BOT] messageCreate error:', err);
+function requireBotKey(req, res, next) {
+  const key = req.header('x-bot-key')
+  if (!nestBotKey || key !== nestBotKey) {
+    return res.status(401).json({ error: 'unauthorized' })
   }
-});
+  next()
+}
+app.use(requireBotKey)
 
 // ==============================
-// HTTP API (Health • Members • DM • Channels • Announce • Server Data Proxies)
+// REST Endpoints
 // ==============================
-const api = express();
-api.use(cors());
-api.use(express.json());
 
-// Auth
-api.use((req, res, next) => {
-  if (req.headers['x-bot-key'] !== API_BOT_KEY) return res.status(401).json({ error: 'unauthorized' });
-  next();
-});
-
-// ----- Health -----
-api.get('/healthz', async (_req, res) => {
+// List members of the configured guild
+app.get('/members', async (_req, res) => {
   try {
-    const guild = await client.guilds.fetch(GUILD_ID);
-    res.json({
-      ok: true,
-      bot: client.user ? client.user.tag : null,
-      guild: { id: guild.id, name: guild.name },
-      time: new Date().toISOString()
-    });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: String(e.message || e) });
-  }
-});
-
-// ----- Members -----
-api.get('/members', async (_req, res) => {
-  try {
-    const guild = await client.guilds.fetch(GUILD_ID);
-    const members = await guild.members.fetch();
-    const list = members.map(m => ({
+    const g = await client.guilds.fetch(guildId)
+    const members = await g.members.fetch()
+    const out = members.map(m => ({
       id: m.user.id,
       username: m.user.username,
-      displayName: m.displayName || m.user.username,
-      avatar: m.user.displayAvatarURL({ size: 64, extension: 'png' })
-    })).sort((a, b) => a.displayName.localeCompare(b.displayName));
-    res.json(list);
+      displayName: m.displayName
+    }))
+    res.json(out)
   } catch (e) {
-    console.error('[BOT] /members error:', e);
-    res.status(500).json({ error: 'failed_to_fetch_members' });
+    console.error('[BOT] /members error:', e)
+    res.status(500).json({ error: 'failed_to_list_members' })
   }
-});
+})
 
-// ----- DM -----
-api.post('/dm', async (req, res) => {
+// List text & announcement channels
+app.get('/channels', async (_req, res) => {
   try {
-    const { userId, message, attachmentUrl, attachmentName } = req.body || {};
-    if (!userId || !message) return res.status(400).json({ error: 'userId_and_message_required' });
+    const g = await client.guilds.fetch(guildId)
+    const channels = await g.channels.fetch()
+    const out = channels
+      .filter(ch => ch && [ChannelType.GuildText, ChannelType.GuildAnnouncement].includes(ch.type))
+      .map(ch => ({
+        id: ch.id,
+        name: ch.name,
+        type: ch.type
+      }))
+    res.json(out)
+  } catch (e) {
+    console.error('[BOT] /channels error:', e)
+    res.status(500).json({ error: 'failed_to_list_channels' })
+  }
+})
 
-    const user = await client.users.fetch(userId);
-    if (attachmentUrl) {
-      try {
-        const absolute = attachmentUrl.startsWith('http')
-          ? attachmentUrl
-          : `${API_BASE_URL.replace(/\/api$/,'')}${attachmentUrl}`;
-        const buf = await downloadBuffer(absolute);
-        await user.send({ content: message, files: [{ attachment: buf, name: attachmentName || 'attachment' }] });
-      } catch (e) {
-        console.warn('[BOT] /dm attachment failed, fallback to text:', e.message || e);
-        await user.send(message);
-      }
+// Post an announcement to a channel by id or name
+app.post('/announce', async (req, res) => {
+  try {
+    const { channelId, channelName, message, embed, attachments, components } = req.body || {}
+    if (!message || (!channelId && !channelName)) {
+      return res.status(400).json({ error: 'channel_and_message_required' })
+    }
+
+    const g = await client.guilds.fetch(guildId)
+    let channel = null
+    if (channelId) {
+      channel = await g.channels.fetch(channelId)
     } else {
-      await user.send(message);
+      const channels = await g.channels.fetch()
+      channel = channels.find(ch => ch && ch.name === String(channelName))
     }
-    res.json({ ok: true });
-  } catch (e) {
-    console.error('[BOT] /dm error:', e);
-    res.status(500).json({ error: 'failed_to_dm' });
-  }
-});
+    if (!channel) return res.status(404).json({ error: 'channel_not_found' })
 
-// ----- Channels (text/announcements/threads) -----
-api.get('/channels', async (_req, res) => {
-  try {
-    const guild = await client.guilds.fetch(GUILD_ID);
-    const channels = await guild.channels.fetch();
-    const allowed = [ChannelType.GuildText, ChannelType.GuildAnnouncement, ChannelType.PublicThread, ChannelType.PrivateThread];
-    const list = channels
-      .filter(ch => ch && allowed.includes(ch.type))
-      .map(ch => ({ id: ch.id, name: ch.name, type: ch.type, position: ch.rawPosition ?? 0 }))
-      .sort((a, b) => a.position - b.position);
-    res.json(list);
-  } catch (e) {
-    console.error('[BOT] /channels error:', e);
-    res.status(500).json({ error: 'failed_to_fetch_channels' });
-  }
-});
+    const attachmentList = normalizeAttachments(attachments)
+    const files = await fetchAttachmentBuffers(attachmentList)
+    const componentRows = buildComponents(components)
 
-// ----- Announce (multi) -----
-api.post('/announce', async (req, res) => {
+    const payload = embed ? { content: message, embeds: [embed] } : { content: message }
+    if (files.length) payload.files = files
+    if (componentRows.length) payload.components = componentRows
+    const sent = await channel.send(payload)
+    res.json({ ok: true, id: sent.id })
+  } catch (e) {
+    console.error('[BOT] /announce error:', e)
+    res.status(500).json({ error: 'failed_to_announce' })
+  }
+})
+
+// Lightweight test endpoint that never posts
+app.post('/announce/test', async (req, res) => {
   try {
-    const { channelIds, content } = req.body || {};
-    if (!Array.isArray(channelIds) || channelIds.length === 0 || !content) {
-      return res.status(400).json({ error: 'channelIds_and_content_required' });
-    }
-    const guild = await client.guilds.fetch(GUILD_ID);
-    const results = [];
-    for (const id of channelIds) {
-      try {
-        const ch = await guild.channels.fetch(id);
-        if (!ch || ![ChannelType.GuildText, ChannelType.GuildAnnouncement].includes(ch.type)) {
-          results.push({ id, ok: false, reason: 'unsupported_channel_type' });
-          continue;
-        }
-        await ch.send({ content });
-        results.push({ id, ok: true });
-      } catch (e) {
-        results.push({ id, ok: false, reason: String(e.message || e) });
+    const { channelId, channelName, message } = req.body || {}
+    res.json({
+      ok: true,
+      echo: { channelId, channelName, message },
+      note: 'No message was sent (test endpoint)'
+    })
+  } catch (e) {
+    console.error('[BOT] /announce/test error:', e)
+    res.status(500).json({ error: 'failed_to_test' })
+  }
+})
+
+// Send direct messages to one or more users
+app.post('/dm', async (req, res) => {
+  try {
+    const { userId, userIds, message, attachments } = req.body || {}
+    const ids = new Set()
+    if (userId) ids.add(String(userId))
+    if (Array.isArray(userIds)) {
+      for (const id of userIds) {
+        if (id) ids.add(String(id))
       }
     }
-    res.json({ ok: true, results });
+    if (!ids.size || !message) {
+      return res.status(400).json({ error: 'userIds_and_message_required' })
+    }
+
+    const attachmentList = normalizeAttachments(attachments)
+    const retrievedFiles = await fetchAttachmentBuffers(attachmentList)
+
+    const results = []
+    for (const id of ids) {
+      try {
+        const user = await client.users.fetch(id)
+        if (!user) throw new Error('user_not_found')
+        const files = retrievedFiles.map(file => ({ attachment: Buffer.from(file.attachment), name: file.name }))
+        const componentRows = buildComponents(req.body.components)
+        const payload = { content: message }
+        if (files.length) payload.files = files
+        if (componentRows.length) payload.components = componentRows
+        const sent = await user.send(payload)
+        results.push({ userId: id, ok: true, messageId: sent.id })
+      } catch (err) {
+        console.error(`[BOT] DM to ${id} failed:`, err)
+        results.push({ userId: id, ok: false, reason: String(err?.message || err) })
+      }
+    }
+
+    const ok = results.some(r => r.ok)
+    res.status(ok ? 200 : 500).json({ ok, results })
   } catch (e) {
-    console.error('[BOT] /announce error:', e);
-    res.status(500).json({ error: 'failed_to_announce' });
+    console.error('[BOT] /dm error:', e)
+    res.status(500).json({ error: 'failed_to_dm' })
   }
-});
+})
 
-// ----- Announce Test (single) -----
-api.post('/announce/test', async (req, res) => {
+client.on('interactionCreate', async interaction => {
   try {
-    const { channelId, content = 'Test from The NEST' } = req.body || {};
-    if (!channelId) return res.status(400).json({ error: 'channelId_required' });
-    const guild = await client.guilds.fetch(GUILD_ID);
-    const ch = await guild.channels.fetch(channelId);
-    await ch.send({ content });
-    res.json({ ok: true });
-  } catch (e) {
-    console.error('[BOT] /announce/test error:', e);
-    res.status(500).json({ error: 'failed_to_send_test' });
+    if (!interaction.isButton()) return
+    if (!interaction.customId || !interaction.customId.startsWith('ack:')) return
+    if (!nestApiUrl) {
+      await interaction.reply({ content: 'Action item service unavailable.', ephemeral: true })
+      return
+    }
+
+    const [, itemId, token] = interaction.customId.split(':')
+    if (!itemId || !token) {
+      await interaction.reply({ content: 'Invalid acknowledgement payload.', ephemeral: true })
+      return
+    }
+
+    let response
+    try {
+      const ackRes = await fetch(`${nestApiUrl.replace(/\/+$/, '')}/api/hq/action-items/${itemId}/ack`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-bot-key': nestBotKey },
+        body: JSON.stringify({ token, userId: interaction.user.id })
+      })
+      response = await ackRes.json().catch(() => ({}))
+      if (!ackRes.ok) {
+        const note = response?.error || `Failed with status ${ackRes.status}`
+        await interaction.reply({ content: `Unable to acknowledge: ${note}`, ephemeral: true })
+        return
+      }
+    } catch (err) {
+      console.error('[BOT] Ack request failed:', err)
+      await interaction.reply({ content: 'Unable to acknowledge at this time.', ephemeral: true })
+      return
+    }
+
+    const updatedComponents = interaction.message.components?.map(row => {
+      const rowBuilder = new ActionRowBuilder()
+      row.components.forEach(component => {
+        if (component.type !== 2) return
+        const button = ButtonBuilder.from(component)
+        if ((component.customId || component.custom_id) === interaction.customId) {
+          button.setLabel('Acknowledged').setStyle(ButtonStyle.Success).setDisabled(true)
+        } else {
+          button.setDisabled(true)
+        }
+        rowBuilder.addComponents(button)
+      })
+      return rowBuilder
+    }).filter(row => row && row.components.length) || []
+
+    await interaction.update({ components: updatedComponents })
+    await interaction.followUp({ content: 'Acknowledged. Thank you!', ephemeral: true })
+  } catch (err) {
+    console.error('[BOT] interaction handler error:', err)
   }
-});
-
-// ----- Server Data Proxies (read-through cache) -----
-// Jobs
-api.get('/server/jobs', async (_req, res) => {
-  try {
-    const key = 'jobs:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/jobs'); setCache(key, data, 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Customers
-api.get('/server/customers', async (_req, res) => {
-  try {
-    const key = 'customers:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/customers'); setCache(key, data, 5 * 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Assets
-api.get('/server/assets', async (_req, res) => {
-  try {
-    const key = 'assets:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/assets'); setCache(key, data, 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Projects
-api.get('/server/projects', async (_req, res) => {
-  try {
-    const key = 'projects:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/projects'); setCache(key, data, 5 * 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Activity
-api.get('/server/activity', async (_req, res) => {
-  try {
-    const key = 'activity:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/activity'); setCache(key, data, 30_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Workorders
-api.get('/server/workorders', async (_req, res) => {
-  try {
-    const key = 'workorders:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/workorders'); setCache(key, data, 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// GLB Assets
-api.get('/server/glb-assets', async (_req, res) => {
-  try {
-    const key = 'glb-assets:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/glb-assets'); setCache(key, data, 5 * 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Sourcing
-api.get('/server/sourcing', async (_req, res) => {
-  try {
-    const key = 'sourcing:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/sourcing'); setCache(key, data, 5 * 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Transfers
-api.get('/server/transfers', async (_req, res) => {
-  try {
-    const key = 'transfers:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/transfers'); setCache(key, data, 2 * 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Master Assignments
-api.get('/server/master-assignments', async (_req, res) => {
-  try {
-    const key = 'master:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/master'); setCache(key, data, 5 * 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Field Docs
-api.get('/server/field-docs', async (_req, res) => {
-  try {
-    const key = 'field-docs:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/field-docs'); setCache(key, data, 10 * 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Service Equipment
-api.get('/server/service-equipment', async (_req, res) => {
-  try {
-    const key = 'service-equipment:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/service-equipment'); setCache(key, data, 5 * 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// MFV Pads
-api.get('/server/mfv', async (_req, res) => {
-  try {
-    const key = 'mfv:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/mfv'); setCache(key, data, 10 * 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
-
-// Documents
-api.get('/server/documents', async (_req, res) => {
-  try {
-    const key = 'documents:list';
-    let data = getCache(key);
-    if (!data) { data = await apiGet('/documents'); setCache(key, data, 10 * 60_000); }
-    res.json(data);
-  } catch (e) { res.status(502).json({ error: 'server_unavailable' }); }
-});
+})
 
 // ==============================
 // Startup
 // ==============================
-client.once('ready', () => {
-  console.log(`[BOT] Discord bot is online as ${client.user.tag}`);
-  api.listen(BOT_HTTP_PORT, () => console.log(`[BOT] HTTP control API listening on :${BOT_HTTP_PORT}`));
-});
-client.login(DISCORD_TOKEN);
+async function start() {
+  await client.login(token)
+  app.listen(port, () => {
+    console.log(`[BOT] HTTP listening on :${port}`)
+    if (nestApiUrl) {
+      // Optional heartbeat to the server (ignored if unreachable)
+      fetch(nestApiUrl).catch(() => {})
+    }
+  })
+}
+
+start().catch(err => {
+  console.error('[BOT] Startup error:', err)
+  process.exit(1)
+})

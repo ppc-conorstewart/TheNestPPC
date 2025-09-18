@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AiOutlineDelete, AiOutlineEdit } from "react-icons/ai";
+import { resolveApiUrl } from '../../../api'
 
 // ================== SECTION LABELS ==================
 const SECTION_LABELS = [
@@ -29,11 +30,17 @@ export default function InstVideosHub({ onClose }) {
 
   async function fetchVideosForTab(tab) {
     setLoading(true);
-    fetch(`/api/instructional-videos-hub?tab=${encodeURIComponent(tab)}`)
+    fetch(resolveApiUrl(`/api/instructional-videos-hub?tab=${encodeURIComponent(tab)}`))
       .then((res) => res.json())
       .then((data) => {
-        setVideos(data);
-        setActiveVideo(data[0] || null);
+        const normalized = Array.isArray(data)
+          ? data.map(video => ({
+              ...video,
+              file_url: resolveApiUrl(video?.file_url || '')
+            }))
+          : [];
+        setVideos(normalized);
+        setActiveVideo(normalized[0] || null);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -55,7 +62,7 @@ export default function InstVideosHub({ onClose }) {
     }
     formData.append("tab", SECTION_LABELS[activeTab]);
     try {
-      await fetch(`/api/instructional-videos-hub`, {
+      await fetch(resolveApiUrl(`/api/instructional-videos-hub`), {
         method: "POST",
         body: formData
       });
@@ -69,7 +76,7 @@ export default function InstVideosHub({ onClose }) {
   const handleDelete = async (videoId, e) => {
     e.stopPropagation();
     if (!window.confirm("Delete this video?")) return;
-    await fetch(`/api/instructional-videos-hub/${videoId}`, { method: "DELETE" });
+    await fetch(resolveApiUrl(`/api/instructional-videos-hub/${videoId}`), { method: "DELETE" });
     fetchVideosForTab(SECTION_LABELS[activeTab]);
     if (activeVideo && activeVideo.id === videoId) setActiveVideo(null);
   };
@@ -89,7 +96,7 @@ export default function InstVideosHub({ onClose }) {
       return;
     }
     const newFullName = renameValue.trim() + video.file_name.substring(video.file_name.lastIndexOf('.'));
-    await fetch(`/api/instructional-videos-hub/${video.id}`, {
+    await fetch(resolveApiUrl(`/api/instructional-videos-hub/${video.id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ newName: newFullName })

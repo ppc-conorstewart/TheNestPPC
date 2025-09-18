@@ -1,14 +1,20 @@
-import React from 'react';
-import AddAssetModal from './Asset Components/AddAssetModal'
+// ==============================
+// File: src/components/ModalsContainer.jsx
+// ==============================
+
+import AddAssetModal from './Asset Components/AddAssetModal';
 
 import EditAssetModal from './Asset Components/EditAssetModal';
 
-import TransferModal from './TransferModal';
-import TransferSuccessModal from './TransferSuccessModal';
-import ConfirmDeleteModal from './ConfirmDeleteModal';
 import PalomaQRCodeModal from './Asset Components/PalomaQRCodeModal';
 import PhysicalAssetTransferModal from './Asset Components/PhysicalAssetTransferModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
+import TransferModal from './TransferModal';
+import TransferSuccessModal from './TransferSuccessModal';
 
+// ==============================
+// COMPONENT — MODALS CONTAINER
+// ==============================
 export default function ModalsContainer({
   showAddModal,
   setShowAddModal,
@@ -38,9 +44,15 @@ export default function ModalsContainer({
   newLocation,
   setNewLocation
 }) {
+  // ==============================
+  // NOTE — ID HANDLING
+  // ==============================
   // We now treat selectedAssetIds as string IDs throughout.
   // Remove integer conversion to allow for IDs like "PPC045162".
 
+  // ==============================
+  // RENDER
+  // ==============================
   return (
     <>
       <AddAssetModal
@@ -61,17 +73,18 @@ export default function ModalsContainer({
         categoryOptions={categoryOptions}
         locationOptions={locationOptions}
         statusOptions={statusOptions}
-        buttonColor="#6a7257"
+        buttonColor='#6a7257'
       />
       <TransferModal
         isOpen={showTransferModal}
         selectedCount={selectedAssetIds ? selectedAssetIds.length : 0}
-        selectedIds={selectedAssetIds || []} // Pass array for detailed listing
+        selectedIds={selectedAssetIds || []}
         onClose={() => setShowTransferModal(false)}
         locationOptions={locationOptions}
         newLocation={newLocation}
         onLocationChange={setNewLocation}
         onTransfer={onTransfer}
+        searchableAssets={assets}
       />
       <TransferSuccessModal
         isOpen={showTransferSuccess}

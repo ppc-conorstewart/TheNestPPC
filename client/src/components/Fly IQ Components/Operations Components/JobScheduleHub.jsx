@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { resolveApiUrl } from '../../../api'
 
 // ==============================
 // JobScheduleHub.jsx
@@ -10,7 +11,7 @@ export default function JobScheduleHub({ onClose }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/jobs-schedule")
+    fetch(resolveApiUrl("/api/jobs-schedule"))
       .then((r) => r.json())
       .then((data) => {
         setJobs(data);

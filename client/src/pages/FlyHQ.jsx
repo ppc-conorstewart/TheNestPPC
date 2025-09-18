@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
+import { API_BASE_URL } from '../api';
 import AssetFilters from '../components/Asset Components/AssetFilters';
 import AssetHistoryModal from '../components/Asset Components/AssetHistoryModal';
 import AssetTable from '../components/Asset Components/AssetTable';
@@ -20,7 +21,11 @@ import useActivityLog from '../hooks/useActivityLog';
 import useAssets from '../hooks/useAssets';
 import useFilteredPaginated from '../hooks/useFilteredPaginated';
 import { useLivePolling } from '../hooks/useLivePolling';
+import useMediaQuery from '../hooks/useMediaQuery';
 import { showPalomaToast } from '../utils/toastUtils';
+
+
+const API_BASE = API_BASE_URL || '';
 
 // ==============================
 // FLYHQ — CONSTANTS
@@ -46,6 +51,7 @@ function coerceTs(x) {
 // FLYHQ — COMPONENT
 // ==============================
 export default function FlyHQ() {
+  const isCompactLayout = useMediaQuery('(max-width: 1100px)');
   // ==============================
   // URL / TAB STATE
   // ==============================
@@ -223,14 +229,19 @@ export default function FlyHQ() {
 
     window.addEventListener('resize', handleResize);
 
-    const ro = new ResizeObserver(() => handleResize());
-    if (tableScrollRef.current) ro.observe(tableScrollRef.current);
+    let ro;
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      ro = new window.ResizeObserver(() => handleResize());
+      if (tableScrollRef.current) ro.observe(tableScrollRef.current);
+    }
 
     return () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(raf);
       clearTimeout(t);
-      try { ro.disconnect(); } catch {}
+      if (ro) {
+        try { ro.disconnect(); } catch {}
+      }
     };
   }, [activeTab, showRightPanelAssets]);
 
@@ -289,7 +300,7 @@ export default function FlyHQ() {
         Object.keys(apiPayload).forEach(
           (k) => (apiPayload[k] === undefined || apiPayload[k] === null || apiPayload[k] === '') && delete apiPayload[k]
         );
-        const res = await fetch('http://localhost:3001/api/assets', {
+        const res = await fetch(`${API_BASE}/api/assets`, {
           method: 'POST',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -334,7 +345,7 @@ export default function FlyHQ() {
         Object.keys(payload).forEach(
           (k) => (payload[k] === undefined || payload[k] === null || payload[k] === '') && delete payload[k]
         );
-        const res = await fetch('http://localhost:3001/api/assets/' + encodeURIComponent(assetId), {
+        const res = await fetch(`${API_BASE}/api/assets/` + encodeURIComponent(assetId), {
           method: 'PUT',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -369,7 +380,7 @@ export default function FlyHQ() {
   const confirmDelete = useCallback(async () => {
     if (!assetPendingDelete) return;
     try {
-      await fetch('http://localhost:3001/api/assets/' + encodeURIComponent(assetPendingDelete.id), {
+      await fetch(`${API_BASE}/api/assets/` + encodeURIComponent(assetPendingDelete.id), {
         method: 'DELETE',
         credentials: 'include'
       });
@@ -394,7 +405,7 @@ export default function FlyHQ() {
     const idsToTransfer = selectedAssetIds;
     if (!idsToTransfer.length || !newLocation) return;
     try {
-      const res = await fetch(process.env.REACT_APP_API_URL + '/api/assets/transfer', {
+      const res = await fetch(`${API_BASE}/api/assets/transfer`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -537,15 +548,17 @@ export default function FlyHQ() {
                 minHeight: 0,
                 marginBottom: 20,
                 position: 'relative',
-                background: 'transparent'
+                background: 'transparent',
+                flexDirection: isCompactLayout ? 'column' : 'row',
+                gap: isCompactLayout ? 16 : 0
               }}
             >
               <div
                 className='flex flex-col'
                 style={{
                   flex: showRightPanelAssets ? '1 1 auto' : '1 1 100%',
-                  minWidth: 1100,
-                  borderRight: '2px solid #282d25',
+                  minWidth: isCompactLayout ? '100%' : 1100,
+                  borderRight: isCompactLayout ? '0' : '2px solid #282d25',
                   border: '2px solid #282d25',
                   height: '100%',
                   padding: '4px 4px 4px 4px',
@@ -575,7 +588,7 @@ export default function FlyHQ() {
                   onToggleMAAssets={handleToggleMA}
                 />
 
-                <div ref={tableScrollRef} style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+                <div ref={tableScrollRef} style={{ flex: 1, overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', minHeight: 0, WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}>
                   <div style={{ fontSize: '0.66rem', height: '100%' }}>
                     <AssetTable
                       assets={paginatedWithSearch}
@@ -601,18 +614,21 @@ export default function FlyHQ() {
 
               <div
                 style={{
-                  width: showRightPanelAssets ? 520 : 0,
-                  minWidth: showRightPanelAssets ? 480 : 0,
-                  flex: '0 0 ' + (showRightPanelAssets ? 520 : 0) + 'px',
-                  overflow: 'hidden',
+                  width: isCompactLayout ? '100%' : showRightPanelAssets ? 520 : 0,
+                  minWidth: isCompactLayout ? '100%' : showRightPanelAssets ? 480 : 0,
+                  flex: isCompactLayout ? '1 1 100%' : `0 0 ${showRightPanelAssets ? 520 : 0}px`,
+                  overflowX: isCompactLayout ? 'auto' : 'hidden',
+                  overflowY: 'hidden',
+                  WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto',
                   display: 'flex',
-                  opacity: showRightPanelAssets ? 1 : 0,
-                  transform: showRightPanelAssets ? 'translateX(0)' : 'translateX(14px)',
+                  opacity: showRightPanelAssets || isCompactLayout ? 1 : 0,
+                  transform: isCompactLayout ? 'translateX(0)' : showRightPanelAssets ? 'translateX(0)' : 'translateX(14px)',
                   transitionProperty: 'flex-basis, width, min-width, opacity, transform, box-shadow, filter',
                   transitionDuration: '420ms',
                   transitionTimingFunction: 'cubic-bezier(.16,1,.3,1)',
-                  boxShadow: showRightPanelAssets ? 'inset 0 0 0 1px #23251d, -10px 0 26px #000a' : 'none',
-                  filter: showRightPanelAssets ? 'saturate(1)' : 'saturate(0.9)'
+                  boxShadow: showRightPanelAssets && !isCompactLayout ? 'inset 0 0 0 1px #23251d, -10px 0 26px #000a' : 'none',
+                  filter: showRightPanelAssets || isCompactLayout ? 'saturate(1)' : 'saturate(0.9)',
+                  marginTop: isCompactLayout ? 12 : 0
                 }}
               >
                 <RightPanel filteredAssets={searched} activityLogs={activityLogs} assetNameMap={assetNameMap} activityLogHeight={350} />
@@ -638,9 +654,9 @@ export default function FlyHQ() {
             >
               <div
                 className='flex flex-col'
-                style={{ flex: '1 1 auto', minWidth: 1100, border: '2px solid #282d25', height: '100%', padding: '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0, background: 'transparent' }}
+                style={{ flex: '1 1 auto', minWidth: isCompactLayout ? '100%' : 1100, border: '2px solid #282d25', height: '100%', padding: isCompactLayout ? '12px' : '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0, background: 'transparent', overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}
               >
-                <div ref={tableScrollRef} style={{ flex: 1, overflow: 'hidden', minHeight: 0 }}>
+                <div ref={tableScrollRef} style={{ flex: 1, overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', minHeight: 0, WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}>
                   <div style={{ fontSize: '0.66rem', height: '100%' }}>
                     <MasterAssembliesDBTable />
                   </div>
@@ -657,7 +673,7 @@ export default function FlyHQ() {
             >
               <div
                 className='flex flex-col'
-                style={{ flex: '1 1 auto', minWidth: 1100, border: '2px solid #282d25', height: '100%', padding: '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0, background: 'transparent' }}
+                style={{ flex: '1 1 auto', minWidth: isCompactLayout ? '100%' : 1100, border: '2px solid #282d25', height: '100%', padding: isCompactLayout ? '12px' : '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0, background: 'transparent', overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}
               >
                 <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
                   <AssetAnalytics assets={assets} activityLogs={activityLogs} />
@@ -705,3 +721,5 @@ export default function FlyHQ() {
     </div>
   );
 }
+
+

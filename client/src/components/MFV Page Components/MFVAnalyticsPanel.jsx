@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../api'
 // ==============================
 // MFVAnalyticsPanel.jsx — MFV Test Reports only • Latest per PPC • MFV vs OEM
 // Focus: Only the two valve rings compute live stats; the right four rings are stubbed at 0.
@@ -164,7 +165,7 @@ export default function MFVAnalyticsPanel() {
       try {
         const [csvText, assetsRes] = await Promise.all([
           fetch(MFV_CSV_URL).then(r => r.text()),
-          fetch("/api/assets").then(r => r.json())
+          fetch(resolveApiUrl("/api/assets")).then(r => r.json())
         ]);
         if (!alive) return;
         setSummary(csvToRows(csvText));

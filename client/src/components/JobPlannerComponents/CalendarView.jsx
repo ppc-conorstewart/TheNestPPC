@@ -17,6 +17,7 @@ export default function CalendarView({
   singleMonth,
   setSelectedMonth,
   events,
+  getCustomerLogo,
 }) {
   // --------- Local State and References ---------
   const [showCalendar, setShowCalendar] = useState(true);
@@ -42,7 +43,9 @@ export default function CalendarView({
   // --------- Render Custom Event Content ---------
   const renderEventContent = (eventInfo) => {
     const job = eventInfo.event.extendedProps;
-    const logoPath = `/assets/logos/${(job.customer || '').toLowerCase().replace(/[^a-z0-9]/g, '')}.png`;
+    const logoPath = getCustomerLogo
+      ? getCustomerLogo(job.customer)
+      : `/assets/logos/${(job.customer || '').toLowerCase().replace(/[^a-z0-9]/g, '')}.png`;
     return {
       domNodes: [
         (() => {
@@ -55,17 +58,19 @@ export default function CalendarView({
           wrapper.style.overflow = 'hidden';
           wrapper.style.width = '100%';
 
-          const img = document.createElement('img');
-          img.src = logoPath;
-          img.alt = 'logo';
-          img.className = 'h-10 w-10 object-contain';
-          img.onerror = (e) => (e.currentTarget.style.display = 'none');
+          if (logoPath) {
+            const img = document.createElement('img');
+            img.src = logoPath;
+            img.alt = 'logo';
+            img.className = 'h-12 w-12 object-contain';
+            img.onerror = (e) => (e.currentTarget.style.display = 'none');
+            wrapper.appendChild(img);
+          }
 
           const textDiv = document.createElement('div');
           textDiv.className = 'text-sm font-bold leading-tight';
           textDiv.innerText = `${job.customer} • ${job.surface_lsd || 'LSD'} • Wells: ${parseInt(job.num_wells) || 0}`;
 
-          wrapper.appendChild(img);
           wrapper.appendChild(textDiv);
           return wrapper;
         })()
@@ -80,7 +85,11 @@ export default function CalendarView({
       content: `
         <div style="text-align:center; max-width: 250px; background-color: black; color: white; border: none; box-shadow: 0 0 0 2px #6a7257; padding: 10px; border-radius: 0px; font-weight: bold;">
           <div style='background-color: white; padding: 4px; border-radius: 4px; margin-bottom: 6px; display:flex; justify-content:center;'>
-            <img src='/assets/logos/${job.customer?.toLowerCase().replace(/[^a-z0-9]/g, '')}.png' alt='logo' style='height: 54px; width: 54px; object-fit: contain;' onerror="this.style.display='none'" />
+            ${(() => {
+              const logo = getCustomerLogo ? getCustomerLogo(job.customer) : `/assets/logos/${job.customer?.toLowerCase().replace(/[^a-z0-9]/g, '')}.png`;
+              if (!logo) return '';
+              return `<img src='${logo}' alt='logo' style='height: 64px; width: 64px; object-fit: contain;' onerror="this.style.display='none'" />`;
+            })()}
           </div>
           <div style='margin-bottom: 4px;'>LSD: ${job.surface_lsd || 'N/A'}</div>
           <div style='margin-bottom: 8px;'>Wells: ${parseInt(job.num_wells) || 0}</div>

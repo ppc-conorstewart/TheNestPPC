@@ -6,6 +6,10 @@ import '@google/model-viewer';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import GlbLibraryModal from './GlbLibraryModal';
+import { API_BASE_URL } from '../../api';
+
+
+const API_BASE = API_BASE_URL || '';
 
 // ==============================
 // ======= DEV URL HELPER =======
@@ -13,7 +17,7 @@ import GlbLibraryModal from './GlbLibraryModal';
 const withServerUrl = url => {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return 'http://localhost:3001' + url;
+  return `${API_BASE}` + url;
 };
 
 export default function SimpleViewer({
@@ -190,7 +194,7 @@ export default function SimpleViewer({
     formData.append('model', file);
 
     try {
-      const res = await fetch('http://localhost:3001/api/upload-model', { method: 'POST', body: formData });
+      const res = await fetch(`${API_BASE}/api/upload-model`, { method: 'POST', body: formData });
       const data = await res.json();
       if (data.url) {
         setUrl(data.url);

@@ -1,16 +1,14 @@
-// ==========================================
-// FILE: client/src/hooks/useAssetOptions.js
-// ==========================================
-
 // ==============================
 // useAssetOptions — IMPORTS
 // ==============================
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../api';
 
 // ==============================
 // useAssetOptions — CONSTANTS
 // ==============================
 const FALLBACK_VENDORS = ['Alaska','Academy','Golden Eagle','Hi-Quality','Source','Domino','Champ','Pacific'];
+const API_BASE = API_BASE_URL || '';
 
 // ==============================
 // useAssetOptions — HOOK
@@ -26,11 +24,11 @@ export default function useAssetOptions() {
     async function run() {
       try {
         const [n, c, l, s, v] = await Promise.all([
-          fetch('http://localhost:3001/api/assets/options/names', { credentials: 'include' }),
-          fetch('http://localhost:3001/api/assets/options/categories', { credentials: 'include' }),
-          fetch('http://localhost:3001/api/assets/options/locations', { credentials: 'include' }),
-          fetch('http://localhost:3001/api/assets/options/statuses', { credentials: 'include' }),
-          fetch('http://localhost:3001/api/assets/options/machining_vendors', { credentials: 'include' })
+          fetch(API_BASE + '/api/assets/options/names', { credentials: 'include' }),
+          fetch(API_BASE + '/api/assets/options/categories', { credentials: 'include' }),
+          fetch(API_BASE + '/api/assets/options/locations', { credentials: 'include' }),
+          fetch(API_BASE + '/api/assets/options/statuses', { credentials: 'include' }),
+          fetch(API_BASE + '/api/assets/options/machining_vendors', { credentials: 'include' })
         ]);
         const [nJ, cJ, lJ, sJ, vJ] = await Promise.all([n.json(), c.json(), l.json(), s.json(), v.json()]);
         if (Array.isArray(nJ)) setNames(nJ);
@@ -47,3 +45,4 @@ export default function useAssetOptions() {
 
   return { names, categories, locations, statuses, vendors };
 }
+

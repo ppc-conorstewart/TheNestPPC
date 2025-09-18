@@ -3,6 +3,7 @@
 // ===========================================
 
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { API_BASE_URL } from '../api'
 import ActionItemsCard from '../components/HQ-Dashboard/ActionItemsCard'
 import ActiveJobsCard from '../components/HQ-Dashboard/ActiveJobsCard'
 import DeployedCoilCard from '../components/HQ-Dashboard/DeployedCoilCard'
@@ -12,6 +13,8 @@ import UpcomingPadsCard from '../components/HQ-Dashboard/UpcomingPadsCard'
 import '../styles/dragula.min.css'
 import dragula from '../styles/dragula.min.js'
 import './FlyHQTools.css'
+
+const API_BASE = API_BASE_URL || ''
 
 const STAT_ITEMS = [
   { label: 'Wells Completed', valueKey: 'wells', color: '#8fffbb' },
@@ -28,11 +31,11 @@ const HEADER_H = 36
 
 const PAGE_WRAPPER_STYLE = {
   background: 'transparent',
-  minHeight: '100dvh',
-  height: '100dvh',
+  minHeight: '100svh',
+  height: 'auto',
   width: '100%',
   position: 'relative',
-  overflow: 'hidden'
+  overflow: 'visible'
 }
 
 const MAIN_CONTAINER_STYLE = {
@@ -96,7 +99,6 @@ const CollapsiblePanel = memo(function CollapsiblePanel({
           justifyContent: 'center',
           cursor: 'pointer',
           background: 'transparent',
-          
           userSelect: 'none',
           position: 'relative'
         }}
@@ -118,48 +120,58 @@ const CollapsiblePanel = memo(function CollapsiblePanel({
           {title}
         </span>
 
-        <span
-          className='fhq-collapse-indicator'
+        <div
+          className='fhq-panel-controls'
           style={{
             position: 'absolute',
-            right: 28,
-            width: 16,
-            height: 16,
-            borderRadius: 4,
-            display: 'grid',
-            placeItems: 'center',
-            border: '1px solid rgba(106,114,87,0.6)',
-            background: 'transparent',
-            fontWeight: 900,
-            color: indicatorColor,
-            transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)',
-            transition: 'transform 160ms ease, color 160ms ease',
-            fontSize: 10,
-            lineHeight: 1
+            right: 10,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 14
           }}
         >
-          {collapsed ? '+' : '–'}
-        </span>
+          <span
+            className='fhq-collapse-indicator'
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: 4,
+              display: 'grid',
+              placeItems: 'center',
+              border: '1px solid rgba(106,114,87,0.6)',
+              background: 'transparent',
+              fontWeight: 900,
+              color: indicatorColor,
+              transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)',
+              transition: 'transform 160ms ease, color 160ms ease',
+              fontSize: 10,
+              lineHeight: 1
+            }}
+          >
+            {collapsed ? '+' : '–'}
+          </span>
 
-        <span
-          className='fhq-drag-handle'
-          title='Drag to reorder'
-          style={{
-            position: 'absolute',
-            right: 6,
-            top: 2,
-            bottom: 2,
-            width: 18,
-            display: 'grid',
-            placeItems: 'center',
-            cursor: 'grab',
-            userSelect: 'none',
-            fontSize: 14,
-            opacity: 0.9
-          }}
-        >
-          ⋮⋮
-        </span>
+          <span
+            className='fhq-drag-handle'
+            title='Drag to reorder'
+            onMouseDown={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+            style={{
+              width: 22,
+              height: 24,
+              display: 'grid',
+              placeItems: 'center',
+              cursor: 'grab',
+              userSelect: 'none',
+              fontSize: 16,
+              opacity: 0.9
+            }}
+          >
+            ⋮⋮
+          </span>
+        </div>
       </div>
 
       <div
@@ -184,10 +196,6 @@ const CollapsiblePanel = memo(function CollapsiblePanel({
   )
 })
 
-
-
-
-/* ========== Component ========== */
 export default function FlyHQTools() {
   const [yearTotals, setYearTotals] = useState({ wells: 0, valve_7_1_16: 0, valve_5_1_8: 0, hyd_3_1_16: 0, man_3_1_16: 0 })
   const currentYear = new Date().getFullYear()
@@ -230,7 +238,7 @@ export default function FlyHQTools() {
   useEffect(() => { setShowSummary(true) }, [])
   useEffect(() => {
     if (!showSummary) return
-    fetch(`${process.env.REACT_APP_API_URL}/api/jobs`)
+    fetch(`${API_BASE}/api/jobs`)
       .then(res => { if (!res.ok) throw new Error('Jobs fetch failed'); return res.json() })
       .then(allJobs => {
         const completedThisYear = allJobs.filter(job => {
@@ -256,7 +264,6 @@ export default function FlyHQTools() {
   const expandAll = () => { const next = {}; order.forEach(k => { next[k] = false }); setCollapsed(next) }
   const collapseAll = () => { const next = {}; order.forEach(k => { next[k] = true }); setCollapsed(next) }
 
-  /* ----- Dragula wiring ----- */
   useEffect(() => {
     const grid = gridRef.current
     if (!grid) return
@@ -404,7 +411,6 @@ export default function FlyHQTools() {
   )
 }
 
-/* ========== Hooks ========== */
 function useFixedPanelContentHeight({
   rows,
   cols,

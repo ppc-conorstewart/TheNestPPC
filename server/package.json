@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start": "node server/index.js",
+    "start": "node server.js",
     "client": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test"
+    "test": "node --test"
   },
   "dependencies": {
     "@fullcalendar/core": "5.11.4",

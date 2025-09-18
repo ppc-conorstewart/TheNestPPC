@@ -1,6 +1,7 @@
 // src/components/Header.jsx
 
 import { useEffect, useRef, useState } from 'react'
+import { resolveApiUrl } from '../api'
 
 export default function Header() {
   const [user, setUser] = useState(null)
@@ -40,7 +41,7 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const onClickLogin = () => { window.location.href = `${process.env.REACT_APP_API_URL}/auth/discord` }
+  const onClickLogin = () => { window.location.href = resolveApiUrl('/auth/discord') }
   const onClickLogout = () => {
     localStorage.removeItem('flyiq_user')
     setUser(null)

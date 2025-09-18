@@ -101,6 +101,7 @@ const selectStyles = {
     color: '#fff',
     fontSize: '0.62rem',
     marginTop: 2,
+    zIndex: 9999,
   }),
   singleValue: provided => ({
     ...provided,
@@ -122,6 +123,7 @@ const selectStyles = {
     paddingTop: 2,
     paddingBottom: 2,
   }),
+  menuPortal: base => ({ ...base, zIndex: 9999 }),
 };
 
 export default function Consumables({
@@ -136,6 +138,8 @@ export default function Consumables({
   const [boltups, setBoltups] = useState([]);
   const [gasketSelect, setGasketSelect] = useState(null);
   const [boltupSelect, setBoltupSelect] = useState(null);
+
+  const menuPortalTarget = typeof document !== 'undefined' ? document.body : null;
 
   // sync savedItems → local state
   useEffect(() => {
@@ -216,6 +220,7 @@ export default function Consumables({
               styles={selectStyles}
               placeholder="Add Gasket"
               className="flex-1"
+              menuPortalTarget={menuPortalTarget}
             />
             <button
               onClick={() => handleAddGasket(gasketSelect)}
@@ -258,6 +263,7 @@ export default function Consumables({
               options={boltupOptions}
               styles={selectStyles}
               placeholder="Add Bolt-Up"
+              menuPortalTarget={menuPortalTarget}
               className="flex-1"
             />
             <button

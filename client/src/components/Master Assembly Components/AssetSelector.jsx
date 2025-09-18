@@ -130,48 +130,19 @@ function AssetSelector({
   const rootRef = useRef(null);
 
   // ---------- Outside click control for menu ----------
-  const [menuIsOpen, setMenuIsOpen] = useState(false);
-  const allowCloseNextRef = useRef(false);
-
-  const openMenu = useCallback(() => setMenuIsOpen(true), []);
-  const closeMenu = useCallback(() => setMenuIsOpen(false), []);
-  const onMenuClose = useCallback(() => {
-    if (allowCloseNextRef.current) {
-      allowCloseNextRef.current = false;
-      setMenuIsOpen(false);
-    } else {
-      setTimeout(() => setMenuIsOpen(true), 0);
-    }
-  }, []);
-  const onMenuOpen = useCallback(() => setMenuIsOpen(true), []);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const onMenuClose = useCallback(() => setMenuOpen(false), []);
+  const onMenuOpen = useCallback(() => setMenuOpen(true), []);
 
   // ---------- Focus the input when opening ----------
   useEffect(() => {
-    if (!menuIsOpen) return;
+    if (!menuOpen) return;
     const root = rootRef.current;
     const input = root && root.querySelector('input');
     if (input) {
       requestAnimationFrame(() => { try { input.focus(); } catch {} });
     }
-  }, [menuIsOpen]);
-
-  // ---------- Suppress true outside clicks only ----------
-  useEffect(() => {
-    if (!menuIsOpen) return;
-    const onMouseDown = (e) => {
-      const root = rootRef.current;
-      const target = e.target;
-      const clickedInsideControl = !!(root && root.contains(target));
-      const clickedInMenu = !!document.querySelector('.rs__menu') && e.composedPath().some((el) => {
-        try { return el && el.classList && el.classList.contains('rs__menu'); } catch { return false; }
-      });
-      if (!clickedInsideControl && !clickedInMenu) {
-        allowCloseNextRef.current = true;
-      }
-    };
-    document.addEventListener('mousedown', onMouseDown, true);
-    return () => document.removeEventListener('mousedown', onMouseDown, true);
-  }, [menuIsOpen]);
+  }, [menuOpen]);
 
   // ---------- Options memo with deep equality ----------
   const lastAssetOptionsRef = useRef(assetOptions);
@@ -197,6 +168,13 @@ function AssetSelector({
 
   const borderColor = accentColor || palomaGreen;
 
+  const handleSelectChange = useCallback((opt) => {
+    setMenuOpen(false);
+    if (onChange) onChange((opt && opt.value) || '');
+  }, [onChange]);
+
+  const portalTarget = typeof document !== 'undefined' ? document.body : null;
+
   return (
     <div
       ref={rootRef}
@@ -204,7 +182,6 @@ function AssetSelector({
         marginBottom: 0,
         ...(style || {}),
       }}
-      onClick={openMenu}
     >
       <Select
         instanceId={instanceIdRef.current}
@@ -214,12 +191,11 @@ function AssetSelector({
         options={options}
         value={selectedOption}
         filterOption={filterOption}
-        onChange={(opt) => onChange && onChange((opt && opt.value) || '')}
+        onChange={handleSelectChange}
         onMenuOpen={onMenuOpen}
         onMenuClose={onMenuClose}
-        menuIsOpen={menuIsOpen}
         components={{ MenuList, Option, SingleValue }}
-        menuPortalTarget={document.body}
+        menuPortalTarget={portalTarget}
         __accentColor={borderColor}
         styles={{
           control: (provided, state) => ({

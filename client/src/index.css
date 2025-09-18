@@ -481,3 +481,12 @@ body { font-size: var(--fs-1); line-height: 1.4; }
 /* ===================================== */
 .app-sidebar { gap: 0 !important; }
 .app-sidebar .flex { gap: 0 !important; }
+
+@media (max-width: 1024px) {
+  body, #root {
+    overflow-x: auto;
+  }
+  .custom-scrollbar {
+    -webkit-overflow-scrolling: touch;
+  }
+}

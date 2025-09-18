@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../../../api'
 // ==============================
 // JobSelector.jsx — Custom Listbox with Font and Field Styling (Customer, LSD, Well Count) [Always Passes Job Object to Parent]
 // ==============================
@@ -22,7 +23,7 @@ export default function JobSelector({ selectedJobId, setSelectedJobId }) {
   const [jobs, setJobs] = useState([]);
 
   useEffect(() => {
-    fetch("/api/hq/active-jobs")
+    fetch(resolveApiUrl("/api/hq/active-jobs"))
       .then(res => res.json())
       .then(data => {
         let filtered = Array.isArray(data) ? data : [];

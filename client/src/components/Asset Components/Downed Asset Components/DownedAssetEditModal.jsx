@@ -6,6 +6,10 @@
 // DOWNED ASSET EDIT MODAL — IMPORTS
 // ==============================
 import { useEffect, useMemo, useState } from 'react';
+import { API_BASE_URL } from '../../../api';
+
+
+const API_BASE = API_BASE_URL || '';
 
 // ==============================
 // DOWNED ASSET EDIT MODAL — THEME CONSTANTS
@@ -86,7 +90,7 @@ export default function DownedAssetEditModal({ asset = null, onClose = () => {},
         downed_notes: notes || null,
         status
       };
-      const res = await fetch('http://localhost:3001/api/assets/' + encodeURIComponent(asset.id), {
+      const res = await fetch(`${API_BASE}/api/assets/` + encodeURIComponent(asset.id), {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -178,3 +182,4 @@ export default function DownedAssetEditModal({ asset = null, onClose = () => {},
     </div>
   );
 }
+

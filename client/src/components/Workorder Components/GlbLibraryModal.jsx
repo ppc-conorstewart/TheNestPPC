@@ -3,11 +3,12 @@
 // ==============================
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { API_BASE_URL } from '../../api';
+const API_BASE = API_BASE_URL || '';
 
 // ==============================
 // ======= CONSTANTS ============
 // ==============================
-const API_BASE = 'http://localhost:3001';
 
 // ==============================
 // ======= UTILS ================

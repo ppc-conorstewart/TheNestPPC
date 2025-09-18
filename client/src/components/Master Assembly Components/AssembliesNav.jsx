@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../api'
 // ==============================
 // src/components/Master Assembly Components/AssembliesNav.jsx
 // ==============================
@@ -220,7 +221,7 @@ export default function AssembliesNav({
     let alive = true;
     (async () => {
       try {
-        const res = await fetch('/api/master/missiles/assignees', { credentials: 'include' });
+        const res = await fetch(resolveApiUrl('/api/master/missiles/assignees'), { credentials: 'include' });
         if (!res.ok) return;
         const rows = await res.json();
         if (!alive) return;
@@ -235,7 +236,7 @@ export default function AssembliesNav({
   async function saveMissileAssignee(child, customer_id) {
     setMissileAssignees((m) => ({ ...m, [child]: customer_id || null }));
     try {
-      await fetch('/api/master/missiles/assignee', {
+      await fetch(resolveApiUrl('/api/master/missiles/assignee'), {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

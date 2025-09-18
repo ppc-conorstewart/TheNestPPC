@@ -1,6 +1,8 @@
+import { resolveApiUrl } from '../../api'
+// =========================== FILE: client/src/components/HQ-Dashboard/UpcomingPadsCard.jsx ===========================
+
 // =================== Imports and Dependencies ===================
 import { useEffect, useState } from "react";
-import ScaleToFit from "../ui/ScaleToFit";
 
 // =================== Utility Functions ===================
 function dedupeJobs(jobs) {
@@ -117,7 +119,7 @@ export default function UpcomingPadsCard() {
   const [modalJobKey, setModalJobKey] = useState(null);
 
   useEffect(() => {
-    fetch('/api/hq/upcoming-jobs')
+    fetch(resolveApiUrl('/api/hq/upcoming-jobs'))
       .then((res) => res.json())
       .then((data) => {
         const list = dedupeJobs(data || [])
@@ -152,7 +154,7 @@ export default function UpcomingPadsCard() {
 
   return (
     <div
-      className="border-2 border-[#6a7257] rounded-2xl shadow-2xl px-4 flex flex-row min-h-[60px]"
+      className="border-2 border-[#6a7257] rounded-2xl shadow-2xl px-4 flex flex-row min-h-[60px] min-h-0"
       style={{
         width: '100%',
         height: '100%',
@@ -162,6 +164,7 @@ export default function UpcomingPadsCard() {
         WebkitBackdropFilter: 'blur(var(--glass-blur))',
         boxShadow: 'var(--glass-shadow)',
         borderColor: '#6a7257',
+        overflow: 'hidden'
       }}
     >
       <ZoneModal
@@ -173,14 +176,15 @@ export default function UpcomingPadsCard() {
       />
 
       {/* ===== Main Content ===== */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
         {loading ? (
           <div className="text-center text-gray-400 py-6">Loading...</div>
         ) : jobs.length === 0 ? (
           <div className="text-center text-gray-400 py-6">No upcoming jobs found.</div>
         ) : (
-          <ScaleToFit className="w-full flex-1 min-h-0">
-            <div className="w-full">
+          <div className="flex-1 min-h-0">
+            <div className="h-full max-h-full overflow-auto pr-1">
+              <div className="w-full min-w-[900px]">
               {/* ===== Header Row ===== */}
               <div
                 className={
@@ -310,23 +314,15 @@ export default function UpcomingPadsCard() {
                   );
                 })}
               </div>
+              </div>
             </div>
-          </ScaleToFit>
+          </div>
         )}
       </div>
 
       {/* ===== Right Actions Panel (Empty Placeholder) ===== */}
-      <div
-        className="ml-3 pl-3 flex flex-col items-center justify-start"
-        style={{
-          width: 54,
-          borderLeft: "2px solid #6a7257",
-          paddingTop: 8,
-          gap: 10,
-          flexShrink: 0
-        }}
-      >
-        {/* Intentionally empty for now */}
+      <div className="ml-3 pl-3 fhq-action-rail">
+        {/* Intentionally empty for future actions */}
       </div>
     </div>
   );

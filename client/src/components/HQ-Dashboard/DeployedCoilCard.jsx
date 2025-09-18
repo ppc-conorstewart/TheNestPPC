@@ -1,4 +1,4 @@
-// =================== DeployedCoilCard.jsx ===================
+// =================== FILE: client/src/components/HQ-Dashboard/DeployedCoilCard.jsx ===================
 
 // =================== Imports and Dependencies ===================
 import { useState } from 'react';
@@ -318,16 +318,7 @@ export default function DeployedCoilCard() {
         )}
       </div>
 
-      <div
-        className='ml-3 pl-3 flex flex-col items-center justify-start'
-        style={{
-          width: 54,
-          borderLeft: '2px solid #6a7257',
-          paddingTop: 8,
-          gap: 10,
-          flexShrink: 0
-        }}
-      >
+      <div className='ml-3 pl-3 fhq-action-rail'>
         <ActionIconBtn
           icon={icons.plus}
           tooltip='Add Job'

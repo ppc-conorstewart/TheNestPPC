@@ -3,7 +3,9 @@
 // API helpers for fetching gasket usage for master assemblies
 // ==============================
 
+import { resolveApiUrl } from '../../../api';
 const API_BASE = '/api/master/gaskets';
+const gasketsUrl = (suffix = '') => resolveApiUrl(`${API_BASE}${suffix}`);
 
 /**
  * Normalize a date string to YYYY-MM-DD format.
@@ -23,7 +25,7 @@ function normDate(v) {
 export async function fetchGasketsForAssembly(assemblyId) {
   if (!assemblyId) return [];
   try {
-    const res = await fetch(`${API_BASE}/${encodeURIComponent(assemblyId)}`, {
+    const res = await fetch(gasketsUrl(`/${encodeURIComponent(assemblyId)}`), {
       credentials: 'include'
     });
     if (!res.ok) {
@@ -49,7 +51,7 @@ export async function fetchGasketsForAssembly(assemblyId) {
  */
 export async function fetchAllGaskets() {
   try {
-    const res = await fetch(`${API_BASE}/all`, {
+    const res = await fetch(gasketsUrl('/all'), {
       credentials: 'include'
     });
     if (!res.ok) {

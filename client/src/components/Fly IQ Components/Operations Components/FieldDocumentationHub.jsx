@@ -1,3 +1,4 @@
+import { resolveApiUrl } from '../../../api'
 // ==============================
 // FieldDocumentationHub.jsx — Frosted Glass Backdrop (Enter to Submit, Shift+Enter for Newline)
 // ==============================
@@ -62,10 +63,16 @@ export default function FieldDocumentationHub({ open, onClose }) {
 
   function fetchDocsForTab(tab) {
     setLoading(true);
-    fetch(`/api/field-docs?tab=${encodeURIComponent(tab)}`)
+    fetch(resolveApiUrl(`/api/field-docs?tab=${encodeURIComponent(tab)}`))
       .then((res) => res.json())
       .then((data) => {
-        setDocuments(data);
+        const normalized = Array.isArray(data)
+          ? data.map(doc => ({
+              ...doc,
+              file_url: resolveApiUrl(doc?.file_url || '')
+            }))
+          : [];
+        setDocuments(normalized);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -89,7 +96,7 @@ export default function FieldDocumentationHub({ open, onClose }) {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("tab", activeTab);
-        await fetch("/api/field-docs", {
+        await fetch(resolveApiUrl("/api/field-docs"), {
           method: "POST",
           body: formData,
         });
@@ -109,7 +116,7 @@ export default function FieldDocumentationHub({ open, onClose }) {
       setRenamingId(null);
       return;
     }
-    const res = await fetch(`/api/field-docs/${doc.id}`, {
+    const res = await fetch(resolveApiUrl(`/api/field-docs/${doc.id}`), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ newName: newFullName })
@@ -357,6 +364,7 @@ export default function FieldDocumentationHub({ open, onClose }) {
                 const [namePart, extPart] = splitNameAndExt(doc.file_name);
                 const isImage = doc.mime_type && doc.mime_type.startsWith("image/");
                 const isPDF = doc.file_name.toLowerCase().endsWith('.pdf');
+                const fileUrl = doc.file_url || resolveApiUrl(`/api/field-docs/files/${doc.id}`);
                 return (
                   <div
                     key={doc.id}
@@ -413,12 +421,12 @@ export default function FieldDocumentationHub({ open, onClose }) {
                         marginTop: 6,
                         boxShadow: "0 2px 7px #18201744"
                       }}
-                      onClick={() => window.open(doc.file_url, "_blank")}
+                      onClick={() => window.open(fileUrl, "_blank")}
                       title={`Open ${doc.file_name}`}
                     >
                       {isImage ? (
                         <img
-                          src={doc.file_url}
+                          src={fileUrl}
                           alt={doc.file_name}
                           style={{
                             width: 134,
@@ -430,7 +438,7 @@ export default function FieldDocumentationHub({ open, onClose }) {
                         />
                       ) : isPDF ? (
                         <embed
-                          src={doc.file_url}
+                          src={fileUrl}
                           type="application/pdf"
                           width="134"
                           height="134"

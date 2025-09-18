@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../api';
+
+
+const API_BASE = API_BASE_URL || '';
 
 const logo = '/assets/logo.png';
 const camoBg = '/assets/new-bg.jpg';
@@ -13,7 +17,7 @@ export default function TrainingRoom({ module }) {
 
   useEffect(() => {
     const endpoint = module === 'module2' ? '/api/module2' : '/api/questions';
-    fetch(`http://localhost:3001${endpoint}`)
+    fetch(`${API_BASE}${endpoint}`)
       .then(res => res.json())
       .then(data => setQuestionData(data))
       .catch(err => console.error('Failed to fetch questions:', err));
@@ -112,3 +116,4 @@ export default function TrainingRoom({ module }) {
     </div>
   );
 }
+

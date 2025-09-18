@@ -49,7 +49,7 @@ export default function TransferModal({
     if (!q) return searchableAssets.slice(0, 50);
     return searchableAssets
       .filter(a => {
-        const str = [a?.id, a?.assetId, a?.name, a?.category, a?.serial]
+        const str = [a?.id, a?.assetId, a?.name, a?.category, a?.sn]
           .filter(Boolean)
           .join(' ')
           .toLowerCase();
@@ -153,7 +153,7 @@ export default function TransferModal({
             >
               <input
                 type='text'
-                placeholder='Search assets by ID, name, category, serial…'
+                placeholder='Search assets by ID, name, category, SN…'
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 style={{
@@ -208,12 +208,12 @@ export default function TransferModal({
                             onClick={() => addId(id)}
                             disabled={disabled}
                             style={{
-                              background: disabled ? '#3a3a3a' : '#6a7257',
+                              background: disabled ? '#3a3a3a' : '#32ab17ff',
                               color: '#fff',
-                              fontWeight: 800,
+                              fontWeight: 400,
                               border: 'none',
                               borderRadius: 6,
-                              padding: '6px 10px',
+                              padding: '2px 8px',
                               cursor: disabled ? 'not-allowed' : 'pointer'
                             }}
                           >
@@ -242,7 +242,7 @@ export default function TransferModal({
             }}
           >
             <div style={{ fontSize: 16 }}>
-              Selected Assets:{' '}
+              Selected Assets{' '}
               <span style={{ color: '#6a7257', fontWeight: 800 }}>
                 {combinedCount}
               </span>
@@ -411,15 +411,15 @@ const th = {
 const thCenter = { ...th, textAlign: 'center', width: 72 };
 
 const td = {
-  padding: '9px 12px',
-  fontSize: 14,
+  padding: '4px 4px',
+  fontSize: 10,
   color: '#e9efe6'
 };
 
 const tdMono = {
   ...td,
   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-  color: '#daff05ff',
+  color: '#ff0505ff',
   whiteSpace: 'nowrap'
 };
 
@@ -436,12 +436,12 @@ const chip = {
   alignItems: 'center',
   gap: 8,
   padding: '6px 10px',
-  borderRadius: 999,
+  borderRadius: 0,
   background: '#172018',
   border: '1px solid #2c422a',
-  fontSize: 13,
-  fontWeight: 700,
-  color: '#e6f3e1'
+  fontSize: 10,
+  fontWeight: 400,
+  color: '#ff0000ff'
 };
 
 const chipLocked = {

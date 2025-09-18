@@ -3,10 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "cd client && npm install && npm run build",
-    "start": "node server.js"
+    "postinstall": "npm --prefix client ci",
+    "build": "npm --prefix client run build",
+    "start": "serve -s client/build -l $PORT"
   },
   "dependencies": {
+    "serve": "^14.2.5",
     "autoprefixer": "^10.4.21",
     "chart.js": "^4.5.0",
     "cors": "^2.8.5",

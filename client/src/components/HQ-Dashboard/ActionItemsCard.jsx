@@ -1,9 +1,8 @@
-// ===========================
-// FILE: client/src/components/HQ-Dashboard/ActionItemsCard.jsx
+import { resolveApiUrl, resolveBotUrl } from '../../api'
+// =========================== FILE: client/src/components/HQ-Dashboard/ActionItemsCard.jsx ===========================
 // Sections: Imports • Add Modal • Edit Modal • Reminder Modal • Docs Modal • Row • Component
-// ===========================
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FiBell, FiCheckCircle, FiEdit2, FiPaperclip, FiPlus, FiUser, FiX } from 'react-icons/fi'
 
 // ===========================
@@ -35,10 +34,36 @@ function AddModal({ open, onClose, onSubmit }) {
     setFileUrl('')
     setFileName('')
 
-    fetch('/api/discord/members')
-      .then(r => (r.ok ? r.json() : []))
-      .then(data => setMembers(Array.isArray(data) ? data : []))
-      .catch(() => setMembers([]))
+    let cancelled = false
+    const loadMembers = async () => {
+      const resolvedDirect = resolveBotUrl('/members')
+      const directUrl = resolvedDirect && /^https?:\/\//i.test(resolvedDirect) ? resolvedDirect : ''
+      const fallbackUrl = resolveApiUrl('/api/discord/members')
+      const storedKey = typeof window !== 'undefined' ? window.localStorage?.getItem('bot_key') : null
+      const botKey = storedKey || process.env.REACT_APP_BOT_KEY || 'Paloma2025*'
+
+      const attempt = async (url, options) => {
+        if (!url) return null
+        try {
+          const res = await fetch(url, options)
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          const data = await res.json()
+          return Array.isArray(data) ? data : null
+        } catch (err) {
+          console.warn('Failed to load Discord members from', url, err)
+          return null
+        }
+      }
+
+      const headers = botKey ? { 'x-bot-key': botKey } : {}
+      let list = await attempt(directUrl, directUrl ? { headers } : undefined)
+      if (!list) list = await attempt(fallbackUrl)
+      if (!cancelled) setMembers(list || [])
+    }
+
+    loadMembers()
+
+    return () => { cancelled = true }
   }, [open])
 
   const suggestions = useMemo(() => {
@@ -72,7 +97,7 @@ function AddModal({ open, onClose, onSubmit }) {
       setUploading(true)
       const fd = new FormData()
       fd.append('model', file) // server expects 'model'
-      const r = await fetch('/api/upload-model', { method: 'POST', body: fd })
+      const r = await fetch(resolveApiUrl('/api/upload-model'), { method: 'POST', body: fd })
       if (!r.ok) throw new Error('upload failed')
       const data = await r.json()
       setFileUrl(data.url || '')
@@ -94,8 +119,8 @@ function AddModal({ open, onClose, onSubmit }) {
 
   if (!open) return null
   return (
-    <div className='absolute inset-0 z-50'>
-      <div className='bg-black rounded-2xl border-2 border-[#6a7257] w-full h-full flex flex-col overflow-hidden'>
+    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'>
+      <div className='bg-black rounded-2xl border-2 border-[#6a7257] w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden'>
         <div className='flex items-center justify-between px-4 pt-3 pb-2'>
           <h3 className='text-base font-extrabold text-[#e6e8df]'>Add Action Item</h3>
           <button className='text-gray-400 hover:text-[#f00] font-bold text-lg leading-none' onClick={onClose}>×</button>
@@ -106,6 +131,10 @@ function AddModal({ open, onClose, onSubmit }) {
             e.preventDefault()
             const stakeholders = Object.values(picked).map(m => m.displayName || m.username)
             const stakeholder_ids = Object.keys(picked)
+            const stakeholder_objects = Object.values(picked).map(m => ({
+              id: m.id,
+              name: m.displayName || m.username || ''
+            }))
             onSubmit({
               description: form.description,
               priority: form.priority,
@@ -113,162 +142,164 @@ function AddModal({ open, onClose, onSubmit }) {
               due_date: form.due_date || null,
               stakeholders,
               stakeholder_ids,
+              stakeholder_objects,
               attachment_url: fileUrl || null,
               attachment_name: fileName || null
             })
           }}
-          className='px-4 pb-3'
+          className='flex flex-col flex-1 px-4 pb-3'
         >
-          <div className='grid grid-cols-2 gap-3'>
-            <div className='grid gap-3'>
-              <label className='text-xs font-bold text-[#e6e8df]'>
-                Description
-                <textarea
-                  rows={2}
-                  className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs resize-none'
-                  value={form.description}
-                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  required
-                />
-              </label>
-
-              <div className='grid grid-cols-3 gap-3'>
+          <div className='flex-1 overflow-y-auto pr-1'>
+            <div className='grid grid-cols-2 gap-3'>
+              <div className='grid gap-3'>
                 <label className='text-xs font-bold text-[#e6e8df]'>
-                  Priority
-                  <select
-                    className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
-                    value={form.priority}
-                    onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
-                  >
-                    <option>Low</option>
-                    <option>Normal</option>
-                    <option>High</option>
-                    <option>Urgent</option>
-                  </select>
-                </label>
-                <label className='text-xs font-bold text-[#e6e8df]'>
-                  Category
-                  <select
-                    className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
-                    value={form.category}
-                    onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                  >
-                    <option>General</option>
-                    <option>Operations</option>
-                    <option>Safety</option>
-                    <option>Logistics</option>
-                    <option>Finance</option>
-                  </select>
-                </label>
-                <label className='text-xs font-bold text-[#e6e8df]'>
-                  Due Date
-                  <input
-                    type='date'
-                    className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
-                    value={form.due_date}
-                    onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
+                  Description
+                  <textarea
+                    rows={2}
+                    className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs resize-none'
+                    value={form.description}
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                    required
                   />
                 </label>
+
+                <div className='grid grid-cols-3 gap-3'>
+                  <label className='text-xs font-bold text-[#e6e8df]'>
+                    Priority
+                    <select
+                      className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
+                      value={form.priority}
+                      onChange={e => setForm(f => ({ ...f, priority: e.target.value }))}
+                    >
+                      <option>Low</option>
+                      <option>Normal</option>
+                      <option>High</option>
+                      <option>Urgent</option>
+                    </select>
+                  </label>
+                  <label className='text-xs font-bold text-[#e6e8df]'>
+                    Category
+                    <select
+                      className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
+                      value={form.category}
+                      onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    >
+                      <option>General</option>
+                      <option>Operations</option>
+                      <option>Safety</option>
+                      <option>Logistics</option>
+                      <option>Finance</option>
+                    </select>
+                  </label>
+                  <label className='text-xs font-bold text-[#e6e8df]'>
+                    Due Date
+                    <input
+                      type='date'
+                      className='w-full mt-1 px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs'
+                      value={form.due_date}
+                      onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
+                    />
+                  </label>
+                </div>
+
+                <div className='grid gap-2'>
+                  <div className='text-xs font-bold text-[#e6e8df]'>Selected Stakeholders</div>
+                  <div className='flex flex-wrap gap-1'>
+                    {Object.values(picked).map(m => (
+                      <span key={m.id} className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#3a3d33] text-[11px] text-[#b0b79f]'>
+                        <FiUser className='opacity-80' /> {(m.displayName || m.username)}
+                        <button type='button' className='ml-1 text-[#6a7257] hover:text-[#ffe066] font-bold' onClick={() => removePick(m.id)}>×</button>
+                      </span>
+                    ))}
+                    {Object.keys(picked).length === 0 && (
+                      <span className='text-[11px] text-[#6a7257] italic'>None</span>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className='grid gap-2'>
-                <div className='text-xs font-bold text-[#e6e8df]'>Selected Stakeholders</div>
-                <div className='flex flex-wrap gap-1'>
-                  {Object.values(picked).map(m => (
-                    <span key={m.id} className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#3a3d33] text-[11px] text-[#b0b79f]'>
-                      <FiUser className='opacity-80' /> {(m.displayName || m.username)}
-                      <button type='button' className='ml-1 text-[#6a7257] hover:text-[#ffe066] font-bold' onClick={() => removePick(m.id)}>×</button>
-                    </span>
-                  ))}
-                  {Object.keys(picked).length === 0 && (
-                    <span className='text-[11px] text-[#6a7257] italic'>None</span>
+                <div className='text-xs font-bold text-[#e6e8df]'>Discord Members</div>
+
+                <div className='relative grid gap-0'>
+                  <input
+                    className='w-full px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs mt-0'
+                    placeholder='Search members...'
+                    value={query}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setTimeout(() => setFocused(false), 150)}
+                    onChange={e => setQuery(e.target.value)}
+                  />
+
+                  {focused && suggestions.length > 0 && (
+                    <div className='absolute left-0 right-0 top-[30px] rounded-lg border-2 border-[#3a3d33] bg-[#171a14] p-1 z-10'>
+                      {suggestions.map(m => (
+                        <label key={m.id} className='flex items-center gap-2 py-1 px-2 text-[12px] text-[#cfd3c3] cursor-pointer hover:bg-[#20241a] rounded'>
+                          <input
+                            type='checkbox'
+                            checked={!!picked[m.id]}
+                            onChange={() => togglePick(m)}
+                            className='accent-[#6a7257]'
+                          />
+                          {m.avatar ? <img src={m.avatar} alt='' className='w-5 h-5 rounded-full' /> : <FiUser className='opacity-70' />}
+                          <span className='font-bold'>{m.displayName || m.username}</span>
+                        </label>
+                      ))}
+                    </div>
                   )}
+                </div>
+
+                <div
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
+                  onDrop={onDrop}
+                  className='rounded-xl border-2 border-dashed border-[#3a3d33] bg-[#171a14] px-3 py-3'
+                  style={{ minHeight: 140 }}
+                >
+                  {!fileUrl ? (
+                    <div className='flex items-center gap-2 text-[12px] text-[#cfd3c3]'>
+                      <FiPaperclip className='opacity-80' />
+                      <span className='font-bold'>Drag & drop file here, or</span>
+                      <button
+                        type='button'
+                        onClick={() => inputRef.current?.click()}
+                        className='underline'
+                      >
+                        browse
+                      </button>
+                      {uploading && <span className='italic text-[#6a7257]'>uploading…</span>}
+                    </div>
+                  ) : (
+                    <div className='flex items-center justify-between'>
+                      <div className='flex items-center gap-2 text-[12px] text-[#cfd3c3]'>
+                        <FiPaperclip className='opacity-80' />
+                        <span className='font-bold'>{fileName}</span>
+                        <span className='text-[#6a7257] font-mono'>{fileUrl}</span>
+                      </div>
+                      <button
+                        type='button'
+                        onClick={() => { setFileUrl(''); setFileName('') }}
+                        className='text-[#ffe066] hover:text-white'
+                        title='Remove'
+                      >
+                        <FiX />
+                      </button>
+                    </div>
+                  )}
+                  <input
+                    ref={inputRef}
+                    type='file'
+                    className='hidden'
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) doUpload(f)
+                      e.currentTarget.value = ''
+                    }}
+                  />
                 </div>
               </div>
             </div>
-
-            <div className='grid gap-2'>
-              <div className='text-xs font-bold text-[#e6e8df]'>Discord Members</div>
-
-              <div className='relative grid gap-0'>
-                <input
-                  className='w-full px-2 py-1 rounded bg-[#191d18] text-white border-2 border-[#6a7257] font-bold text-xs mt-0'
-                  placeholder='Search members...'
-                  value={query}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => setTimeout(() => setFocused(false), 150)}
-                  onChange={e => setQuery(e.target.value)}
-                />
-
-                {focused && suggestions.length > 0 && (
-                  <div className='absolute left-0 right-0 top-[30px] rounded-lg border-2 border-[#3a3d33] bg-[#171a14] p-1 z-10'>
-                    {suggestions.map(m => (
-                      <label key={m.id} className='flex items-center gap-2 py-1 px-2 text-[12px] text-[#cfd3c3] cursor-pointer hover:bg-[#20241a] rounded'>
-                        <input
-                          type='checkbox'
-                          checked={!!picked[m.id]}
-                          onChange={() => togglePick(m)}
-                          className='accent-[#6a7257]'
-                        />
-                        <img src={m.avatar} alt='' className='w-5 h-5 rounded-full' />
-                        <span className='font-bold'>{m.displayName || m.username}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div
-                onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }}
-                onDrop={onDrop}
-                className='rounded-xl border-2 border-dashed border-[#3a3d33] bg-[#171a14] px-3 py-3'
-                style={{ minHeight: 140 }}
-              >
-                {!fileUrl ? (
-                  <div className='flex items-center gap-2 text-[12px] text-[#cfd3c3]'>
-                    <FiPaperclip className='opacity-80' />
-                    <span className='font-bold'>Drag & drop file here, or</span>
-                    <button
-                      type='button'
-                      onClick={() => inputRef.current?.click()}
-                      className='underline'
-                    >
-                      browse
-                    </button>
-                    {uploading && <span className='italic text-[#6a7257]'>uploading…</span>}
-                  </div>
-                ) : (
-                  <div className='flex items-center justify-between'>
-                    <div className='flex items-center gap-2 text-[12px] text-[#cfd3c3]'>
-                      <FiPaperclip className='opacity-80' />
-                      <span className='font-bold'>{fileName}</span>
-                      <span className='text-[#6a7257] font-mono'>{fileUrl}</span>
-                    </div>
-                    <button
-                      type='button'
-                      onClick={() => { setFileUrl(''); setFileName('') }}
-                      className='text-[#ffe066] hover:text-white'
-                      title='Remove'
-                    >
-                      <FiX />
-                    </button>
-                  </div>
-                )}
-                <input
-                  ref={inputRef}
-                  type='file'
-                  className='hidden'
-                  onChange={(e) => {
-                    const f = e.target.files?.[0]
-                    if (f) doUpload(f)
-                    e.currentTarget.value = ''
-                  }}
-                />
-              </div>
-            </div>
           </div>
-
-          <div className='mt-3 flex justify-end gap-2'>
+          <div className='mt-3 flex justify-end gap-2 shrink-0'>
             <button
               type='button'
               className='px-3 py-1 rounded font-bold text-xs'
@@ -504,7 +535,7 @@ function Row({ item, selected, onSelect }) {
       High: 'bg-[#38231f] text-[#ffb39a] border-[#4a2d27]',
       Urgent: 'bg-[#3a2626] text-[#ff8e8e] border-[#523030]'
     }
-    const cls = 'px-2 py-0.5 text-[11px] font-bold rounded border ' + (map[val] || 'bg-[#252821] text-[#cfd3c3] border-[#3a3d33]')
+    const cls = 'px-2 py-0.5 text[11px] text-[11px] font-bold rounded border ' + (map[val] || 'bg-[#252821] text-[#cfd3c3] border-[#3a3d33]')
     return <span className={cls}>{val}</span>
   }
   const base = 'grid grid-cols-[1fr_110px_140px_140px_1.2fr] items-center py-1 rounded-lg transition-all duration-150 cursor-pointer '
@@ -524,12 +555,31 @@ function Row({ item, selected, onSelect }) {
         </span>
       </div>
       <div className='px-2 flex flex-wrap gap-1 items-center'>
-        {(item.stakeholders || []).map((s, i) => (
-          <span key={i} className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[#3a3d33] text-[10px] text-[#b0b79f]'>
-            <FiUser className='opacity-80' /> {s}
-          </span>
-        ))}
-        {(!item.stakeholders || !item.stakeholders.length) && <span className='text-[11px] text-[#6a7257] italic'>None</span>}
+        {(() => {
+          const detailList = Array.isArray(item.stakeholders_detail) && item.stakeholders_detail.length
+            ? item.stakeholders_detail
+            : (item.stakeholders || []).map(name => ({ name }))
+          if (!detailList.length) {
+            return <span className='text-[11px] text-[#6a7257] italic'>None</span>
+          }
+          return detailList.map((detail, i) => {
+            const acknowledged = Boolean(detail.acknowledged)
+            const baseCls = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold transition-colors'
+            const ackCls = acknowledged
+              ? 'border-[#2f4a31] bg-[#1b2d1b] text-[#8fffbb]'
+              : 'border-[#3a3d33] bg-transparent text-[#b0b79f]'
+            return (
+              <span
+                key={`${detail.id || detail.name || i}`}
+                className={`${baseCls} ${ackCls}`}
+                title={acknowledged ? 'Acknowledged' : 'Awaiting acknowledgement'}
+              >
+                {acknowledged ? <FiCheckCircle className='text-[#8fffbb]' size={10} /> : <FiUser className='opacity-80' size={10} />}
+                {detail.name || 'Stakeholder'}
+              </span>
+            )
+          })
+        })()}
       </div>
     </div>
   )
@@ -547,12 +597,30 @@ export default function ActionItemsCard() {
   const [openRemind, setOpenRemind] = useState(false)
   const [openDocs, setOpenDocs] = useState(false)
 
-  const load = () => {
+  const load = useCallback(() => {
     setLoading(true)
-    fetch('/api/hq/action-items')
+    fetch(resolveApiUrl('/api/hq/action-items'))
       .then(r => (r.ok ? r.json() : []))
       .then(data => {
-        setItems(Array.isArray(data) ? data : [])
+        const normalized = Array.isArray(data) ? data.map(item => {
+          const detail = Array.isArray(item.stakeholders_detail) ? item.stakeholders_detail : []
+          const mappedDetail = detail.map(entry => ({
+            id: entry?.id ? String(entry.id) : null,
+            name: entry?.name || '',
+            acknowledged: Boolean(entry?.acknowledged),
+            acknowledged_at: entry?.acknowledged_at || null
+          }))
+          const stakeholders = Array.isArray(item.stakeholders) && item.stakeholders.length
+            ? item.stakeholders
+            : mappedDetail.map(entry => entry.name).filter(Boolean)
+          return {
+            ...item,
+            stakeholders,
+            stakeholders_detail: mappedDetail,
+            acknowledged_ids: Array.isArray(item.acknowledged_ids) ? item.acknowledged_ids : mappedDetail.filter(entry => entry.acknowledged && entry.id).map(entry => entry.id)
+          }
+        }) : []
+        setItems(normalized)
         setLoading(false)
         setSelected(null)
       })
@@ -561,9 +629,13 @@ export default function ActionItemsCard() {
         setLoading(false)
         setSelected(null)
       })
-  }
+  }, [])
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    const timer = setInterval(load, 15000)
+    return () => clearInterval(timer)
+  }, [load])
 
   const header = useMemo(() => (
     <div className='grid grid-cols-[1fr_110px_140px_140px_1.2fr] items-center pb-1 pt-2 border-b border-[#393c32] mb-1 font-bold text-[#b0b79f] text-xs uppercase tracking-wider'>
@@ -577,7 +649,7 @@ export default function ActionItemsCard() {
 
   const handleAdd = async (payload) => {
     try {
-      await fetch('/api/hq/action-items', {
+      await fetch(resolveApiUrl('/api/hq/action-items'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -592,7 +664,7 @@ export default function ActionItemsCard() {
   const handleSaveEdit = async (payload) => {
     if (!selected) return
     try {
-      await fetch(`/api/hq/action-items/${selected.id}`, {
+      await fetch(resolveApiUrl(`/api/hq/action-items/${selected.id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -607,7 +679,7 @@ export default function ActionItemsCard() {
   const handleReminder = async ({ when, note }) => {
     if (!selected) return
     try {
-      await fetch(`/api/hq/action-items/${selected.id}/reminders`, {
+      await fetch(resolveApiUrl(`/api/hq/action-items/${selected.id}/reminders`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ when, note })
@@ -620,7 +692,7 @@ export default function ActionItemsCard() {
   const handleCloseOut = async () => {
     if (!selected) return
     try {
-      await fetch(`/api/hq/action-items/${selected.id}/close`, { method: 'PATCH' })
+      await fetch(resolveApiUrl(`/api/hq/action-items/${selected.id}/close`), { method: 'PATCH' })
       load()
     } catch {}
   }
@@ -674,10 +746,7 @@ export default function ActionItemsCard() {
         )}
       </div>
 
-      <div
-        className='ml-3 pl-3 flex flex-col items-center justify-start'
-        style={{ width: 54, borderLeft: '2px solid #6a7257', paddingTop: 8, gap: 10, flexShrink: 0 }}
-      >
+      <div className='ml-3 pl-3 fhq-action-rail'>
         <button
           type='button'
           className={addCls}

@@ -1,13 +1,17 @@
+/* =========================== FILE: client/src/pages/FlyHQTools.css =========================== */
 /* ===========================================
-   FILE: client/src/pages/FlyHQTools.css
-   ===========================================
    Sections:
    • Root Vars
    • Grid (Gaps/Margins)
    • Panels (Margins)
    • Existing Styles
+   • Topbar/Chips
+   • Breakpoints ≤1100px / ≤600px
+   • Mobile Overrides ≤768px / ≤480px
+   • Doc Hub Overrides
    • Dragula Classes
-*/
+   • Action Rail (Slim Global Style)
+   =========================================== */
 
 /* ========== Root Vars ========== */
 :root {
@@ -67,7 +71,6 @@ html {
 
 /* ========== Panels (Margins) ========== */
 .fhq-panel {
- 
   position: relative;
   transition: transform 160ms ease, opacity 160ms ease, outline-color 120ms ease, background-color 160ms ease, box-shadow 160ms ease;
   background-clip: padding-box;
@@ -106,6 +109,7 @@ html {
 
 .fhq-panel-header:hover { background: rgba(106,114,87,0.15); color: #ffffff; transition: background 0.2s ease, color 0.2s ease; }
 
+/* ========== Topbar/Chips ========== */
 .fhq-topbar { position: sticky; top: 2px; display: flex; justify-content: flex-end; align-items: center; z-index: 2; padding: 2px 0 6px 0; margin: 0 var(--responsive-padding) 6px; }
 
 .fhq-btn-group { display: inline-flex; gap: 8px; background: rgba(0,0,0,0.35); border: 1px solid var(--fhq-ring); border-radius: 10px; padding: 4px; box-shadow: 0 4px 18px rgba(0,0,0,0.25); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
@@ -117,6 +121,7 @@ html {
 .fhq-chip-positive { box-shadow: 0 0 0 1px rgba(124,255,2,0.25) inset; }
 .fhq-chip-neutral  { box-shadow: 0 0 0 1px rgba(200,200,200,0.22) inset; }
 
+/* ========== Breakpoints ≤1100px / ≤600px ========== */
 @media (max-width: 1100px) {
   .dashboard-cards-grid {
     grid-template-columns: 1fr !important;
@@ -134,6 +139,78 @@ html {
   .dashboard-card-shell { min-height: 210px !important; border-radius: 13px !important; box-shadow: 0 2.5px 10px 0 rgba(30,32,26,0.2) !important; }
 }
 
+/* ========== Mobile Overrides ≤768px / ≤480px ========== */
+@media (max-width: 768px) {
+  .dashboard-cards-grid {
+    grid-template-columns: 1fr !important;
+    row-gap: 10px !important;
+    column-gap: 0 !important;
+    padding: 0 6px !important;
+    margin: 6px auto 10px auto !important;
+  }
+
+  .fhq-panel {
+    margin: 6px !important;
+    border-radius: 10px !important;
+  }
+
+  .dashboard-card-shell {
+    min-height: unset !important;
+    padding: 12px !important;
+    font-size: 0.9rem !important;
+  }
+
+  .fhq-panel-header {
+    height: 42px !important;
+    padding: 0 8px !important;
+  }
+
+  .fhq-panel-title {
+    font-size: 16px !important;
+    letter-spacing: 0.08em !important;
+  }
+
+  .fhq-collapse-indicator {
+    right: 12px !important;
+  }
+
+  /* Downsized Expand/Collapse buttons */
+  .fhq-btn-group {
+    gap: 4px !important;
+    padding: 2px 3px !important;
+    border-radius: 6px !important;
+  }
+
+  .fhq-chip {
+    padding: 3px 6px !important;
+    font-size: 10px !important;
+    border-radius: 6px !important;
+  }
+
+  .fhq-chip .fhq-chip-icon {
+    font-size: 10px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-card-shell {
+    padding: 8px !important;
+    font-size: 0.8rem !important;
+  }
+  .fhq-panel-header {
+    height: 40px !important;
+  }
+  .fhq-panel-title {
+    font-size: 14px !important;
+    letter-spacing: 0.06em !important;
+  }
+  .fhq-chip {
+    font-size: 9px !important;
+    padding: 2px 5px !important;
+  }
+}
+
+/* ========== Doc Hub Overrides ========== */
 .swiper { z-index: 2; }
 body, html { overflow-x: hidden; font-family: 'MyFont','erbaum','Inter','Arial',sans-serif; }
 
@@ -149,3 +226,23 @@ body, html { overflow-x: hidden; font-family: 'MyFont','erbaum','Inter','Arial',
 .gu-hide { display: none !important; }
 .gu-unselectable { -webkit-user-select: none !important; -moz-user-select: none !important; -ms-user-select: none !important; user-select: none !important; }
 .gu-transit { opacity: .2; }
+
+/* ========== Action Rail (Slim Global Style) ========== */
+.fhq-action-rail {
+  width: 36px;
+  border-left: 2px solid #6a7257;
+  padding-top: 8px;
+  gap: 10px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+@media (max-width: 768px) {
+  .fhq-action-rail {
+    width: 34px;
+    gap: 8px;
+  }
+}

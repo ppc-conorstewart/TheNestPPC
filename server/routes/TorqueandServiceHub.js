@@ -40,7 +40,7 @@ router.get('/', async (req, res) => {
         const result = await db.query(
             `SELECT id, file_name, file_path, file_size, mime_type, uploaded_at, tab
              FROM torque_and_service_hub_documents
-             WHERE tab = $1 AND deleted = FALSE
+             WHERE tab = $1 AND (deleted IS NOT TRUE)
              ORDER BY uploaded_at DESC`,
             [tab]
         );
@@ -62,7 +62,7 @@ router.get('/files/:id', async (req, res) => {
     const id = req.params.id;
     try {
         const result = await db.query(
-            `SELECT file_name, file_path, mime_type FROM torque_and_service_hub_documents WHERE id = $1 AND deleted = FALSE`, [id]
+            `SELECT file_name, file_path, mime_type FROM torque_and_service_hub_documents WHERE id = $1 AND (deleted IS NOT TRUE)`, [id]
         );
         if (!result.rows.length) {
             return res.status(404).send('File not found');
@@ -115,7 +115,7 @@ router.patch('/:id', async (req, res) => {
     try {
         // Get old info
         const result = await db.query(
-            `SELECT file_path FROM torque_and_service_hub_documents WHERE id = $1 AND deleted = FALSE`, [id]
+            `SELECT file_path FROM torque_and_service_hub_documents WHERE id = $1 AND (deleted IS NOT TRUE)`, [id]
         );
         if (!result.rows.length) return res.status(404).json({ error: 'Document not found' });
         const oldPath = result.rows[0].file_path;

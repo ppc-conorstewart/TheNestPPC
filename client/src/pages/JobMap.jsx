@@ -1,11 +1,13 @@
 // src/pages/JobMap.jsx
 
 import React, { useState, useEffect, useRef } from 'react'
+import { API_BASE_URL } from '../api'
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import Sidebar from '../components/Sidebar'
 import { convertDLS } from '../utils/dlsConverter'
+const API_BASE = API_BASE_URL || ''
 
 // Default blue pin icon for job pins
 const customIcon = new L.Icon({
@@ -74,7 +76,7 @@ export default function JobMap() {
   useEffect(() => {
     async function fetchJobs() {
       try {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/jobs`)
+        const res = await fetch(`${API_BASE}/api/jobs`)
         const data = await res.json()
         const mapped = data
           .map(job => {

@@ -3,7 +3,7 @@
 // ==============================
 
 import axios from 'axios';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../api';
 import Glblibrary from '../components/Workorder Components/Glblibrary';
@@ -11,28 +11,8 @@ import WorkorderCard from '../components/Workorder Components/WorkorderCard';
 import WorkorderForm from '../components/Workorder Components/WorkorderForm';
 import { transformJobToPackage } from '../components/Workorder Components/workorderData';
 import { useUser } from '../hooks/useUser';
-
-// ==============================
-// ======= LOGOS ================
-// ==============================
-const slugName = (str='') => str.trim().toLowerCase().replace(/\s+/g, '-');
-const customerLogoMap = {
-  'generic': '/assets/folders/generic.png',
-  'aoc': '/assets/customer-logos/aoc.png',
-  'baytex': '/assets/customer-logos/baytex.png',
-  'chevron': '/assets/customer-logos/chevron.png',
-  'conocophillips': '/assets/customer-logos/conocophillips.png',
-  'halo-exploration': '/assets/customer-logos/halo-exploration.png',
-  'nuvista': '/assets/customer-logos/nuvista.png',
-  'pacific-canbriam': '/assets/customer-logos/pacific-canbriam.png',
-  'paramount': '/assets/customer-logos/paramount.png',
-  'tourmaline': '/assets/customer-logos/tourmaline.png',
-  'true-canadian-kec': '/assets/customer-logos/true-canadian-kec.png',
-  'veren': '/assets/customer-logos/veren.png',
-  'whitecap': '/assets/customer-logos/whitecap.png',
-};
-const getCustomerLogo = name =>
-  customerLogoMap[slugName(name || 'generic')] || `/assets/customer-logos/${slugName(name || 'generic')}.png`;
+import useCustomerLogos from '../hooks/useCustomerLogos';
+import { getCustomerLogo as mapCustomerLogo } from '../utils/customerLogos';
 
 // ==============================
 // ======= WORKORDER HUB =========
@@ -53,6 +33,11 @@ export default function WorkorderHub() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const { user } = useUser();
+  const { logoMap: customerLogoMap } = useCustomerLogos();
+  const getCustomerLogo = useCallback(
+    (name) => mapCustomerLogo(customerLogoMap, name),
+    [customerLogoMap]
+  );
 
   // ==============================
   // ======= DATA FETCH: JOBS =====
@@ -202,6 +187,7 @@ export default function WorkorderHub() {
         <WorkorderForm
           initialData={{ ...draft, id: draft.id }}
           onClose={() => setDraft(null)}
+          getCustomerLogo={getCustomerLogo}
         />
       </div>
     );
@@ -319,6 +305,7 @@ export default function WorkorderHub() {
                       onEdit={handleStartWorkorder}
                       onSubmit={handleStartWorkorder}
                       onRemove={handleRemoveWorkorder}
+                      getCustomerLogo={getCustomerLogo}
                       asTableRow
                     />
                   ))}

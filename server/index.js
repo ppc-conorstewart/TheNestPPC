@@ -1,6 +1,6 @@
 // ==============================
 // FILE: server/index.js — Express App Entry
-// Sections: Imports • Middleware • Routers • Discord Proxy • Action Items (In-Memory) • Exports
+// Sections: Imports • Middleware • Routers • Discord Proxy • Action Items (In-Memory) • Admin Import (Seed) • Exports
 // ==============================
 
 const express = require('express')
@@ -10,22 +10,58 @@ const path = require('path')
 const fs = require('fs')
 const fetch = require('node-fetch')
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib')
+const { v4: uuidv4 } = require('uuid')
 
 const { FRONTEND_URL, SESSION_SECRET } = require('./config/config')
 const passport = require('./auth/discordStrategy')
 
 const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads')
 const db = require('./db')
+const discordMembersRest = require('./services/discordMembersRest')
 
 const app = express()
+
+const isProd = process.env.NODE_ENV === 'production'
+
+if (isProd) {
+  app.set('trust proxy', 1)
+}
+
 
 // ==============================
 // SECTION: CORS
 // ==============================
+const defaultCorsOrigins = [
+  FRONTEND_URL,
+  'https://thenestppc.ca',
+  process.env.FRONTEND_URL_FALLBACK,
+  process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+]
+  .filter(Boolean)
+  .map(origin => origin.replace(/\/+$/, ''))
+
+const localhostPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(?::\d+)?$/i
+const railwayPattern = /^https?:\/\/[^\s]+\.railway\.app$/i
+const extraCors = (process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(value => value.trim())
+  .filter(Boolean)
+  .map(origin => origin.replace(/\/+$/, ''))
+
+const allowedCorsOrigins = new Set([...defaultCorsOrigins, ...extraCors])
+
 app.use(cors({
   origin: (origin, callback) => {
-    const allowed = [FRONTEND_URL, 'http://localhost:3000']
-    if (!origin || allowed.includes(origin)) return callback(null, true)
+    if (!origin) return callback(null, true)
+    const normalized = origin.replace(/\/+$/, '')
+    if (allowedCorsOrigins.has(normalized)) return callback(null, true)
+    if (localhostPattern.test(normalized)) return callback(null, true)
+    if (isProd && railwayPattern.test(normalized)) return callback(null, true)
+    console.warn(`[CORS] Blocked origin: ${origin}`)
     return callback(new Error('Not allowed by CORS'), false)
   },
   credentials: true
@@ -42,7 +78,7 @@ app.use('/uploads', express.static(uploadDir, {
   }
 }))
 app.use('/uploads/docs', express.static(path.join(uploadDir, 'docs')))
-const LOGOS_DIR = 'C:/Users/WelshWonder/FLY-IQ/The NEST App/server/public/assets/logos'
+const LOGOS_DIR = path.join(__dirname, 'public', 'assets', 'logos')
 console.log('Serving customer logos from:', LOGOS_DIR)
 app.use('/assets/logos', express.static(LOGOS_DIR))
 
@@ -63,8 +99,8 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax'
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax'
   }
 }))
 app.use(passport.initialize())
@@ -188,23 +224,65 @@ app.get('/api/hq/upcoming-jobs', async (req, res) => {
 // ==============================
 // SECTION: Discord Proxy (Members/DM/Channels/Announce)
 // ==============================
-const BOT_SERVICE_URL = process.env.BOT_SERVICE_URL || 'http://localhost:3020'
+const BOT_SERVICE_URL = (() => {
+  const fromEnv = (process.env.BOT_SERVICE_URL || '').trim()
+  if (fromEnv) return fromEnv
+  return process.env.NODE_ENV !== 'production' ? 'http://localhost:3020' : ''
+})()
 const BOT_KEY = process.env.NEST_BOT_KEY || 'Paloma2025*'
 
 app.get('/api/discord/members', async (_req, res) => {
-  try {
-    const r = await fetch(`${BOT_SERVICE_URL}/members`, { headers: { 'x-bot-key': BOT_KEY } })
-    if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
-    const list = await r.json()
-    res.json(list)
-  } catch (e) {
-    console.error('Discord members proxy error:', e)
-    res.status(502).json({ error: 'bot_unavailable' })
+  const hasRemote = Boolean(BOT_SERVICE_URL)
+  const hasFallback = discordMembersRest.isConfigured()
+
+  if (!hasRemote && !hasFallback) {
+    return res.status(503).json({ error: 'bot_service_unconfigured' })
   }
+
+  const errors = []
+
+  if (hasRemote) {
+    try {
+      const r = await fetch(`${BOT_SERVICE_URL}/members`, { headers: { 'x-bot-key': BOT_KEY } })
+      if (!r.ok) {
+        let details = ''
+        try {
+          details = await r.text()
+        } catch (_) {
+          details = ''
+        }
+        const statusInfo = `${r.status} ${r.statusText}`.trim()
+        const message = details ? `${statusInfo}: ${details}` : statusInfo
+        throw new Error(`Bot service responded ${message}`)
+      }
+      const list = await r.json()
+      return res.json(list)
+    } catch (err) {
+      errors.push({ scope: 'remote', error: err })
+    }
+  }
+
+  if (hasFallback) {
+    try {
+      const list = await discordMembersRest.fetchMembers()
+      return res.json(list)
+    } catch (err) {
+      errors.push({ scope: 'fallback', error: err })
+    }
+  }
+
+  if (errors.length) {
+    for (const { scope, error } of errors) {
+      console.error(`[Discord members ${scope} error]:`, error)
+    }
+  }
+
+  return res.status(502).json({ error: 'bot_unavailable' })
 })
 
 app.get('/api/discord/channels', async (_req, res) => {
   try {
+    if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
     const r = await fetch(`${BOT_SERVICE_URL}/channels`, { headers: { 'x-bot-key': BOT_KEY } })
     if (!r.ok) return res.status(502).json({ error: 'bot_unavailable' })
     const list = await r.json()
@@ -217,13 +295,71 @@ app.get('/api/discord/channels', async (_req, res) => {
 
 app.post('/api/discord/announce', async (req, res) => {
   try {
-    const r = await fetch(`${BOT_SERVICE_URL}/announce`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-      body: JSON.stringify(req.body || {})
-    })
-    const out = await r.json().catch(() => ({}))
-    res.status(r.status).json(out)
+    if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
+
+    const { channelIds, channelId, content, message, attachments: incomingAttachments } = req.body || {}
+    const collected = []
+
+    if (Array.isArray(channelIds)) collected.push(...channelIds)
+    if (channelId) collected.push(channelId)
+
+    const payloadContent = content || message || ''
+    const ids = Array.from(new Set(collected.map(id => String(id || '').trim()).filter(Boolean)))
+
+    const resolveAttachmentUrlServer = (raw) => {
+      if (!raw) return null
+      if (/^https?:\/\//i.test(raw)) return raw
+      const envBase = (process.env.NEST_PUBLIC_UPLOAD_BASE || process.env.NEST_PUBLIC_BASE_URL || process.env.NEST_API_URL || '').trim()
+      const reqOrigin = (() => {
+        if (!req || typeof req.get !== 'function') return ''
+        const proto = req.header('x-forwarded-proto') || req.protocol || 'https'
+        const host = req.get('host')
+        if (!host) return ''
+        return `${proto}://${host}`
+      })()
+      const base = (envBase || reqOrigin).replace(/\/+$/, '')
+      if (!base) return null
+      const suffix = raw.startsWith('/') ? raw : `/${raw}`
+      return `${base}${suffix}`
+    }
+
+    const attachments = Array.isArray(incomingAttachments)
+      ? incomingAttachments
+          .map(att => ({
+            url: resolveAttachmentUrlServer(att && att.url ? String(att.url) : null),
+            name: att && att.name ? String(att.name) : undefined
+          }))
+          .filter(att => att.url)
+      : []
+
+    if (!ids.length || !payloadContent) {
+      return res.status(400).json({ error: 'channelIds_and_content_required' })
+    }
+
+    const headers = { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY }
+    const results = []
+
+    for (const id of ids) {
+      try {
+        const r = await fetch(`${BOT_SERVICE_URL}/announce`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ channelId: id, message: payloadContent, attachments })
+        })
+        const out = await r.json().catch(() => ({}))
+        if (!r.ok) {
+          const reason = out?.error || out?.message || `${r.status}`
+          results.push({ id, ok: false, reason })
+        } else {
+          results.push({ id, ok: true, data: out })
+        }
+      } catch (err) {
+        results.push({ id, ok: false, reason: String(err?.message || err) })
+      }
+    }
+
+    const anyOk = results.some(r => r.ok)
+    res.status(anyOk ? 200 : 502).json({ ok: anyOk, results })
   } catch (e) {
     console.error('Discord announce proxy error:', e)
     res.status(502).json({ error: 'bot_unavailable' })
@@ -232,6 +368,7 @@ app.post('/api/discord/announce', async (req, res) => {
 
 app.post('/api/discord/announce/test', async (req, res) => {
   try {
+    if (!BOT_SERVICE_URL) return res.status(503).json({ error: 'bot_service_unconfigured' })
     const r = await fetch(`${BOT_SERVICE_URL}/announce/test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
@@ -251,58 +388,162 @@ app.post('/api/discord/announce/test', async (req, res) => {
 let actionItems = []
 let nextId = 1
 
-app.get('/api/hq/action-items', (_req, res) => res.json(actionItems))
+const sanitizeActionItem = (item) => {
+  if (!item) return item
+  const stakeholders_detail = Array.isArray(item.stakeholders_detail)
+    ? item.stakeholders_detail.map(({ ack_token, ...rest }) => ({ ...rest }))
+    : item.stakeholders_detail
+  return { ...item, stakeholders_detail }
+}
+
+app.get('/api/hq/action-items', (_req, res) => {
+  res.json(actionItems.map(sanitizeActionItem))
+})
 
 app.post('/api/hq/action-items', async (req, res) => {
   try {
-    const { description, priority, category, due_date, attachment_url, attachment_name } = req.body
-    const stakeholders = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : []
-    const stakeholder_ids = Array.isArray(req.body.stakeholder_ids) ? req.body.stakeholder_ids : []
+    const { description, priority, category, due_date, attachment_url, attachment_name } = req.body || {}
 
-    const dmIds = new Set()
-    const stakeholderNames = []
+    const rawStakeholderObjects = Array.isArray(req.body.stakeholder_objects) ? req.body.stakeholder_objects : []
+    const rawStakeholderNames = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : []
+    const rawStakeholderIds = Array.isArray(req.body.stakeholder_ids) ? req.body.stakeholder_ids : []
 
-    for (const s of stakeholders) {
-      if (typeof s === 'string') {
-        stakeholderNames.push(s)
-      } else if (s && typeof s === 'object') {
-        if (s.name || s.displayName || s.username) stakeholderNames.push(s.name || s.displayName || s.username)
-        if (s.id) dmIds.add(String(s.id))
+    const detailById = new Map()
+    const detailByName = new Map()
+    const stakeholderDetails = []
+
+    const registerDetail = (rawId, rawName) => {
+      const id = rawId ? String(rawId) : null
+      const name = (rawName || '').toString().trim()
+      if (id && detailById.has(id)) {
+        const existing = detailById.get(id)
+        if (!existing.name && name) existing.name = name
+        return existing
       }
+      const key = id ? id : name.toLowerCase()
+      if (!id && name && detailByName.has(key)) {
+        return detailByName.get(key)
+      }
+      const detail = {
+        id,
+        name: name || (id ? `User ${id}` : 'Stakeholder'),
+        acknowledged: false,
+        acknowledged_at: null,
+        ack_token: uuidv4()
+      }
+      stakeholderDetails.push(detail)
+      if (id) detailById.set(id, detail)
+      else if (name) detailByName.set(key, detail)
+      return detail
     }
-    for (const id of stakeholder_ids) {
-      if (id) dmIds.add(String(id))
+
+    for (const obj of rawStakeholderObjects) {
+      if (!obj) continue
+      registerDetail(obj.id, obj.name || obj.displayName || obj.username)
     }
+
+    rawStakeholderIds.forEach((rawId, idx) => {
+      if (!rawId) return
+      const name = rawStakeholderNames[idx] || ''
+      registerDetail(rawId, name)
+    })
+
+    rawStakeholderNames.forEach(name => {
+      if (!name) return
+      registerDetail(null, name)
+    })
+
+    const stakeholderNames = stakeholderDetails.map(detail => detail.name).filter(Boolean)
+    const stakeholderIds = stakeholderDetails.filter(detail => detail.id).map(detail => detail.id)
 
     const id = nextId++
+
     const item = {
       id,
       description,
       priority: priority || 'Normal',
       category: category || 'General',
       due_date: due_date || null,
-      stakeholders: stakeholderNames.filter(Boolean),
+      stakeholders: stakeholderNames,
+      stakeholder_ids: stakeholderIds,
+      stakeholders_detail: stakeholderDetails,
+      acknowledged_ids: [],
       attachment_url: attachment_url || null,
       attachment_name: attachment_name || null
     }
     actionItems.unshift(item)
 
-    if (dmIds.size) {
+    const recipients = stakeholderDetails.filter(detail => detail.id)
+
+    if (recipients.length) {
       const dateStr = item.due_date ? new Date(item.due_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'N/A'
-      const message =
-        `You have been Added to an Action Item:\n` +
-        `**Description:** ${item.description}\n` +
-        `**Priority:** ${item.priority}\n` +
-        `**Due Date:** ${dateStr}` +
-        `${item.attachment_url ? `\n**Attached File:** ${item.attachment_name || 'attachment'}` : ''}`
-      try { await fetch(`${BOT_SERVICE_URL}/dm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-        body: JSON.stringify({ userId: Array.from(dmIds)[0], message, attachmentUrl: item.attachment_url, attachmentName: item.attachment_name })
-      }) } catch {}
+      let message =
+`You have been Added to an Action Item:\n` +
+`**Description:** ${item.description}\n` +
+`**Priority:** ${item.priority}\n` +
+`**Due Date:** ${dateStr}`
+
+      const attachments = []
+      if (item.attachment_url) {
+        const attachmentLabel = item.attachment_name || 'Attachment'
+        const resolveAttachmentUrlServer = (raw) => {
+          if (!raw) return null
+          if (/^https?:\/\//i.test(raw)) return raw
+          const envBase = (process.env.NEST_PUBLIC_UPLOAD_BASE || process.env.NEST_PUBLIC_BASE_URL || process.env.NEST_API_URL || '').trim()
+          const reqOrigin = (() => {
+            if (!req || typeof req.get !== 'function') return ''
+            const proto = req.header('x-forwarded-proto') || req.protocol || 'https'
+            const host = req.get('host')
+            if (!host) return ''
+            return `${proto}://${host}`
+          })()
+          const base = (envBase || reqOrigin).replace(/\/+$/, '')
+          if (!base) return null
+          const suffix = raw.startsWith('/') ? raw : `/${raw}`
+          return `${base}${suffix}`
+        }
+        const absoluteUrl = resolveAttachmentUrlServer(item.attachment_url)
+        if (absoluteUrl) {
+          message += `\n**${attachmentLabel}:** Attached`
+          attachments.push({ url: absoluteUrl, name: item.attachment_name || undefined })
+        } else {
+          message += `\n**${attachmentLabel}:** Attached`
+        }
+      }
+
+      if (BOT_SERVICE_URL) {
+        for (const detail of recipients) {
+          const buttonComponents = detail.ack_token
+            ? [
+              {
+                type: 1,
+                components: [
+                  {
+                    type: 2,
+                    style: detail.acknowledged ? 3 : 1,
+                    label: detail.acknowledged ? 'Acknowledged' : 'Acknowledge',
+                    custom_id: `ack:${id}:${detail.ack_token}`,
+                    disabled: detail.acknowledged
+                  }
+                ]
+              }
+            ]
+            : []
+
+          try {
+            await fetch(`${BOT_SERVICE_URL}/dm`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
+              body: JSON.stringify({ userId: detail.id, message, attachments, components: buttonComponents })
+            })
+          } catch (err) {
+            console.error(`Failed to dispatch action item DM to ${detail.id}:`, err)
+          }
+        }
+      }
     }
 
-    res.json(item)
+    res.json(sanitizeActionItem(item))
   } catch (e) {
     console.error('Create action item failed:', e)
     res.status(500).json({ error: 'create_failed' })
@@ -315,6 +556,39 @@ app.put('/api/hq/action-items/:id', async (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'not_found' })
   const prev = actionItems[idx]
   const stakeholders = Array.isArray(req.body.stakeholders) ? req.body.stakeholders : null
+  const incomingDetail = Array.isArray(req.body.stakeholders_detail) ? req.body.stakeholders_detail : null
+
+  let stakeholders_detail = Array.isArray(prev.stakeholders_detail) ? prev.stakeholders_detail.map(detail => ({ ...detail })) : []
+
+  if (incomingDetail) {
+    const byToken = new Map(stakeholders_detail.map(detail => [detail.ack_token, detail]))
+    const byId = new Map(stakeholders_detail.filter(detail => detail.id).map(detail => [detail.id, detail]))
+    stakeholders_detail = incomingDetail.map(entry => {
+      const id = entry?.id ? String(entry.id) : null
+      const token = entry?.ack_token
+      const name = entry?.name || ''
+      const existing = (token && byToken.get(token)) || (id && byId.get(id)) || null
+      return {
+        id,
+        name: name || existing?.name || (id ? `User ${id}` : 'Stakeholder'),
+        acknowledged: Boolean(existing?.acknowledged),
+        acknowledged_at: existing?.acknowledged_at || null,
+        ack_token: token || existing?.ack_token || uuidv4()
+      }
+    })
+  } else if (stakeholders) {
+    stakeholders_detail = stakeholders_detail.map((detail, idx) => ({
+      ...detail,
+      name: stakeholders[idx] || detail.name
+    }))
+  }
+
+  const updatedStakeholderNames = stakeholders
+    ? stakeholders.map(s => (typeof s === 'string' ? s : (s?.name || s?.displayName || s?.username || ''))).filter(Boolean)
+    : (stakeholders_detail.length ? stakeholders_detail.map(detail => detail.name).filter(Boolean) : prev.stakeholders)
+
+  const updatedStakeholderIds = stakeholders_detail.filter(detail => detail.id).map(detail => detail.id)
+  const acknowledgedIds = stakeholders_detail.filter(detail => detail.acknowledged && detail.id).map(detail => detail.id)
 
   const next = {
     ...prev,
@@ -322,10 +596,13 @@ app.put('/api/hq/action-items/:id', async (req, res) => {
     priority: req.body.priority ?? prev.priority,
     category: req.body.category ?? prev.category,
     due_date: req.body.due_date ?? prev.due_date,
-    stakeholders: stakeholders ? stakeholders.map(s => (typeof s === 'string' ? s : (s.name || s.displayName || s.username || ''))).filter(Boolean) : prev.stakeholders
+    stakeholders: updatedStakeholderNames,
+    stakeholder_ids: updatedStakeholderIds,
+    stakeholders_detail,
+    acknowledged_ids: acknowledgedIds
   }
   actionItems[idx] = next
-  res.json(next)
+  res.json(sanitizeActionItem(next))
 })
 
 app.patch('/api/hq/action-items/:id/close', (req, res) => {
@@ -343,6 +620,44 @@ app.post('/api/hq/action-items/:id/reminders', async (req, res) => {
   const { when, note } = req.body || {}
   const msg = `Reminder: "${item.description}" (Priority: ${item.priority}). ${note ? 'Note: ' + note : ''}`
   res.json({ ok: true, when, note, msg })
+})
+
+app.post('/api/hq/action-items/:id/ack', (req, res) => {
+  if ((req.header('x-bot-key') || '') !== BOT_KEY) {
+    return res.status(401).json({ error: 'unauthorized' })
+  }
+
+  const id = Number(req.params.id)
+  const item = actionItems.find(i => i.id === id)
+  if (!item) return res.status(404).json({ error: 'not_found' })
+
+  const { token, userId } = req.body || {}
+  if (!token) return res.status(400).json({ error: 'token_required' })
+
+  const details = Array.isArray(item.stakeholders_detail) ? item.stakeholders_detail : []
+  const detail = details.find(entry => entry.ack_token === token)
+  if (!detail) return res.status(404).json({ error: 'stakeholder_not_found' })
+  if (detail.id && userId && String(userId) !== String(detail.id)) {
+    return res.status(403).json({ error: 'mismatched_user' })
+  }
+
+  const alreadyAcknowledged = Boolean(detail.acknowledged)
+  if (!alreadyAcknowledged) {
+    detail.acknowledged = true
+    detail.acknowledged_at = new Date().toISOString()
+    if (detail.id) {
+      const current = new Set(Array.isArray(item.acknowledged_ids) ? item.acknowledged_ids.map(v => String(v)) : [])
+      current.add(String(detail.id))
+      item.acknowledged_ids = Array.from(current)
+    }
+  }
+
+  res.json({
+    ok: true,
+    alreadyAcknowledged,
+    stakeholder: { id: detail.id, name: detail.name },
+    itemId: item.id
+  })
 })
 
 // ==============================
@@ -406,4 +721,29 @@ app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedi
   res.redirect(`${require('./config/config').FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(req.user))}`)
 })
 
+// ==============================
+// SECTION: Static Client (Production)
+// ==============================
+if (process.env.NODE_ENV === 'production') {
+  const clientBuildPath = path.join(__dirname, '..', 'client', 'build')
+  if (fs.existsSync(clientBuildPath)) {
+    app.use(express.static(clientBuildPath))
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(clientBuildPath, 'index.html'))
+    })
+  } else {
+    console.warn('[Static] client/build not found at:', clientBuildPath)
+  }
+}
+
+// ==============================
+// SECTION: Admin Import (Seed)
+// ==============================
+if (process.env.ADMIN_IMPORT_KEY) {
+  app.use('/api/admin', require('./routes/adminImport'))
+}
+
+// ==============================
+// SECTION: Exports
+// ==============================
 module.exports = app
