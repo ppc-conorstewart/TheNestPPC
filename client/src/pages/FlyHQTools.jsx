@@ -31,11 +31,11 @@ const HEADER_H = 36
 
 const PAGE_WRAPPER_STYLE = {
   background: 'transparent',
-  minHeight: '100dvh',
-  height: '100dvh',
+  minHeight: '100svh',
+  height: 'auto',
   width: '100%',
   position: 'relative',
-  overflow: 'hidden'
+  overflow: 'visible'
 }
 
 const MAIN_CONTAINER_STYLE = {
@@ -99,7 +99,6 @@ const CollapsiblePanel = memo(function CollapsiblePanel({
           justifyContent: 'center',
           cursor: 'pointer',
           background: 'transparent',
-          
           userSelect: 'none',
           position: 'relative'
         }}
@@ -187,10 +186,6 @@ const CollapsiblePanel = memo(function CollapsiblePanel({
   )
 })
 
-
-
-
-/* ========== Component ========== */
 export default function FlyHQTools() {
   const [yearTotals, setYearTotals] = useState({ wells: 0, valve_7_1_16: 0, valve_5_1_8: 0, hyd_3_1_16: 0, man_3_1_16: 0 })
   const currentYear = new Date().getFullYear()
@@ -259,7 +254,6 @@ export default function FlyHQTools() {
   const expandAll = () => { const next = {}; order.forEach(k => { next[k] = false }); setCollapsed(next) }
   const collapseAll = () => { const next = {}; order.forEach(k => { next[k] = true }); setCollapsed(next) }
 
-  /* ----- Dragula wiring ----- */
   useEffect(() => {
     const grid = gridRef.current
     if (!grid) return
@@ -407,7 +401,6 @@ export default function FlyHQTools() {
   )
 }
 
-/* ========== Hooks ========== */
 function useFixedPanelContentHeight({
   rows,
   cols,
