@@ -151,22 +151,26 @@ function useMasterMeta(groups) {
     let alive = true;
     (async () => {
       setLoading(true);
-      const next = {};
-      for (const [type, names] of Object.entries(groups)) {
-        const assemblyTitle = typeToAssemblyTitle(type);
-        for (const name of names) {
-          const one = await fetchMeta(assemblyTitle, name);
-          if (one) { next[name] = one; continue; }
-          const alt = tryLetterVariant(name);
-          if (alt) {
-            const two = await fetchMeta(assemblyTitle, alt);
-            if (two) next[name] = two;
+      try {
+        const next = {};
+        for (const [type, names] of Object.entries(groups)) {
+          const assemblyTitle = typeToAssemblyTitle(type);
+          for (const name of names) {
+            const one = await fetchMeta(assemblyTitle, name);
+            if (one) { next[name] = one; continue; }
+            const alt = tryLetterVariant(name);
+            if (alt) {
+              const two = await fetchMeta(assemblyTitle, alt);
+              if (two) next[name] = two;
+            }
           }
         }
-      }
-      if (alive) {
-        setMetaMap(next);
-        setLoading(false);
+        if (alive) {
+          setMetaMap(next);
+          setLoading(false);
+        }
+      } catch {
+        if (alive) setLoading(false);
       }
     })();
     return () => { alive = false; };

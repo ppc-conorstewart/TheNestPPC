@@ -130,21 +130,20 @@ function AssetSelector({
   const rootRef = useRef(null);
 
   // ---------- Outside click control for menu ----------
-  const [menuIsOpen, setMenuIsOpen] = useState(false);
-  const onMenuClose = useCallback(() => setMenuIsOpen(false), []);
-  const onMenuOpen = useCallback(() => setMenuIsOpen(true), []);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const onMenuClose = useCallback(() => setMenuOpen(false), []);
+  const onMenuOpen = useCallback(() => setMenuOpen(true), []);
 
   // ---------- Focus the input when opening ----------
   useEffect(() => {
-    if (!menuIsOpen) return;
+    if (!menuOpen) return;
     const root = rootRef.current;
     const input = root && root.querySelector('input');
     if (input) {
       requestAnimationFrame(() => { try { input.focus(); } catch {} });
     }
-  }, [menuIsOpen]);
+  }, [menuOpen]);
 
-  // ---------- Suppress true outside clicks only ----------
   // ---------- Options memo with deep equality ----------
   const lastAssetOptionsRef = useRef(assetOptions);
   const stableAssetOptions = useMemo(() => {
@@ -170,7 +169,7 @@ function AssetSelector({
   const borderColor = accentColor || palomaGreen;
 
   const handleSelectChange = useCallback((opt) => {
-    setMenuIsOpen(false);
+    setMenuOpen(false);
     if (onChange) onChange((opt && opt.value) || '');
   }, [onChange]);
 
@@ -195,7 +194,6 @@ function AssetSelector({
         onChange={handleSelectChange}
         onMenuOpen={onMenuOpen}
         onMenuClose={onMenuClose}
-        menuIsOpen={menuIsOpen}
         components={{ MenuList, Option, SingleValue }}
         menuPortalTarget={portalTarget}
         __accentColor={borderColor}
