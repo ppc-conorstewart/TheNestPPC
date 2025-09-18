@@ -131,18 +131,7 @@ function AssetSelector({
 
   // ---------- Outside click control for menu ----------
   const [menuIsOpen, setMenuIsOpen] = useState(false);
-  const allowCloseNextRef = useRef(false);
-
-  const openMenu = useCallback(() => setMenuIsOpen(true), []);
-  const closeMenu = useCallback(() => setMenuIsOpen(false), []);
-  const onMenuClose = useCallback(() => {
-    if (allowCloseNextRef.current) {
-      allowCloseNextRef.current = false;
-      setMenuIsOpen(false);
-    } else {
-      setTimeout(() => setMenuIsOpen(true), 0);
-    }
-  }, []);
+  const onMenuClose = useCallback(() => setMenuIsOpen(false), []);
   const onMenuOpen = useCallback(() => setMenuIsOpen(true), []);
 
   // ---------- Focus the input when opening ----------
@@ -156,23 +145,6 @@ function AssetSelector({
   }, [menuIsOpen]);
 
   // ---------- Suppress true outside clicks only ----------
-  useEffect(() => {
-    if (!menuIsOpen) return;
-    const onMouseDown = (e) => {
-      const root = rootRef.current;
-      const target = e.target;
-      const clickedInsideControl = !!(root && root.contains(target));
-      const clickedInMenu = !!document.querySelector('.rs__menu') && e.composedPath().some((el) => {
-        try { return el && el.classList && el.classList.contains('rs__menu'); } catch { return false; }
-      });
-      if (!clickedInsideControl && !clickedInMenu) {
-        allowCloseNextRef.current = true;
-      }
-    };
-    document.addEventListener('mousedown', onMouseDown, true);
-    return () => document.removeEventListener('mousedown', onMouseDown, true);
-  }, [menuIsOpen]);
-
   // ---------- Options memo with deep equality ----------
   const lastAssetOptionsRef = useRef(assetOptions);
   const stableAssetOptions = useMemo(() => {
@@ -198,7 +170,6 @@ function AssetSelector({
   const borderColor = accentColor || palomaGreen;
 
   const handleSelectChange = useCallback((opt) => {
-    allowCloseNextRef.current = true;
     setMenuIsOpen(false);
     if (onChange) onChange((opt && opt.value) || '');
   }, [onChange]);
@@ -212,7 +183,6 @@ function AssetSelector({
         marginBottom: 0,
         ...(style || {}),
       }}
-      onClick={openMenu}
     >
       <Select
         instanceId={instanceIdRef.current}

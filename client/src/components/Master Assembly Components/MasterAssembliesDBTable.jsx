@@ -22,6 +22,17 @@ const palomaGreen = '#6a7257';
 const textMain = '#e6e8df';
 const palomaIcon = '/assets/Paloma_Icon_White_large.png';
 
+const SPINNER_STYLE_ID = '__ma_db_spinner__';
+if (typeof document !== 'undefined' && !document.getElementById(SPINNER_STYLE_ID)) {
+  const style = document.createElement('style');
+  style.id = SPINNER_STYLE_ID;
+  style.textContent = `
+    @keyframes maDbSpin { to { transform: rotate(360deg); } }
+    .ma-db-spinner { width: 32px; height: 32px; border-radius: 999px; border: 3px solid rgba(106,114,87,0.18); border-top-color: ${palomaGreen}; animation: maDbSpin 0.8s linear infinite; }
+  `;
+  document.head.appendChild(style);
+}
+
 // ==============================
 // ===== Helpers =====
 // ==============================
@@ -58,10 +69,12 @@ const typeToAssemblyTitle = (type) => {
 function useAssignments() {
   const [rows, setRows] = useState([]);
   const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
     (async () => {
+      setLoading(true);
       try {
         const fetchAssignments = async () => {
           const urls = [`${API}/api/master/assignments?all=1`, `${API}/api/master/assignments/all`];
@@ -79,7 +92,10 @@ function useAssignments() {
         if (!alive) return;
         setRows(assignments || []);
         setAssets(Array.isArray(assetsJson) ? assetsJson : []);
-      } catch {}
+        setLoading(false);
+      } catch {
+        if (alive) setLoading(false);
+      }
     })();
     return () => { alive = false; };
   }, []);
@@ -121,7 +137,7 @@ function useAssignments() {
       });
   }, [rows, assetMap]);
 
-  return { joined };
+  return { joined, loading };
 }
 
 // ==============================
@@ -129,10 +145,12 @@ function useAssignments() {
 // ==============================
 function useMasterMeta(groups) {
   const [metaMap, setMetaMap] = useState({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
     (async () => {
+      setLoading(true);
       const next = {};
       for (const [type, names] of Object.entries(groups)) {
         const assemblyTitle = typeToAssemblyTitle(type);
@@ -146,7 +164,10 @@ function useMasterMeta(groups) {
           }
         }
       }
-      if (alive) setMetaMap(next);
+      if (alive) {
+        setMetaMap(next);
+        setLoading(false);
+      }
     })();
     return () => { alive = false; };
   }, [JSON.stringify(groups)]);
@@ -162,7 +183,7 @@ function useMasterMeta(groups) {
     return ok;
   };
 
-  return { metaMap, updateMeta };
+  return { metaMap, updateMeta, loading };
 }
 
 async function fetchMeta(assemblyTitle, child) {
@@ -495,7 +516,7 @@ function Tabs({ active, onChange }) {
 // ===== Main =====
 // ==============================
 export default function MasterAssembliesDBTable() {
-  const { joined } = useAssignments();
+  const { joined, loading: assignmentsLoading } = useAssignments();
 
   const groups = useMemo(() => ({
     Dogbones: range(40).map((n) => `Dogbone-${n}`),
@@ -503,7 +524,7 @@ export default function MasterAssembliesDBTable() {
     Flowcrosses: range(40).map((n) => `Flowcross-${n}`),
   }), []);
 
-  const { metaMap, updateMeta } = useMasterMeta(groups);
+  const { metaMap, updateMeta, loading: metaLoading } = useMasterMeta(groups);
 
   const byAssembly = useMemo(() => {
     const m = new Map();
@@ -595,6 +616,19 @@ export default function MasterAssembliesDBTable() {
 
   const gridTemplate = `${Math.round(split*100)}% 10px calc(100% - ${Math.round(split*100)}% - 10px)`;
 
+  const isLoading = assignmentsLoading || metaLoading;
+  const overlayStyle = {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(10, 11, 9, 0.65)',
+    backdropFilter: 'blur(6px)',
+    WebkitBackdropFilter: 'blur(6px)',
+    zIndex: 5,
+  };
+
   // ==============================
   // ===== Render =====
   // ==============================
@@ -627,9 +661,14 @@ export default function MasterAssembliesDBTable() {
         }}
       >
         {/* ===== Active Table Pane ===== */}
-        <div style={{ border: cardBorder, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+        <div style={{ border: cardBorder, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
           <div style={colHeaderStyle}>{activeTab === 'dogbones' ? 'DOG BONES' : activeTab === 'zippers' ? 'ZIPPERS' : 'FLOWCROSSES'}</div>
-          <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+          <div style={{ flex: 1, minHeight: 0, overflow: 'auto', position: 'relative' }}>
+            {isLoading && (
+              <div style={overlayStyle}>
+                <div className='ma-db-spinner' />
+              </div>
+            )}
             <Suspense fallback={<div style={{ padding: 12 }}>Loading…</div>}>
               {activeTab === 'dogbones' && (
                 <DogbonesTable

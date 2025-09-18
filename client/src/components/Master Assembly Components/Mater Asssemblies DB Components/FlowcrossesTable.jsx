@@ -256,7 +256,7 @@ function TableBody({
   return (
     <table style={tableStyle}>
       <colgroup>
-        <col style={{ width:'38%' }} /><col style={{ width:'24%' }} /><col style={{ width:'18%' }} /><col style={{ width:'20%' }} />
+        <col style={{ width:'48%' }} /><col style={{ width:'26%' }} /><col style={{ width:'26%' }} />
       </colgroup>
 
       <thead>
@@ -264,14 +264,12 @@ function TableBody({
           <th style={thStyle}>Assembly</th>
           <th style={thStyle}>Status</th>
           <th style={thStyle}>Health</th>
-          <th style={thStyle}>Location</th>
         </tr>
       </thead>
 
       <tbody>
         {filteredNames.map((name, idx) => {
           const rowsAll = byAssembly.get(name) || [];
-          const location = mode(rowsAll.map(r => r.location));
           const metaStatus = (metaMap[name]?.status || '').trim();
           const chosenStatus = (metaStatus || localStatus[name] || 'In-Active').trim();
           const pill = statusPill(chosenStatus);
@@ -329,9 +327,6 @@ function TableBody({
                 <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                   <Gauge pct={pct} /><span style={{ fontWeight:800, letterSpacing:'.04em', color:FLO_TEXT_SOFT }}>{pct}%</span>
                 </div>
-              </td>
-              <td style={{ ...tdBase, boxShadow: cellInner }}>
-                <span style={{ chip:'#141414', color:'#e0d7cc' }}>{location || '—'}</span>
               </td>
             </tr>
           );
