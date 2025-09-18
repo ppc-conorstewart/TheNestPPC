@@ -243,12 +243,129 @@ function TableBody({
     });
   }, [names, metaMap, localStatus, statusFilter, healthFilter]);
 
-  const rowRefSetter = useCallback((isSel) => (el) => { if (isSel && el) onSelectedRowEl(el); }, [onSelectedRowEl]);
+  const cellRefSetter = useCallback((isSel) => (el) => { if (isSel && el) onSelectedRowEl(el); }, [onSelectedRowEl]);
+
+  const emptyCellStyle = useMemo(() => ({
+    ...tdBase,
+    background: 'transparent',
+    boxShadow: 'none',
+    border: 'none',
+    height: 30,
+  }), []);
+
+  const pairs = useMemo(() => {
+    const out = [];
+    for (let i = 0; i < filteredNames.length; i += 2) {
+      out.push([filteredNames[i], filteredNames[i + 1] || null]);
+    }
+    return out;
+  }, [filteredNames]);
+
+  const renderBlock = (name, idx, keyPrefix) => {
+    if (!name) {
+      return [
+        <td key={`${keyPrefix}-assembly-empty`} style={emptyCellStyle} />, 
+        <td key={`${keyPrefix}-status-empty`} style={emptyCellStyle} />, 
+        <td key={`${keyPrefix}-health-empty`} style={emptyCellStyle} />
+      ];
+    }
+
+    const rowsAll = byAssembly.get(name) || [];
+    const metaStatus = (metaMap[name]?.status || '').trim();
+    const chosenStatus = (metaStatus || localStatus[name] || 'In-Active').trim();
+    const pill = statusPill(chosenStatus);
+    const isSelected = selected && selected.type === type && selected.name === name;
+    const isHover = hoverKey === `${type}:${name}`;
+
+    const creation = metaMap[name]?.creation_date || '';
+    const recert   = metaMap[name]?.recert_date || '';
+    const totalDays = creation && recert ? Math.max(1, daysBetween(creation, recert)) : 0;
+    const usedDays  = creation ? clamp(daysBetween(creation, new Date().toISOString().slice(0,10)), 0, totalDays || 1) : 0;
+    const pct       = totalDays ? clamp(Math.round((usedDays / totalDays) * 100), 0, 100) : 0;
+
+    const rowBg = idx % 2 === 0 ? DOG_BG_EVEN : DOG_BG_ODD;
+
+    const fancyText = {
+      color: DOG_TEXT_MAIN,
+      textShadow: ['0.5px 0.5px 0 #0a0b08','0 1px 0 #0a0b08','0 -1px 0 rgba(255,255,255,0.03)','0 0 6px rgba(106,114,87,.10)'].join(','),
+      backgroundImage: isHover ? 'linear-gradient(120deg, rgba(255,255,255,0) 0%, rgba(201,212,175,.4) 30%, rgba(255,255,255,0) 60%)' : 'none',
+      backgroundClip: isHover ? 'text' : 'initial',
+      WebkitBackgroundClip: isHover ? 'text' : 'initial',
+      animation: isHover ? 'textGloss 900ms linear 1' : 'none',
+    };
+
+    const cellInner = isHover ? 'inset 0 0 20px rgba(106,114,87,.08), inset 0 0 0 1px rgba(255,255,255,.06)' : 'inset 0 0 0 1px rgba(255,255,255,.04)';
+    const transformStyle = isSelected ? 'scale(1.015)' : (isHover ? 'translateY(-0.25px)' : 'none');
+
+    const assemblyTdStyle = {
+      ...assemblyCell,
+      boxShadow: cellInner,
+      background: rowBg,
+      transform: transformStyle,
+      transition: 'transform 160ms ease, box-shadow 140ms ease, background-color 140ms ease',
+    };
+
+    const statusTdStyle = {
+      ...tdBase,
+      boxShadow: cellInner,
+      background: rowBg,
+      transform: transformStyle,
+      transition: 'transform 160ms ease, box-shadow 140ms ease, background-color 140ms ease',
+    };
+
+    const healthTdStyle = {
+      ...tdBase,
+      boxShadow: cellInner,
+      background: rowBg,
+      transform: transformStyle,
+      transition: 'transform 160ms ease, box-shadow 140ms ease, background-color 140ms ease',
+    };
+
+    return [
+      <td
+        key={`${keyPrefix}-assembly`}
+        ref={cellRefSetter(isSelected)}
+        onMouseEnter={() => setHoverKey(`${type}:${name}`)}
+        onMouseLeave={() => setHoverKey(null)}
+        style={assemblyTdStyle}
+      >
+        <span style={{ position:'absolute', left:0, top:0, bottom:0, width:3, background:`linear-gradient(180deg, ${DOG_STRIPE}, ${DOG_STRIPE}44)` }} />
+        <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+          <span style={{ opacity:.55, fontSize:'0.66rem', minWidth:22, textAlign:'right', color:DOG_TEXT_SOFT }}>{idx + 1}.</span>
+          <button
+            onClick={() => { setSelected({ type, name, rows: rowsAll }); onView(type, name); }}
+            style={{ ...assemblyBtn }}
+            title="Open details"
+          >
+            <span style={fancyText}>{name}</span>
+          </button>
+          <span
+            aria-hidden
+            style={{ marginLeft:'auto', opacity:(isHover||isSelected)?0.9:0, transition:'opacity 120ms',
+              fontFamily:'Font-cornero, sans-serif', letterSpacing:'0.06em', color:DOG_TEXT_SOFT }}
+          >
+            ➤
+          </span>
+        </div>
+
+        {isHover ? <PopCard name={name} status={pill.label} creation={creation} recert={recert} pct={pct} /> : null}
+      </td>,
+      <td key={`${keyPrefix}-status`} style={statusTdStyle}>
+        <span style={chip(pill.bg, pill.fg, pill.anim)}>{pill.label}</span>
+      </td>,
+      <td key={`${keyPrefix}-health`} style={healthTdStyle}>
+        <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+          <Gauge pct={pct} /><span style={{ fontWeight:800, letterSpacing:'.04em', color:DOG_TEXT_SOFT }}>{pct}%</span>
+        </div>
+      </td>,
+    ];
+  };
 
   return (
     <table style={tableStyle}>
       <colgroup>
-        <col style={{ width:'48%' }} /><col style={{ width:'26%' }} /><col style={{ width:'26%' }} />
+        <col style={{ width:'26%' }} /><col style={{ width:'12%' }} /><col style={{ width:'12%' }} />
+        <col style={{ width:'26%' }} /><col style={{ width:'12%' }} /><col style={{ width:'12%' }} />
       </colgroup>
 
       <thead>
@@ -256,75 +373,20 @@ function TableBody({
           <th style={thStyle}>Assembly</th>
           <th style={thStyle}>Status</th>
           <th style={thStyle}>Health</th>
-      </tr>
+          <th style={thStyle}>Assembly</th>
+          <th style={thStyle}>Status</th>
+          <th style={thStyle}>Health</th>
+        </tr>
       </thead>
 
       <tbody>
-        {filteredNames.map((name, idx) => {
-          const rowsAll = byAssembly.get(name) || [];
-          const metaStatus = (metaMap[name]?.status || '').trim();
-          const chosenStatus = (metaStatus || localStatus[name] || 'In-Active').trim();
-          const pill = statusPill(chosenStatus);
-          const isSelected = selected && selected.type === type && selected.name === name;
-          const isHover = hoverKey === `${type}:${name}`;
-
-          const creation = metaMap[name]?.creation_date || '';
-          const recert   = metaMap[name]?.recert_date || '';
-          const totalDays = creation && recert ? Math.max(1, daysBetween(creation, recert)) : 0;
-          const usedDays  = creation ? clamp(daysBetween(creation, new Date().toISOString().slice(0,10)), 0, totalDays || 1) : 0;
-          const pct       = totalDays ? clamp(Math.round((usedDays / totalDays) * 100), 0, 100) : 0;
-
-          const rowBg = idx % 2 === 0 ? DOG_BG_EVEN : DOG_BG_ODD;
-
-          const baseShadow = isHover
-            ? 'inset 0 0 0 1px rgba(255,255,255,0.05), 0 6px 10px rgba(0,0,0,.28)'
-            : 'inset 0 0 0 1px rgba(255,255,255,0.03)';
-
-          // Bigger pop-out on selection (no lateral shift)
-          const rowStyle = {
-            background: rowBg,
-            transform: isSelected ? 'scale(1.015)' : (isHover ? 'translateY(-0.25px)' : 'none'),
-            transformOrigin: 'center',
-            transition: 'transform 160ms ease, box-shadow 140ms ease, background-color 140ms ease',
-            boxShadow: baseShadow,
-          };
-
-          const fancyText = {
-            color: DOG_TEXT_MAIN,
-            textShadow: ['0.5px 0.5px 0 #0a0b08','0 1px 0 #0a0b08','0 -1px 0 rgba(255,255,255,0.03)','0 0 6px rgba(106,114,87,.10)'].join(','),
-            backgroundImage: isHover ? 'linear-gradient(120deg, rgba(255,255,255,0) 0%, rgba(201,212,175,.4) 30%, rgba(255,255,255,0) 60%)' : 'none',
-            backgroundClip: isHover ? 'text' : 'initial', WebkitBackgroundClip: isHover ? 'text' : 'initial',
-            animation: isHover ? 'textGloss 900ms linear 1' : 'none',
-          };
-
-          const cellInner = isHover ? 'inset 0 0 20px rgba(106,114,87,.08), inset 0 0 0 1px rgba(255,255,255,.06)' : 'inset 0 0 0 1px rgba(255,255,255,.04)';
-
+        {pairs.map((pair, pairIdx) => {
+          const leftCells = renderBlock(pair[0], pairIdx * 2, `left-${pairIdx}-${pair[0] || 'empty'}`);
+          const rightCells = renderBlock(pair[1], pairIdx * 2 + 1, `right-${pairIdx}-${pair[1] || 'empty'}`);
           return (
-            <tr key={name} ref={rowRefSetter(isSelected)}
-                onMouseEnter={() => setHoverKey(`${type}:${name}`)} onMouseLeave={() => setHoverKey(null)}
-                style={rowStyle}>
-              <td style={{ ...assemblyCell, boxShadow: cellInner }}>
-                <span style={{ position:'absolute', left:0, top:0, bottom:0, width:3, background:`linear-gradient(180deg, ${DOG_STRIPE}, ${DOG_STRIPE}44)` }} />
-                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <span style={{ opacity:.55, fontSize:'0.66rem', minWidth:22, textAlign:'right', color:DOG_TEXT_SOFT }}>{idx + 1}.</span>
-                  <button onClick={() => { setSelected({ type, name, rows: rowsAll }); onView(type, name); }} style={{ ...assemblyBtn }} title="Open details">
-                    <span style={fancyText}>{name}</span>
-                  </button>
-                  <span aria-hidden style={{ marginLeft:'auto', opacity:(isHover||isSelected)?0.9:0, transition:'opacity 120ms',
-                    fontFamily:'Font-cornero, sans-serif', letterSpacing:'0.06em', color:DOG_TEXT_SOFT }}>➤</span>
-                </div>
-
-                {isHover ? <PopCard name={name} status={pill.label} creation={creation} recert={recert} pct={pct} /> : null}
-              </td>
-
-              <td style={{ ...tdBase, boxShadow: cellInner }}>
-                <span style={chip(pill.bg, pill.fg, pill.anim)}>{pill.label}</span>
-              </td>
-              <td style={{ ...tdBase, boxShadow: cellInner }}>
-                <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                  <Gauge pct={pct} /><span style={{ fontWeight:800, letterSpacing:'.04em', color:DOG_TEXT_SOFT }}>{pct}%</span>
-                </div>
-              </td>
+            <tr key={`row-${pairIdx}`}>
+              {leftCells}
+              {rightCells}
             </tr>
           );
         })}

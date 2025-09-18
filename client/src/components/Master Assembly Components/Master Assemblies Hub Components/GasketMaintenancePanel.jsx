@@ -103,7 +103,15 @@ function Donut({ percent = 0, size = 70, label = '•' }) {
 // ==============================
 function LabelRow({ k, v }) {
   return (
-    <div style={{ display: 'flex', gap: 4, alignItems: 'baseline', minWidth: 0 }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '70px 1fr',
+        gap: 6,
+        alignItems: 'baseline',
+        minWidth: 0,
+      }}
+    >
       <div
         style={{
           fontSize: 6,
@@ -120,7 +128,6 @@ function LabelRow({ k, v }) {
         style={{
           fontSize: 6,
           fontWeight: 200,
-          
           color: '#e6e8df',
           minWidth: 0,
           overflow: 'hidden',
@@ -155,18 +162,19 @@ function GasketCell({ slot, gasketId, installedDate }) {
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'auto 1fr',
+        gridTemplateColumns: '60px 1fr',
         alignItems: 'center',
-        gap: 8,
-        padding: 4, // tighter padding
+        gap: 12,
+        padding: '8px 12px',
         background: 'linear-gradient(180deg,#1a1f18,#151813)',
         border: '1px solid #2e342b',
+        borderRadius: 10,
         minWidth: 0,
       }}
       title={installedDate ? `Installed: ${installedDate} • Due: ${memo.due}` : 'No install date'}
     >
-      <div style={{ display: 'grid', placeItems: 'center' }}>
-        <Donut percent={memo.percent} label={n} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+        <Donut percent={memo.percent} label={n} size={58} />
       </div>
 
       <div style={{ display: 'grid', gap: 2, minWidth: 0 }}>
@@ -187,9 +195,10 @@ function GasketCell({ slot, gasketId, installedDate }) {
 
         {/* Compact triple-line spec */}
         <LabelRow k="Gasket" v={gasketId || '—'} />
-        <LabelRow k="In.Date" v={installedDate || '—'} />
+        <LabelRow k="Installed" v={installedDate || '—'} />
+        <LabelRow k="Due" v={memo.due || '—'} />
         <LabelRow
-          k="St"
+          k="Status"
           v={
             installedDate
               ? memo.daysLeft >= 0
