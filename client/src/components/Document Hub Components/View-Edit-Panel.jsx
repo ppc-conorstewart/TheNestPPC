@@ -17,6 +17,8 @@ const THEME = {
   paper: 'rgba(255,255,255,0.06)'
 };
 
+const API_BASE = process.env.REACT_APP_API_URL;
+
 // =====================================================
 // LIGHT MODE CSS CONSTANTS
 // =====================================================
@@ -143,15 +145,15 @@ function downloadLabel(kind) {
 }
 function chooseInlineUrl(doc) {
   if (!doc) return '';
-  if (doc.file && doc.file.url) return doc.file.url;
-  if (doc.fileUrl) return doc.fileUrl;
-  if (doc.id) return `/api/documents/${doc.id}/file`;
+  if (doc.file && doc.file.url) return `${API_BASE}${doc.file.url}`;
+  if (doc.fileUrl) return `${API_BASE}${doc.fileUrl}`;
+  if (doc.id) return `${API_BASE}/api/documents/${doc.id}/file`;
   return '';
 }
 function chooseDownloadUrl(doc) {
   if (!doc) return '';
-  if (doc.downloadUrl) return doc.downloadUrl;
-  if (doc.id) return `/api/documents/${doc.id}/download`;
+  if (doc.downloadUrl) return `${API_BASE}${doc.downloadUrl}`;
+  if (doc.id) return `${API_BASE}/api/documents/${doc.id}/download`;
   const u = chooseInlineUrl(doc);
   return u || '';
 }
@@ -171,133 +173,65 @@ function ImageViewer({ src, name }) {
   );
 }
 
-function DocxViewer({ src, name }) {
-  const [html, setHtml] = useState('<div style="opacity:.6">Loading DOCX…</div>');
-  const [error, setError] = useState('');
+function DocxViewer({ src }) {
+  const ref = useRef(null);
   useEffect(() => {
-    let aborted = false;
-    async function ensureMammoth() {
-      if (window.mammoth) return window.mammoth;
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js';
-        s.async = true;
-        s.onload = res;
-        s.onerror = () => rej(new Error('Failed to load mammoth'));
-        document.head.appendChild(s);
-      });
-      return window.mammoth;
-    }
-    async function load() {
+    let cancelled = false;
+    async function run() {
       try {
-        const mammoth = await ensureMammoth();
-        const resp = await fetch(src, { cache: 'no-cache' });
-        const buf = await resp.arrayBuffer();
-        if (aborted) return;
-        const result = await mammoth.convertToHtml({ arrayBuffer: buf });
-        if (aborted) return;
-        setHtml('<div class="docx-html">' + result.value + '</div>');
-      } catch {
-        if (!aborted) setError('Unable to render .docx inline. Click Download to open in Word.');
+        const r = await fetch(src);
+        const ab = await r.arrayBuffer();
+        const { renderAsync } = await import('docx-preview');
+        if (!cancelled) renderAsync(ab, ref.current, null, { inWrapper: false, styleMap: DOCX_CSS });
+      } catch (err) {
+        console.error('Docx render error:', err);
       }
     }
-    load();
-    return () => { aborted = true; };
+    run();
+    return () => { cancelled = true; };
   }, [src]);
-  if (error) {
-    return (
-      <div style={{ padding: 16 }}>
-        <div style={{ marginBottom: 10, color: '#b00020' }}>{error}</div>
-        <a href={src} download={fileSafeName(name)}>Download</a>
-      </div>
-    );
-  }
-  return (
-    <div style={{ width: '100%', height: '100%', overflow: 'auto', padding: 16, background: 'transparent' }}>
-      <style>{DOCX_CSS}</style>
-      <div dangerouslySetInnerHTML={{ __html: html }} />
-    </div>
-  );
+  return <div ref={ref} className='docx-html' style={{ padding: '1rem', background: '#fff', height: '100%', overflow: 'auto' }} />;
 }
 
 // =====================================================
-// XLSX EDITOR
+// XLSX EDITOR (LUCKYSHEET EMBED)
 // =====================================================
-function XlsxEditor({ src, name }) {
-  const hostRef = useRef(null);
-  const [ready, setReady] = useState(false);
-  const [err, setErr] = useState('');
+function XlsxEditor({ src }) {
+  const containerRef = useRef(null);
   useEffect(() => {
-    const pushCss = (href) => {
-      if (!document.querySelector(`link[data-ls='${href}']`)) {
-        const l = document.createElement('link');
-        l.rel = 'stylesheet';
-        l.href = href;
-        l.setAttribute('data-ls', href);
-        document.head.appendChild(l);
-      }
-    };
-    const pushJs = (srcUrl) =>
-      new Promise((resolve, reject) => {
-        if (document.querySelector(`script[data-ls='${srcUrl}']`)) return resolve();
-        const s = document.createElement('script');
-        s.src = srcUrl;
-        s.async = true;
-        s.setAttribute('data-ls', srcUrl);
-        s.onload = resolve;
-        s.onerror = reject;
-        document.body.appendChild(s);
-      });
-    pushCss('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/css/plugins.css');
-    pushCss('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/plugins.css');
-    pushCss('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/css/luckysheet.css');
-    Promise.all([
-      pushJs('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/plugins/js/plugin.js'),
-      pushJs('https://cdn.jsdelivr.net/npm/luckysheet@2.1.13/dist/luckysheet.umd.js'),
-      pushJs('https://cdn.jsdelivr.net/npm/luckyexcel@1.0.1/dist/luckyexcel.umd.js')
-    ])
-      .then(() => setReady(true))
-      .catch(() => setErr('Failed to load spreadsheet editor.'));
-  }, []);
-  useEffect(() => {
-    if (!ready || !hostRef.current) return;
-    let disposed = false;
-    async function init() {
+    let cancelled = false;
+    async function run() {
       try {
-        if (window.luckysheet) {
-          try { window.luckysheet.destroy(); } catch {}
-        }
-        const resp = await fetch(src, { cache: 'no-cache' });
-        const blob = await resp.blob();
-        const file = new File([blob], fileSafeName(name || 'workbook.xlsx'), { type: blob.type });
-        window.LuckyExcel.transformExcelToLucky(file, (exportJson) => {
-          if (disposed) return;
-          if (!exportJson || !exportJson.sheets || exportJson.sheets.length === 0) {
-            setErr('No sheets found in workbook.');
-            return;
-          }
-          hostRef.current.innerHTML = '';
-          window.luckysheet.create({
-            container: hostRef.current.id,
-            lang: 'en',
-            showinfobar: false,
-            data: exportJson.sheets
-          });
+        const luckysheet = (await import('luckysheet')).default;
+        if (cancelled) return;
+        const id = 'luckysheet-container';
+        containerRef.current.id = id;
+        luckysheet.create({
+          container: id,
+          showtoolbar: true,
+          showinfobar: false,
+          showsheetbar: true,
+          data: [{
+            name: 'Sheet1',
+            celldata: []
+          }],
+          allowCopy: true,
+          lang: 'en',
+          plugins: ['chart'],
+          hook: {},
+          loadUrl: src
         });
-      } catch {
-        setErr('Unable to render spreadsheet inline.');
+        const styleTag = document.createElement('style');
+        styleTag.innerHTML = LUCKYSHEET_LIGHT_FIX_CSS;
+        document.head.appendChild(styleTag);
+      } catch (err) {
+        console.error('Xlsx render error:', err);
       }
     }
-    init();
-    return () => { disposed = true; };
-  }, [ready, src, name]);
-  return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <style>{LUCKYSHEET_LIGHT_FIX_CSS}</style>
-      {err ? <div style={{ padding: 12 }}>{err}</div> : null}
-      <div id='luckysheet-container' ref={hostRef} style={{ position: 'absolute', inset: 0, background: 'transparent' }} />
-    </div>
-  );
+    run();
+    return () => { cancelled = true; };
+  }, [src]);
+  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
 }
 
 // =====================================================
@@ -307,99 +241,46 @@ export default function ViewEditPanel({ doc }) {
   const inlineUrl = useMemo(() => chooseInlineUrl(doc), [doc]);
   const downloadUrl = useMemo(() => chooseDownloadUrl(doc), [doc]);
 
-  const name =
-    (doc && (doc.original_filename || doc.title || doc.code)) ||
-    (doc && doc.file && (doc.file.name || doc.file.filename)) ||
-    'document';
+  if (!doc) {
+    return (
+      <GlassBackdrop>
+        <div style={{ padding: '2rem', color: THEME.text }}>Select a document to view</div>
+      </GlassBackdrop>
+    );
+  }
 
-  const mime =
-    (doc && (doc.mime_type || doc.mime)) ||
-    (doc && doc.file && (doc.file.mime || doc.file.mimetype)) ||
-    '';
-
-  const kind = useMemo(() => {
-    if (!inlineUrl) return 'none';
-    if (isPdf(mime, name)) return 'pdf';
-    if (isImage(mime, name)) return 'image';
-    if (isDocx(mime, name)) return 'docx';
-    if (isSpreadsheet(mime, name)) return 'xlsx';
-    return 'unknown';
-  }, [inlineUrl, mime, name]);
-
-  const Header = (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '10px 12px',
-        background: 'transparent',
-        borderBottom: `1px solid ${THEME.border}`
-      }}
-    >
-      <div
-        style={{
-          color: THEME.text,
-          fontSize: 26,
-          fontWeight: 900,
-          letterSpacing: 2,
-          textTransform: 'uppercase',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          maxWidth: '65vw'
-        }}
-        title={name}
-      >
-        {name}
-      </div>
-      {inlineUrl ? (
-        <a
-          href={downloadUrl || inlineUrl}
-          download={fileSafeName(name)}
-          style={{ fontSize: 12, fontWeight: 800, textDecoration: 'underline', color: '#e6e8df' }}
-        >
-          {downloadLabel(kind)}
-        </a>
-      ) : null}
-    </div>
-  );
+  const kind = isPdf(doc.mimeType, doc.name)
+    ? 'pdf'
+    : isImage(doc.mimeType, doc.name)
+    ? 'image'
+    : isDocx(doc.mimeType, doc.name)
+    ? 'docx'
+    : isSpreadsheet(doc.mimeType, doc.name)
+    ? 'spreadsheet'
+    : 'unknown';
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        height: '100%',
-        width: '100%',
-        background: 'transparent',
-        borderLeft: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 0 0 1px rgba(0,0,0,0.35) inset',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-    >
-      <GlassBackdrop blur={8} opacity={0.18} />
-      {Header}
-      <div style={{ flex: 1, minHeight: 0, width: '100%', background: 'transparent' }}>
-        {!inlineUrl ? (
-          <div style={{ padding: 16, color: THEME.text }}>No document selected.</div>
-        ) : kind === 'pdf' ? (
-          <PdfViewer src={inlineUrl} />
-        ) : kind === 'image' ? (
-          <ImageViewer src={inlineUrl} name={name} />
-        ) : kind === 'docx' ? (
-          <DocxViewer src={inlineUrl} name={name} />
-        ) : kind === 'xlsx' ? (
-          <XlsxEditor src={inlineUrl} name={name} />
-        ) : (
-          <div style={{ padding: 16, color: THEME.text }}>
-            Preview not supported.{' '}
-            <a href={downloadUrl || inlineUrl} download={fileSafeName(name)} style={{ color: '#e6e8df', textDecoration: 'underline' }}>
-              Download
-            </a>
+    <GlassBackdrop>
+      <div style={{ position: 'absolute', top: 10, right: 10 }}>
+        {downloadUrl && (
+          <a href={downloadUrl} download={fileSafeName(doc.name)} target='_blank' rel='noreferrer'>
+            <button style={{ padding: '.5rem 1rem', background: THEME.border, color: '#fff', border: 'none', borderRadius: 4 }}>
+              {downloadLabel(kind)}
+            </button>
+          </a>
+        )}
+      </div>
+      <div style={{ width: '100%', height: '100%', background: THEME.surface }}>
+        {kind === 'pdf' && <PdfViewer src={inlineUrl} />}
+        {kind === 'image' && <ImageViewer src={inlineUrl} name={doc.name} />}
+        {kind === 'docx' && <DocxViewer src={inlineUrl} />}
+        {kind === 'spreadsheet' && <XlsxEditor src={inlineUrl} />}
+        {kind === 'unknown' && (
+          <div style={{ padding: '2rem', color: THEME.text }}>
+            Cannot preview this file type. Please download instead.
           </div>
         )}
       </div>
-    </div>
+    </GlassBackdrop>
   );
 }
