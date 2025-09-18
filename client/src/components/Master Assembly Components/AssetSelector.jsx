@@ -197,6 +197,14 @@ function AssetSelector({
 
   const borderColor = accentColor || palomaGreen;
 
+  const handleSelectChange = useCallback((opt) => {
+    allowCloseNextRef.current = true;
+    setMenuIsOpen(false);
+    if (onChange) onChange((opt && opt.value) || '');
+  }, [onChange]);
+
+  const portalTarget = typeof document !== 'undefined' ? document.body : null;
+
   return (
     <div
       ref={rootRef}
@@ -214,12 +222,12 @@ function AssetSelector({
         options={options}
         value={selectedOption}
         filterOption={filterOption}
-        onChange={(opt) => onChange && onChange((opt && opt.value) || '')}
+        onChange={handleSelectChange}
         onMenuOpen={onMenuOpen}
         onMenuClose={onMenuClose}
         menuIsOpen={menuIsOpen}
         components={{ MenuList, Option, SingleValue }}
-        menuPortalTarget={document.body}
+        menuPortalTarget={portalTarget}
         __accentColor={borderColor}
         styles={{
           control: (provided, state) => ({
