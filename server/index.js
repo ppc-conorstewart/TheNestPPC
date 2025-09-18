@@ -373,9 +373,11 @@ app.post('/api/hq/action-items', async (req, res) => {
 `**Description:** ${item.description}\n` +
 `**Priority:** ${item.priority}\n` +
 `**Due Date:** ${dateStr}`
+      const attachments = []
       if (item.attachment_url) {
         const attachmentLabel = item.attachment_name || 'Attachment'
-        message += `\n**${attachmentLabel}:** ${item.attachment_url}`
+        message += `\n**${attachmentLabel}:** Attached`
+        attachments.push({ url: item.attachment_url, name: item.attachment_name || undefined })
       }
 
       if (BOT_SERVICE_URL) {
@@ -384,7 +386,7 @@ app.post('/api/hq/action-items', async (req, res) => {
           await fetch(`${BOT_SERVICE_URL}/dm`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-            body: JSON.stringify({ userIds: recipients, message })
+            body: JSON.stringify({ userIds: recipients, message, attachments })
           })
         } catch (err) {
           console.error('Failed to dispatch action item DM:', err)

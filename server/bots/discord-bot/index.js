@@ -13,6 +13,15 @@ const { Client, GatewayIntentBits, Partials, ChannelType } = require('discord.js
 const fetch = require('node-fetch')
 const { token, nestApiUrl, nestBotKey, guildId, port } = require('./config')
 
+const resolveAttachmentUrl = (rawUrl) => {
+  if (!rawUrl) return null
+  if (/^https?:\/\//i.test(rawUrl)) return rawUrl
+  if (!nestApiUrl) return null
+  const base = nestApiUrl.replace(/\/+$/, '')
+  const suffix = rawUrl.startsWith('/') ? rawUrl : `/${rawUrl}`
+  return `${base}${suffix}`
+}
+
 // ==============================
 // Config
 // ==============================
@@ -135,7 +144,7 @@ app.post('/announce/test', async (req, res) => {
 // Send direct messages to one or more users
 app.post('/dm', async (req, res) => {
   try {
-    const { userId, userIds, message } = req.body || {}
+    const { userId, userIds, message, attachments } = req.body || {}
     const ids = new Set()
     if (userId) ids.add(String(userId))
     if (Array.isArray(userIds)) {
@@ -147,12 +156,44 @@ app.post('/dm', async (req, res) => {
       return res.status(400).json({ error: 'userIds_and_message_required' })
     }
 
+    const attachmentList = []
+    if (Array.isArray(attachments)) {
+      for (const entry of attachments) {
+        if (!entry) continue
+        if (typeof entry === 'string') attachmentList.push({ url: entry })
+        else if (entry.url) attachmentList.push({ url: entry.url, name: entry.name })
+      }
+    } else if (attachments && typeof attachments === 'object') {
+      if (attachments.url) attachmentList.push({ url: attachments.url, name: attachments.name })
+    }
+
+    const retrievedFiles = []
+    for (const att of attachmentList) {
+      const resolved = resolveAttachmentUrl(att.url)
+      if (!resolved) {
+        console.warn('[BOT] Skipping attachment without resolvable URL:', att)
+        continue
+      }
+      try {
+        const response = await fetch(resolved)
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const arrayBuffer = await response.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+        const fallbackName = att.name || resolved.split('/').filter(Boolean).pop() || `attachment-${retrievedFiles.length + 1}`
+        retrievedFiles.push({ attachment: buffer, name: fallbackName })
+      } catch (err) {
+        console.error(`[BOT] Failed to fetch DM attachment from ${resolved}:`, err)
+      }
+    }
+
     const results = []
     for (const id of ids) {
       try {
         const user = await client.users.fetch(id)
         if (!user) throw new Error('user_not_found')
-        const sent = await user.send({ content: message })
+        const files = retrievedFiles.map(file => ({ attachment: file.attachment, name: file.name }))
+        const payload = files.length ? { content: message, files } : { content: message }
+        const sent = await user.send(payload)
         results.push({ userId: id, ok: true, messageId: sent.id })
       } catch (err) {
         console.error(`[BOT] DM to ${id} failed:`, err)
