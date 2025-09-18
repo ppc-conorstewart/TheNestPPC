@@ -16,7 +16,6 @@
     "@remix-run/router": "^1.23.0",
     "@tanstack/router-devtools": "^1.120.18",
     "axios": "^1.10.0",
-    "better-sqlite3": "^11.10.0",
     "body-parser": "^2.2.0",
     "chart.js": "^4.5.0",
     "chartjs-plugin-annotation": "^3.1.0",
@@ -67,7 +66,6 @@
     "react-window": "^1.8.11",
     "recharts": "^2.15.3",
     "serve": "^14.2.3",
-    "sqlite3": "^5.1.7",
     "swiper": "^11.2.8",
     "three": "^0.172.0",
     "tippy.js": "^6.3.7",
@@ -81,7 +79,7 @@
     "build": "CI=false craco build",
     "test": "craco test",
     "eject": "react-scripts eject",
-    "start-all": "concurrently \"cd ../server && node index.js\" \"npm run dev\""
+    "start-all": "concurrently \"cd ../server && node server.js\" \"npm run dev\""
   },
   "browserslist": {
     "production": [

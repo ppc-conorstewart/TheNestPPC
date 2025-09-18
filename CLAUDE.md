@@ -4,120 +4,190 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
-### Development
+### Development Setup
 ```bash
-# Install dependencies for both client and server
+# Install dependencies separately (recommended due to sqlite3 build issues)
 cd client && npm install
 cd ../server && npm install
 
+# Note: Root npm install may fail due to sqlite3/Python 3.13 compatibility
+# This is not critical if subdirectories are installed successfully
+```
+
+### Development Servers
+```bash
 # Start development servers (run in separate terminals)
-cd client && npm start    # Client on http://localhost:3000
-cd server && node index.js # API on http://localhost:3001
+cd client && npm run dev    # Client on http://localhost:3000 (uses CRACO)
+cd server && node index.js  # API on http://localhost:3001
 
 # Alternative: Start both from client directory
 cd client && npm run start-all
 ```
 
-### Build
+### Build & Production
 ```bash
 # Build client for production
-cd client && npm run build
+cd client && npm run build   # Uses CI=false to ignore warnings
 
-# Build from root
+# Build from root (if dependencies resolved)
 npm run build
+
+# Start production server
+npm start  # Serves client build with 'serve' package
 ```
 
 ### Testing
 ```bash
 # Run client tests
 cd client && npm test
+
+# Run server tests
+cd server && npm test  # Uses Node's built-in test runner
 ```
 
 ## Architecture Overview
 
-### Full-Stack Application Structure
-- **Frontend**: React 18 app using Create React App with CRACO configuration
-- **Backend**: Express.js REST API server
-- **Database**: PostgreSQL with centralized connection pool (`server/db.js`)
-- **Authentication**: Discord OAuth via Passport.js
-- **File Storage**: Local filesystem with uploads handled via Multer
+### Tech Stack
+- **Frontend**: React 18 with CRACO (webpack customization)
+- **Backend**: Express.js REST API
+- **Database**: PostgreSQL "The NEST"
+- **Authentication**: Discord OAuth2 via Passport.js
+- **File Storage**: Local filesystem (`server/uploads/`)
 
-### Key Architectural Patterns
+### Frontend Architecture (`/client`)
+- **Build Tool**: CRACO disables ESLint plugin, configures proxy
+- **Routing**: React Router v6
+- **State**: React Context API (`context/JobContext.js`)
+- **Styling**: Tailwind CSS v4 with PostCSS
+- **Major Libraries**:
+  - FullCalendar (scheduling)
+  - Chart.js/Recharts (analytics)
+  - Leaflet (maps)
+  - Konva (canvas drawing)
+  - React Beautiful DnD (drag-drop)
+- **API Proxy**: Routes `/api/*` and `/auth/*` to localhost:3001
 
-#### Frontend (`/client`)
-- **Routing**: React Router v6 with protected routes pattern
-- **State Management**: React Context API (see `context/JobContext.js`)
-- **Styling**: Tailwind CSS v4 with custom glass morphism theme
-- **Component Organization**:
-  - Page components in `pages/`
-  - Reusable components grouped by feature in `components/`
-  - UI primitives in `components/ui/`
-  - Shared templates in `templates/`
-- **API Communication**: Axios with proxy to backend (configured in package.json)
-
-#### Backend (`/server`)
-- **Entry Point**: `server/index.js` sets up Express app with middleware
-- **Database**: Centralized PostgreSQL pool in `db.js` using environment variables
-- **Routes**: RESTful endpoints organized by resource in `routes/`
-- **Services**: Business logic separated in `services/` directory
-- **Authentication Flow**:
-  1. Discord OAuth strategy configured in `auth/discordStrategy.js`
-  2. Session management with express-session
-  3. Protected endpoints check session authentication
+### Backend Architecture (`/server`)
+- **Entry**: `index.js` configures Express middleware stack
+- **Database Pool**: `db.js` manages PostgreSQL connections
+- **Sessions**: express-session with Discord OAuth
+- **File Uploads**: Multer with 50MB limit
+- **CORS**: Dynamic validation with localhost/Railway support
+- **Static Assets**: Customer logos at `server/public/assets/logos/`
 
 ### Environment Configuration
-Required environment variables (create `.env` in server directory):
-- `DATABASE_URL` or individual PG connection params (`PGUSER`, `PGHOST`, `PGDATABASE`, `PGPASSWORD`, `PGPORT`)
-- `SESSION_SECRET` for Express sessions
-- `DISCORD_CLIENT_ID` and `DISCORD_CLIENT_SECRET` for OAuth
-- `FRONTEND_URL` for CORS configuration
 
-### Major Features & Their Implementation
+Create `.env` in server directory:
 
-#### Asset Management System
-- Database tables for assets, transfers, activity logs
-- Physical transfer workflow with QR codes and signatures
-- Master assemblies tracking (Missiles, Dogbones, Zippers, Flowcrosses)
+```env
+# Database Option 1: Connection String
+DATABASE_URL=postgresql://user:pass@host/db
 
-#### Job Planning & Operations
-- Job scheduling with calendar and table views
-- MFV (Multi-Flow Valve) tracking and reporting
-- Work order generation and management
-- Site measurements canvas tool
+# Database Option 2: Individual Parameters
+PGUSER=postgres
+PGHOST=localhost
+PGDATABASE=The NEST
+PGPASSWORD=password
+PGPORT=5432
+PGSSL=false
 
-#### Document Management
-- File upload/download with versioning
-- Category-based organization
-- Drag-and-drop interface
+# Authentication
+SESSION_SECRET=your-secret-key
+DISCORD_CLIENT_ID=your-discord-id
+DISCORD_CLIENT_SECRET=your-discord-secret
 
-#### Training & Competency
-- Interactive training modules
-- Competency matrix tracking
-- Employee visit logging
+# URLs
+FRONTEND_URL=http://localhost:3000
+BOT_SERVICE_URL=http://localhost:3020  # Optional Discord bot
+NEST_BOT_KEY=Paloma2025*
 
-### Critical File Paths
-- Hardcoded logo path in `server/index.js:45`: Update `LOGOS_DIR` for deployment
-- Upload directory configured in `server/utils/uploads.js`
+# Optional Features
+ADMIN_IMPORT_KEY=key  # Enables /api/admin routes
+```
 
-### API Route Structure
-All API routes prefixed with `/api/`:
-- `/api/assets` - Asset CRUD operations
+### API Routes
+
+All routes prefixed with `/api/`:
+
+**Core Operations:**
+- `/api/assets` - Asset inventory management
+- `/api/transfers` - Asset transfer workflows
 - `/api/jobs` - Job planning and scheduling
 - `/api/customers` - Customer management
-- `/api/documents` - Document hub operations
-- `/api/workorders` - Work order processing
-- `/api/transfers` - Asset transfer management
-- `/api/mfv-pads` - MFV pad tracking
-- `/api/master-assignments` - Master assembly assignments
+- `/api/workorders` - Work order generation (PDF)
 
-### Database Schema
-PostgreSQL database "The NEST" with tables for:
-- Core entities: assets, customers, jobs, documents
-- Relationships: transfers, assignments, activity_log
-- Specialized: mfv_pads, workorders, sourcing_data
+**MFV System:**
+- `/api/mfv` - MFV pad tracking
+- `/api/master` - Master assembly assignments
 
-### Security Considerations
-- CORS configured for specific origins
-- Session-based authentication with Discord OAuth
-- File uploads restricted by type and size
-- SQL injection prevention via parameterized queries
+**Documentation:**
+- `/api/documents` - Document hub
+- `/api/field-docs` - Field documentation
+- `/api/torque-manuals` - Torque & service manuals
+- `/api/instructional-videos-hub` - Training videos
+
+**Supporting:**
+- `/api/sourcing` - Sourcing data
+- `/api/activity` - Activity logging
+- `/api/service-equipment` - Equipment tracking
+- `/api/projects` - Project management
+- `/api/jobs-schedule` - FlyIQ scheduling
+
+**Discord Integration:**
+- `/api/discord/members` - Guild member list
+- `/api/discord/channels` - Channel list
+- `/api/discord/announce` - Send announcements
+- `/api/hq/action-items` - Action items with DMs
+
+### High-Level Request Flow
+
+1. **Client Request**: React app makes API call to `/api/*`
+2. **Proxy Forward**: CRACO dev server proxies to Express (port 3001)
+3. **Middleware Stack**: CORS → Session → Passport → Route Handler
+4. **Database Query**: Handler uses PostgreSQL connection pool
+5. **Response**: JSON data or file stream returned
+
+### Authentication Flow
+
+1. User clicks Discord login → `/auth/discord`
+2. Passport initiates OAuth with Discord
+3. Callback to `/auth/discord/callback` creates session
+4. User data accessible via `req.user` and `/api/user`
+5. Protected routes check `req.isAuthenticated()`
+
+### File Upload System
+
+- **Multer Configuration**: 50MB limit, various file types
+- **Storage Path**: `server/uploads/` with subdirectories
+- **Static Serving**: Files available at `/uploads/*` URLs
+- **Document Categories**: Organized by type in subdirectories
+
+### Discord Bot Integration
+
+- Optional bot service for enhanced features
+- Main API proxies bot requests
+- Fallback to REST API if bot unavailable
+- Action items send DMs with acknowledgment buttons
+
+### Critical Implementation Notes
+
+- **Logo Path**: Hardcoded at `server/public/assets/logos/` (index.js:81)
+- **PDF Templates**: Work orders use pdf-lib with templates in `server/templates/`
+- **Action Items**: Currently stored in-memory (not persisted to database)
+- **Production Mode**: Serves React build from `client/build/` when NODE_ENV=production
+- **Railway Deploy**: Auto-configures CORS for Railway domains
+- **Legacy Code**: Quiz endpoints `/api/questions` and `/api/module2` serve training data
+
+### Known Issues
+
+- **sqlite3 Build**: May fail with Python 3.13+ due to missing distutils
+- **Canvas Module**: Windows ARM64 may have resource lock issues
+- **Deprecation Warnings**: Several dependencies need updates (see npm warnings)
+
+### Database Schema Overview
+
+PostgreSQL database "The NEST" includes tables for:
+- **Core Entities**: assets, customers, jobs, documents
+- **Relationships**: transfers, assignments, activity_log
+- **Specialized**: mfv_pads, workorders, sourcing_data
+- **Master Assemblies**: Missiles, Dogbones, Zippers, Flowcrosses tracking
