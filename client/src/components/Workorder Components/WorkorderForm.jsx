@@ -154,6 +154,25 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
   const [pageIndex, setPageIndex] = useState(0);
   const [showAlerts, setShowAlerts] = useState(false);
 
+  const extractJobId = data => data?.id ?? data?.jobId ?? data?.ID ?? data?.job_id ?? null;
+  const toNumberOrNull = value => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  const fetchLatestWorkorder = async jobId => {
+    const numericJobId = toNumberOrNull(jobId);
+    if (!numericJobId) return null;
+    try {
+      const res = await axios.get(resolveApiUrl(`/api/workorders/by-job/${numericJobId}/latest`));
+      return res?.data || null;
+    } catch (err) {
+      if (err?.response?.status === 404) return null;
+      console.error('Failed to fetch latest workorder', err);
+      return null;
+    }
+  };
+
   const dfitPanelSpecs = useMemo(() => asArray(dfit.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
@@ -235,6 +254,17 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
     loadDraft();
     // eslint-disable-next-line
   }, [storageKey]);
+
+  useEffect(() => {
+    (async () => {
+      if (!workorderId) return;
+      const latest = await fetchLatestWorkorder(workorderId);
+      if (latest?.id) {
+        setWorkorderRecordId(latest.id);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workorderId]);
 
   useEffect(() => {
     const items = [];
@@ -368,20 +398,54 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
       let savedJobId = workorderId;
       if (!savedJobId) {
         const jobRes = await axios.post(resolveApiUrl('/api/jobs'), jobPayload);
-        savedJobId = jobRes.data?.id || jobRes.data?.jobId || jobRes.data?.ID;
+        savedJobId = extractJobId(jobRes?.data);
+        if (!savedJobId) {
+          const jobsRes = await axios.get(resolveApiUrl('/api/jobs'));
+          const normalizedCustomer = (jobPayload.customer || '').trim().toUpperCase();
+          const normalizedSurface = (jobPayload.surface_lsd || '').trim().toLowerCase();
+          const normalizedRig = (jobPayload.rig_in_date || '').slice(0, 10);
+          const matchedJob = asArray(jobsRes.data).find(job => {
+            const jobCustomer = (job.customer || '').trim().toUpperCase();
+            const jobSurface = (job.surface_lsd || '').trim().toLowerCase();
+            const jobRig = (job.rig_in_date || '').slice(0, 10);
+            return jobCustomer === normalizedCustomer && jobSurface === normalizedSurface && (!normalizedRig || jobRig === normalizedRig);
+          });
+          savedJobId = extractJobId(matchedJob);
+        }
         if (!savedJobId) throw new Error('Server did not return a job id!');
         alert('New Job created! Saving full workorder...');
       } else {
         await axios.patch(resolveApiUrl(`/api/jobs/${savedJobId}`), jobPayload);
       }
 
-      await axios.post(resolveApiUrl('/api/drafts'), { user_id: userId, workorder_id: savedJobId, page_key: storageKey, payload: draftBody });
+      const numericJobId = toNumberOrNull(savedJobId);
+      if (!numericJobId) throw new Error('Invalid job id received from server');
 
-      const createPayload = { job_id: Number(savedJobId), revision: 'A', payload: draftBody };
-      const woRes = await axios.post(resolveApiUrl('/api/workorders'), createPayload);
-      if (woRes?.data?.id) setWorkorderRecordId(woRes.data.id);
+      await axios.post(resolveApiUrl('/api/drafts'), { user_id: userId, workorder_id: numericJobId, page_key: storageKey, payload: draftBody });
 
-      if (!workorderId && savedJobId) { setLocalWorkorderId(savedJobId); initialData.id = savedJobId; }
+      const revision = 'A';
+      const workorderPayload = { revision, payload: draftBody };
+      let recordId = workorderRecordId;
+      try {
+        if (recordId) {
+          await axios.put(resolveApiUrl(`/api/workorders/${recordId}`), workorderPayload);
+        } else {
+          const woRes = await axios.post(resolveApiUrl('/api/workorders'), { job_id: numericJobId, revision, payload: draftBody });
+          recordId = woRes?.data?.id || null;
+          if (recordId) setWorkorderRecordId(recordId);
+        }
+      } catch (woErr) {
+        const latest = await fetchLatestWorkorder(numericJobId);
+        if (latest?.id) {
+          recordId = latest.id;
+          setWorkorderRecordId(recordId);
+          await axios.put(resolveApiUrl(`/api/workorders/${recordId}`), workorderPayload);
+        } else {
+          throw woErr;
+        }
+      }
+
+      if (!workorderId && numericJobId) { setLocalWorkorderId(numericJobId); initialData.id = numericJobId; }
 
       alert('Progress saved to server!');
     } catch (err) {
@@ -397,6 +461,17 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
     }
 
     try {
+      const numericJobId = toNumberOrNull(workorderId);
+      if (!numericJobId) throw new Error('Invalid job id');
+      if (!workorderRecordId) {
+        const latest = await fetchLatestWorkorder(numericJobId);
+        if (latest?.id) {
+          setWorkorderRecordId(latest.id);
+        } else {
+          throw new Error('No workorder record found to publish. Please save first.');
+        }
+      }
+
       const bomPayload = {
         dfitSelections: asArray(dfit.selections), dfitBuildQtys: asArray(dfit.buildQtys),
         umaSelections:  asArray(uma.selections),  umaBuildQtys:  asArray(uma.buildQtys),
@@ -414,12 +489,12 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
       if (workorderRecordId) {
         await axios.put(resolveApiUrl(`/api/workorders/${workorderRecordId}`), { revision, payload: workOrdersData });
       } else {
-        const createPayload = { job_id: Number(workorderId), revision, payload: workOrdersData };
+        const createPayload = { job_id: numericJobId, revision, payload: workOrdersData };
         const woRes = await axios.post(resolveApiUrl('/api/workorders'), createPayload);
         if (woRes?.data?.id) setWorkorderRecordId(woRes.data.id);
       }
 
-      await axios.patch(resolveApiUrl(`/api/jobs/${workorderId}`), { work_orders: JSON.stringify(workOrdersData) });
+      await axios.patch(resolveApiUrl(`/api/jobs/${numericJobId}`), { work_orders: JSON.stringify(workOrdersData) });
 
       alert(`Published revision REV-${revision} for this job!`);
     } catch (err) {
