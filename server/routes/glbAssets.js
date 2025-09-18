@@ -1,24 +1,73 @@
 // ==============================
 // FILE: server/routes/glbAssets.js
+// SECTIONS: Imports • Helpers • List • Detail • Create • Update • Delete (soft/hard) • Move • Defaults • Export
 // ==============================
 
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const crypto = require('crypto');
-const pool = require('../db'); // 
+const pool = require('../db');
 const { memoryUpload, uploadDir } = require('../utils/uploads');
 
 const router = express.Router();
 
-const ensureDir = dir => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); };
-const sha256 = buf => crypto.createHash('sha256').update(buf).digest('hex');
-const toTagsArray = raw => Array.isArray(raw) ? raw.map(s => String(s).trim()).filter(Boolean)
-  : String(raw || '').split(',').map(s => s.trim()).filter(Boolean);
-const slugify = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '').slice(0,120);
-const urlFromAbs = abs => `/uploads/${path.relative(uploadDir, abs).replace(/\\/g, '/')}`;
+// ==============================
+// SECTION: Helpers
+// ==============================
+const ensureDir = (dir) => { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }); };
+const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
+const toTagsArray = (raw) => Array.isArray(raw)
+  ? raw.map((s) => String(s).trim()).filter(Boolean)
+  : String(raw || '').split(',').map((s) => s.trim()).filter(Boolean);
+const slugify = (s) => String(s || '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/(^-|-$)+/g, '')
+  .slice(0, 120);
+const urlFromAbs = (abs) => `/uploads/${path.relative(uploadDir, abs).replace(/\\/g, '/')}`;
+const absFromUrl = (url) => path.join(uploadDir, url.replace(/^\/?uploads\//i, ''));
 
-// ===== LIST =====
+const buildAssetBaseDir = (folderType, customerSlug, modelSlug) => {
+  return folderType === 'CUSTOMER'
+    ? path.join(uploadDir, 'glb', 'customers', customerSlug || 'unspecified', modelSlug)
+    : path.join(uploadDir, 'glb', 'generic', modelSlug);
+};
+
+const moveAssetOnDisk = (storageUrl, folderType, customerSlug) => {
+  const srcAbs = absFromUrl(storageUrl);
+  const srcDir = path.dirname(srcAbs);
+  const modelSlug = path.basename(srcDir);
+  const dstBase = buildAssetBaseDir(folderType, customerSlug, modelSlug);
+  ensureDir(dstBase);
+  const dstAbs = path.join(dstBase, path.basename(srcAbs));
+  const dstDir = path.dirname(dstAbs);
+
+  ensureDir(dstDir);
+  if (srcDir !== dstDir) {
+    ensureDir(path.dirname(dstDir));
+    ensureDir(dstDir);
+    // Move entire model folder (to keep thumbs/aux files)
+    if (fs.existsSync(srcDir)) {
+      const parentDst = path.dirname(dstBase);
+      ensureDir(parentDst);
+      fs.renameSync(srcDir, dstBase);
+    }
+  }
+  const newStorageUrl = urlFromAbs(path.join(dstBase, path.basename(srcAbs)));
+  // Fix thumbnail path if it existed
+  const thumbsSrc = path.join(dstBase, 'thumbs'); // already moved with folder
+  const thumbCandidate = fs.existsSync(thumbsSrc)
+    ? fs.readdirSync(thumbsSrc).find((f) => f.startsWith(modelSlug + '.'))
+    : null;
+  const thumbnailUrl = thumbCandidate ? urlFromAbs(path.join(thumbsSrc, thumbCandidate)) : null;
+  return { newStorageUrl, thumbnailUrl };
+};
+
+// ==============================
+// SECTION: List
+// ==============================
 router.get('/', async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page || '1', 10));
@@ -53,7 +102,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ===== DETAIL =====
+// ==============================
+// SECTION: Detail
+// ==============================
 router.get('/:id', async (req, res) => {
   try {
     const { rows } = await pool.query(`SELECT * FROM glb_assets WHERE id = $1`, [req.params.id]);
@@ -65,7 +116,9 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ===== CREATE (UPLOAD/REGISTER) =====
+// ==============================
+// SECTION: Create (Upload/Register)
+// ==============================
 router.post(
   '/',
   memoryUpload.fields([{ name: 'model', maxCount: 1 }, { name: 'thumbnail', maxCount: 1 }]),
@@ -95,10 +148,8 @@ router.post(
       const modelSlug = slugify(name || path.parse(modelFile.originalname).name);
       const customer_slug = dest_type === 'CUSTOMER' && dest_customer ? slugify(dest_customer) : null;
 
-      const baseDir = dest_type === 'CUSTOMER'
-        ? path.join(uploadDir, 'glb', 'customers', customer_slug || 'unspecified', modelSlug)
-        : path.join(uploadDir, 'glb', 'generic', modelSlug);
-      if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
+      const baseDir = buildAssetBaseDir(dest_type, customer_slug, modelSlug);
+      ensureDir(baseDir);
 
       const modelName = modelFile.originalname.toLowerCase().endsWith('.glb') ? modelFile.originalname : `${modelSlug}.glb`;
       const modelAbs = path.join(baseDir, modelName);
@@ -109,7 +160,7 @@ router.post(
       const thumbFile = req.files?.thumbnail?.[0];
       if (thumbFile) {
         const thumbsDir = path.join(baseDir, 'thumbs');
-        if (!fs.existsSync(thumbsDir)) fs.mkdirSync(thumbsDir, { recursive: true });
+        ensureDir(thumbsDir);
         const ext = (path.extname(thumbFile.originalname) || '.png').toLowerCase();
         const thumbAbs = path.join(thumbsDir, `${modelSlug}${ext}`);
         fs.writeFileSync(thumbAbs, thumbFile.buffer);
@@ -141,16 +192,16 @@ router.post(
   }
 );
 
-// ===== UPDATE =====
+// ==============================
+// SECTION: Update
+// ==============================
 router.patch('/:id', async (req, res) => {
   try {
     const fields = [];
     const params = [];
     let i = 1;
 
-    const setField = (col, val, transform) => {
-      fields.push(`${col} = $${i}`); params.push(transform ? transform(val) : val); i++;
-    };
+    const setField = (col, val, transform) => { fields.push(`${col} = $${i}`); params.push(transform ? transform(val) : val); i++; };
 
     if (req.body.name !== undefined) setField('name', req.body.name || null);
     if (req.body.category !== undefined) setField('category', req.body.category || null);
@@ -178,18 +229,169 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-// ===== DELETE (SOFT) =====
+// ==============================
+// SECTION: Delete (Soft / Hard via ?hard=true)
+// ==============================
 router.delete('/:id', async (req, res) => {
   try {
+    const hard = String(req.query.hard || '').toLowerCase() === 'true';
+    const { rows: existing } = await pool.query(`SELECT id, storage_url FROM glb_assets WHERE id = $1`, [req.params.id]);
+    if (!existing.length) return res.status(404).json({ error: 'Not found' });
+
+    if (hard) {
+      try {
+        const abs = absFromUrl(existing[0].storage_url);
+        const dir = path.dirname(abs);
+        if (fs.existsSync(dir)) fs.rmSync(dir, { recursive: true, force: true });
+      } catch (_) { /* ignore */ }
+      await pool.query(`DELETE FROM glb_assets WHERE id = $1`, [req.params.id]);
+      return res.json({ deleted: true, hard: true });
+    }
+
     const { rows } = await pool.query(
       `UPDATE glb_assets SET is_active = false, updated_at = NOW() WHERE id = $1 RETURNING *`,
       [req.params.id]
     );
-    if (!rows.length) return res.status(404).json({ error: 'Not found' });
-    res.json({ deleted: true, asset: rows[0] });
+    res.json({ deleted: true, hard: false, asset: rows[0] });
   } catch (err) {
     console.error('DELETE /api/glb-assets/:id error:', err);
     res.status(500).json({ error: 'Failed to delete GLB asset' });
+  }
+});
+
+// ==============================
+// SECTION: Move GLB Asset (folder/customer)
+// BODY: { folder_type: 'GENERIC'|'CUSTOMER', customer_slug?: string }
+// ==============================
+router.post('/:id/move', async (req, res) => {
+  try {
+    const folder_type = (req.body.folder_type || '').toUpperCase() === 'CUSTOMER' ? 'CUSTOMER' : 'GENERIC';
+    const customer_slug = folder_type === 'CUSTOMER' ? slugify(req.body.customer_slug || '') : null;
+
+    const { rows: currentRows } = await pool.query(
+      `SELECT id, storage_url, thumbnail_url FROM glb_assets WHERE id = $1`,
+      [req.params.id]
+    );
+    if (!currentRows.length) return res.status(404).json({ error: 'Not found' });
+
+    const { newStorageUrl, thumbnailUrl } = moveAssetOnDisk(currentRows[0].storage_url, folder_type, customer_slug);
+
+    const { rows } = await pool.query(
+      `UPDATE glb_assets
+         SET storage_url = $1,
+             thumbnail_url = COALESCE($2, thumbnail_url),
+             folder_type = $3,
+             customer_slug = $4,
+             updated_at = NOW()
+       WHERE id = $5
+       RETURNING *`,
+      [newStorageUrl, thumbnailUrl, folder_type, customer_slug, req.params.id]
+    );
+
+    res.json({ moved: true, asset: rows[0] });
+  } catch (err) {
+    console.error('POST /api/glb-assets/:id/move error:', err);
+    res.status(500).json({ error: 'Failed to move GLB asset' });
+  }
+});
+
+// ==============================
+// SECTION: Assign/Unassign Default
+// BODY: { customer_slug: string, active?: boolean, by_category?: string }
+// ==============================
+router.post('/:id/defaults', async (req, res) => {
+  try {
+    const customer_slug = slugify(req.body.customer_slug || '');
+    if (!customer_slug) return res.status(400).json({ error: 'customer_slug_required' });
+    const active = req.body.active === undefined ? true : !!req.body.active;
+    const by_category = req.body.by_category ? String(req.body.by_category) : null;
+
+    const upsertSql = `
+      INSERT INTO glb_asset_defaults (id, asset_id, customer_slug, by_category, is_active, created_at)
+      VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())
+      ON CONFLICT (customer_slug, asset_id)
+      DO UPDATE SET is_active = EXCLUDED.is_active, by_category = EXCLUDED.by_category
+      RETURNING *
+    `;
+    const { rows } = await pool.query(upsertSql, [req.params.id, customer_slug, by_category, active]);
+    res.json({ ok: true, default: rows[0] });
+  } catch (err) {
+    console.error('POST /api/glb-assets/:id/defaults error:', err);
+    res.status(500).json({ error: 'Failed to update defaults' });
+  }
+});
+
+// ==============================
+// SECTION: Export (GLB passthrough, GLTF/ZIP if gltf-pipeline is present)
+// QUERY: ?format=glb|gltf|zip
+// ==============================
+router.get('/:id/export', async (req, res) => {
+  try {
+    const format = String(req.query.format || 'glb').toLowerCase();
+    const { rows } = await pool.query(`SELECT id, name, storage_url FROM glb_assets WHERE id = $1`, [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+
+    const asset = rows[0];
+    const srcAbs = absFromUrl(asset.storage_url);
+    const baseName = slugify(asset.name || path.basename(srcAbs, path.extname(srcAbs)));
+
+    if (format === 'glb') {
+      res.setHeader('Content-Disposition', `attachment; filename="${baseName}.glb"`);
+      return fs.createReadStream(srcAbs).pipe(res);
+    }
+
+    let pipeline = null;
+    try {
+      // Optional dependency; only used if installed
+      // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+      pipeline = require('gltf-pipeline');
+    } catch (_) { /* not installed */ }
+
+    if (!pipeline) {
+      return res.status(501).json({ error: 'converter_unavailable', note: 'Install gltf-pipeline to enable GLTF/ZIP export' });
+    }
+
+    const glbBuf = fs.readFileSync(srcAbs);
+    const result = await pipeline.glbToGltf(glbBuf, {});
+    const gltf = result.gltf;
+    const gltfJson = Buffer.from(JSON.stringify(gltf, null, 0));
+
+    if (format === 'gltf') {
+      res.setHeader('Content-Type', 'model/gltf+json');
+      res.setHeader('Content-Disposition', `attachment; filename="${baseName}.gltf"`);
+      return res.end(gltfJson);
+    }
+
+    if (format === 'zip') {
+      // Minimal ZIP without extra deps; write temp files and stream as .zip via system zip if available
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nest-gltf-'));
+      const gltfPath = path.join(tmpDir, `${baseName}.gltf`);
+      fs.writeFileSync(gltfPath, gltfJson);
+      // Try to use OS zip; fallback to serving .gltf
+      try {
+        const { execFileSync } = require('child_process');
+        const zipPath = path.join(tmpDir, `${baseName}.zip`);
+        const zipCmd = process.platform === 'win32' ? 'powershell' : 'zip';
+        if (zipCmd === 'zip') {
+          execFileSync('zip', ['-j', zipPath, gltfPath], { stdio: 'ignore' });
+        } else {
+          execFileSync('powershell', ['-NoProfile', '-Command', `Compress-Archive -Path '${gltfPath}' -DestinationPath '${zipPath}' -Force`], { stdio: 'ignore' });
+        }
+        res.setHeader('Content-Disposition', `attachment; filename="${baseName}.zip"`);
+        const stream = fs.createReadStream(zipPath);
+        stream.on('close', () => { try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch (_) {} });
+        return stream.pipe(res);
+      } catch (_) {
+        res.setHeader('Content-Type', 'model/gltf+json');
+        res.setHeader('Content-Disposition', `attachment; filename="${baseName}.gltf"`);
+        return res.end(gltfJson);
+      }
+    }
+
+    return res.status(400).json({ error: 'unsupported_format' });
+  } catch (err) {
+    console.error('GET /api/glb-assets/:id/export error:', err);
+    res.status(500).json({ error: 'Failed to export GLB asset' });
   }
 });
 

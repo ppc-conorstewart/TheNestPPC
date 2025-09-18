@@ -265,13 +265,21 @@ export default function Glblibrary() {
                   />
                 </div>
                 <div>
-                  <label className='block text-[14px] text-black uppercase font-bold mb-0.5'>Category</label>
-                  <input
+                  <label className='block text-[14px] text-black uppercase font-bold mb-0.5'>GLB Asset Category</label>
+                  <select
                     value={glbCategory}
                     onChange={e => setGlbCategory(e.target.value)}
-                    placeholder='Flowcross, Dogbone…'
                     className='w-full px-3 py-1.5 rounded-md bg-[#121212] text-black border border-black outline-none text-xs'
-                  />
+                  >
+                    <option value=''>Select category…</option>
+                    <option value='DFIT Assembly'>DFIT Assembly</option>
+                    <option value='Upper Master Assembly'>Upper Master Assembly</option>
+                    <option value='Flowcross'>Flowcross</option>
+                    <option value='Swab'>Swab</option>
+                    <option value='Dogbone'>Dogbone</option>
+                    <option value='Zipper'>Zipper</option>
+                    <option value='Zipper (Cleanout)'>Zipper (Cleanout)</option>
+                  </select>
                 </div>
                 <div>
                   <label className='block text-[10px] font-bold  uppercase text-black mb-0.5'>.glb File</label>

@@ -19,6 +19,7 @@
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "form-data": "^4.0.4",
+    "gltf-pipeline": "^4.3.0",
     "multer": "^2.0.1",
     "node-fetch": "^2.7.0",
     "papaparse": "^5.5.3",
