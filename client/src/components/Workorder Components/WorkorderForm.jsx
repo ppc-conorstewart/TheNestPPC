@@ -52,15 +52,10 @@ function extractSizePressure(name) {
   return [];
 }
 
-function computeSpecs(selectedAssets, assets, assetSpecs) {
+function computeSpecs(selectedAssets, resolveSpec) {
   let totalWeight = 0, totalVolume = 0, totalOAL = 0, torqueSpecsArr = [];
   selectedAssets.forEach(name => {
-    let spec = assetSpecs[name];
-    if (!spec) {
-      const normalizedRaw = normalizeUniversal(name);
-      const matchKey = Object.keys(assetSpecs).find(k => normalizeUniversal(k) === normalizedRaw);
-      spec = matchKey && assetSpecs[matchKey];
-    }
+    const spec = resolveSpec(name);
     if (spec) {
       totalWeight += Number(spec.weight) || 0;
       totalVolume += Number(spec.fillVolume) || 0;
@@ -106,6 +101,28 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
   } = initialData;
 
   const { assets } = useAssets();
+  const resolveAssetSpec = useMemo(() => {
+    const normalizedMap = new Map();
+    Object.keys(assetSpecs).forEach(key => {
+      normalizedMap.set(normalizeUniversal(key), assetSpecs[key]);
+    });
+    const cache = new Map();
+    return (rawName) => {
+      if (!rawName) return null;
+      if (cache.has(rawName)) return cache.get(rawName);
+      let spec = assetSpecs[rawName];
+      if (!spec) {
+        const normalizedRaw = normalizeUniversal(rawName);
+        spec = normalizedMap.get(normalizedRaw) || null;
+      }
+      if (!spec) {
+        const decimalName = rawName.replace(/(\d+-\d+\/\d+)/g, m => fractionToDecimal(m));
+        spec = assetSpecs[decimalName] || normalizedMap.get(normalizeUniversal(decimalName)) || null;
+      }
+      cache.set(rawName, spec);
+      return spec;
+    };
+  }, [assets]);
   const storageKey = `workorder_${customer.replace(/\s+/g, '-')}_${surfaceLSD}`;
   const { user } = useUser();
   const userId = user?.id || 'GUEST';
@@ -177,44 +194,44 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [dfit.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [dfit.selections, resolveAssetSpec]);
   const umaPanelSpecs = useMemo(() => asArray(uma.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [uma.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [uma.selections, resolveAssetSpec]);
   const fcaPanelSpecs = useMemo(() => asArray(fca.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [fca.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [fca.selections, resolveAssetSpec]);
   const svaPanelSpecs = useMemo(() => asArray(sva.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [sva.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [sva.selections, resolveAssetSpec]);
   const dogbonesPanelSpecs = useMemo(() => asArray(dogbones.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [dogbones.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [dogbones.selections, resolveAssetSpec]);
   const zippersPanelSpecs = useMemo(() => asArray(zippers.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [zippers.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [zippers.selections, resolveAssetSpec]);
   const pplPanelSpecs = useMemo(() => asArray(ppl.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [ppl.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [ppl.selections, resolveAssetSpec]);
 
   useEffect(() => {
     async function loadDraft() {

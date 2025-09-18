@@ -1,7 +1,7 @@
 // ==============================
 // FLYHQ — IMPORTS
 // ==============================
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useDeferredValue } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { API_BASE_URL } from '../api';
@@ -78,6 +78,7 @@ export default function FlyHQ() {
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'ascending' });
   const [rowsPerPage, setRowsPerPage] = useState(15);
   const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showTransferSuccess, setShowTransferSuccess] = useState(false);
@@ -138,8 +139,8 @@ export default function FlyHQ() {
   );
 
   const searched = useMemo(() => {
-    if (!searchTerm) return filtered;
-    const t = searchTerm.toLowerCase();
+    if (!deferredSearchTerm) return filtered;
+    const t = deferredSearchTerm.toLowerCase();
     return filtered.filter(
       (a) =>
         (a?.id ? String(a.id) : '').toLowerCase().includes(t) ||
@@ -149,11 +150,11 @@ export default function FlyHQ() {
         (a?.location || '').toLowerCase().includes(t) ||
         (a?.status || '').toLowerCase().includes(t)
     );
-  }, [filtered, searchTerm]);
+  }, [filtered, deferredSearchTerm]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, filters, showMAAssets]);
+  }, [deferredSearchTerm, filters, showMAAssets]);
 
   const paginatedWithSearch = useMemo(() => {
     const sorted = [...searched].sort((a, b) => {

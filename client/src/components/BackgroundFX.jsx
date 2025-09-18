@@ -173,7 +173,7 @@ export default function BackgroundFX() {
     // ==============================
     // ANIMATE
     // ==============================
-    function tick() {
+    const tick = () => {
       const usedDpr = dprRef.current;
 
       // ===== CLEAR DPR BACKING STORE =====
@@ -437,15 +437,28 @@ export default function BackgroundFX() {
       }
 
       rafRef.current = requestAnimationFrame(tick);
-    }
+    };
 
-    rafRef.current = requestAnimationFrame(tick);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        rafRef.current = requestAnimationFrame(tick);
+      } else if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+    };
+
+    if (document.visibilityState === 'visible') {
+      rafRef.current = requestAnimationFrame(tick);
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
 
     // ==============================
     // CLEANUP
     // ==============================
     return () => {
-      cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('resize', resize);
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerleave', onPointerLeave);

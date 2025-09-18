@@ -1,25 +1,27 @@
 // =================== Imports and Assets ===================
-import Lottie from "lottie-react";
-import { useState } from 'react';
+import Lottie from 'lottie-react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FixedSizeList as List } from 'react-window';
 import EditIcon from '../../assets/Fly-HQ Icons/EditIcon.json';
 import HistoryIcon from '../../assets/Fly-HQ Icons/HistoryIcon.json';
 import QRICon from '../../assets/Fly-HQ Icons/QRICon.json';
 import TrashIcon from '../../assets/Fly-HQ Icons/TrashIcon.json';
 import PalomaQRCodeModal from './PalomaQRCodeModal';
-
 import useMediaQuery from '../../hooks/useMediaQuery';
+
 // =================== Style Constants ===================
 const cardBorder = '1px solid #6a7257';
 const bgCard = '#000';
 const headerBg = '#10110f';
-const palomaGreen = '#6a7257';
 const zebraBg = '#161616';
 const zebraAlt = '#0d0d0d';
 const textMain = '#e6e8df';
+const palomaGreen = '#6a7257';
 
 // =================== Fixed Metrics ===================
 const ROW_HEIGHT = 24;
+const VIRTUAL_ROW_HEIGHT = ROW_HEIGHT + 18;
 
 // =================== Column Widths ===================
 const colWidths = {
@@ -37,9 +39,12 @@ const colWidths = {
 const missilePurple = '#A64DFF';
 const maYellow = '#F5D742';
 
-// =================== Helpers: Status Formatting ===================
+const DATA_COLUMNS = ['id', 'sn', 'name', 'category', 'location', 'status'];
+
+const defaultHeaderLabel = key => key.toUpperCase();
+
 function formatStatusLabel(status) {
-  if (!status || typeof status !== "string") return status;
+  if (!status || typeof status !== 'string') return status;
 
   const missileMatch = status.match(/^MA-MI-(\d+)$/i);
   if (missileMatch) return `Master Assembly (Missile-${missileMatch[1]})`;
@@ -49,32 +54,34 @@ function formatStatusLabel(status) {
     const abbr = nonMissileMatch[1].toUpperCase();
     const num = nonMissileMatch[2];
     let fullName = abbr;
-    if (abbr === "DB") fullName = "Dogbone";
-    if (abbr === "ZIP") fullName = "Zipper";
-    if (abbr === "FC") fullName = "Flowcross";
+    if (abbr === 'DB') fullName = 'Dogbone';
+    if (abbr === 'ZIP') fullName = 'Zipper';
+    if (abbr === 'FC') fullName = 'Flowcross';
     return `Master Assembly (${fullName}-${num})`;
   }
 
   return status;
 }
+
 function routeForStatus(status) {
   if (!status || typeof status !== 'string') return null;
 
-  const mi = status.match(/^MA-MI-(\d+)$/i);
-  if (mi) {
-    const child = `Missile-${mi[1]}`;
+  const missile = status.match(/^MA-MI-(\d+)$/i);
+  if (missile) {
+    const child = `Missile-${missile[1]}`;
     const label = `Master Assembly (${child})`;
     return {
       to: `/fly-hq?tab=assemblies&assembly=${encodeURIComponent('Missiles')}&child=${encodeURIComponent(child)}`,
       label,
-      title: `Click to navigate to ${label}`
+      title: `Click to navigate to ${label}`,
     };
   }
-  const m = status.match(/^MA\s*\(([A-Z]{2,3})-([A-Z0-9]+)\)$/i);
-  if (!m) return null;
 
-  const abbr = m[1].toUpperCase();
-  const num = m[2];
+  const ma = status.match(/^MA\s*\(([A-Z]{2,3})-([A-Z0-9]+)\)$/i);
+  if (!ma) return null;
+
+  const abbr = ma[1].toUpperCase();
+  const num = ma[2];
   let assemblyTitle = '';
   let child = '';
 
@@ -87,11 +94,23 @@ function routeForStatus(status) {
   return {
     to: `/fly-hq?tab=assemblies&assembly=${encodeURIComponent(assemblyTitle)}&child=${encodeURIComponent(child)}`,
     label,
-    title: `Click to navigate to ${label}`
+    title: `Click to navigate to ${label}`,
   };
 }
 
-// =================== Component: AssetTable ===================
+function buildGridTemplate() {
+  return [
+    colWidths.checkbox,
+    colWidths.id,
+    colWidths.sn,
+    colWidths.name,
+    colWidths.category,
+    colWidths.location,
+    colWidths.status,
+    colWidths.actions,
+  ].map(w => `${w}px`).join(' ');
+}
+
 export default function AssetTable({
   assets,
   selectedIds,
@@ -106,27 +125,102 @@ export default function AssetTable({
   onViewQR,
   onViewHistory,
 }) {
-  const [qrAsset, setQRAsset] = useState(null);
   const isCompact = useMediaQuery('(max-width: 1100px)');
+  const [qrAsset, setQRAsset] = useState(null);
+  const [hoveredActionId, setHoveredActionId] = useState(null);
+  const [hoveredActionType, setHoveredActionType] = useState(null);
 
-  const selectedSet = new Set(selectedIds);
-  const allOnPageSelected = assets.length > 0 && assets.every((a) => selectedSet.has(a.id));
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const allOnPageSelected = assets.length > 0 && assets.every(a => selectedSet.has(a.id));
+  const gridTemplate = useMemo(buildGridTemplate, []);
+  const useVirtualized = !isCompact && assets.length > 120;
 
-  const isMissileMA = (status) =>
-    typeof status === 'string' && /^MA-MI-\d+$/i.test(status?.trim());
-  const isNonMissileMA = (status) =>
-    typeof status === 'string' && /^MA\s*\(([A-Z]{2,3})-[A-Z0-9]+\)$/i.test(status?.trim());
+  const renderStatus = (asset) => {
+    const statusRoute = routeForStatus(asset.status);
+    const isMissile = /^MA-MI-\d+$/i.test(asset.status || '');
+    const isNonMissile = /^MA\s*\(([A-Z]{2,3})-[A-Z0-9]+\)$/i.test(asset.status || '');
 
-  const buttonHeight = 22;
-  const iconButtonSize = 28;
+    if (statusRoute) {
+      return (
+        <Link to={statusRoute.to} title={statusRoute.title} className='underline text-[#8CF94A]'>
+          {statusRoute.label}
+        </Link>
+      );
+    }
 
-  const [hoverEditIdx, setHoverEditIdx] = useState(null);
-  const [hoverDeleteIdx, setHoverDeleteIdx] = useState(null);
-  const [hoverQRIdx, setHoverQRIdx] = useState(null);
-  const [hoverHistoryIdx, setHoverHistoryIdx] = useState(null);
-  const lottieKey = (base, idx, hover) => `${base}-${idx}-${hover ? 'play' : 'pause'}`;
+    if (isMissile || isNonMissile) {
+      const color = isMissile ? missilePurple : maYellow;
+      return <span style={{ color }}>{formatStatusLabel(asset.status)}</span>;
+    }
 
-  return (
+    return formatStatusLabel(asset.status);
+  };
+
+  const RowActions = ({ asset }) => {
+    const play = type => hoveredActionId === asset.id && hoveredActionType === type;
+
+    const makeButton = (type, icon, handler, title) => (
+      <button
+        key={type}
+        onClick={handler}
+        title={title}
+        onMouseEnter={() => { setHoveredActionId(asset.id); setHoveredActionType(type); }}
+        onMouseLeave={() => setHoveredActionId(null)}
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: '50%',
+          border: '1px solid rgba(255,255,255,0.15)',
+          background: 'rgba(0,0,0,0.35)',
+          display: 'grid',
+          placeItems: 'center',
+          cursor: 'pointer',
+          ...(type === 'delete' ? deleteButtonStyle : {}),
+        }}
+      >
+        <Lottie
+          animationData={icon}
+          loop={false}
+          autoplay={false}
+          style={{ width: 22, height: 22 }}
+          play={play(type)}
+        />
+      </button>
+    );
+
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, alignItems: 'center', height: 22 }}>
+        {makeButton('edit', EditIcon, () => onEdit(asset), 'Edit Asset')}
+        {makeButton('history', HistoryIcon, () => onViewHistory(asset), 'Asset History')}
+        {makeButton('qr', QRICon, () => { setQRAsset(asset); onViewQR && onViewQR(asset); }, 'View QR')}
+        {makeButton('delete', TrashIcon, () => onDelete(asset), 'Delete Asset')}
+      </div>
+    );
+  };
+
+  const TableRow = ({ asset, index }) => {
+    const zebra = index % 2 === 0 ? zebraBg : zebraAlt;
+    return (
+      <tr
+        key={asset.id}
+        style={{ background: zebra, height: ROW_HEIGHT }}
+        className='border-b border-[#1e1e1e] text-xs tracking-wide'
+      >
+        <td>
+          <input type='checkbox' checked={selectedSet.has(asset.id)} onChange={() => onToggle(asset.id)} />
+        </td>
+        <td>{asset.id}</td>
+        <td>{asset.sn}</td>
+        <td className='text-left font-semibold'>{asset.name}</td>
+        <td>{asset.category}</td>
+        <td>{asset.location}</td>
+        <td>{renderStatus(asset)}</td>
+        <td><RowActions asset={asset} /></td>
+      </tr>
+    );
+  };
+
+  const renderTable = () => (
     <div
       style={{
         border: cardBorder,
@@ -143,10 +237,10 @@ export default function AssetTable({
         WebkitOverflowScrolling: isCompact ? 'touch' : 'auto',
         display: 'block',
       }}
-      className="w-full"
+      className='w-full'
     >
       <table
-        className="w-full text-center"
+        className='w-full text-center'
         style={{
           fontSize: '0.6rem',
           background: bgCard,
@@ -154,36 +248,19 @@ export default function AssetTable({
           borderCollapse: 'collapse',
           width: '100%',
           minWidth: isCompact ? 900 : 1100,
-          tableLayout: 'fixed'
+          tableLayout: 'fixed',
         }}
       >
         <colgroup>
-          {Object.keys(colWidths).map((key) => (
-            <col
-              key={key}
-              style={{
-                width: colWidths[key],
-                minWidth: colWidths[key],
-                maxWidth: colWidths[key]
-              }}
-            />
+          {Object.keys(colWidths).map(key => (
+            <col key={key} style={{ width: colWidths[key], minWidth: colWidths[key], maxWidth: colWidths[key] }} />
           ))}
         </colgroup>
         <thead style={{ background: headerBg }}>
           <tr style={{ height: ROW_HEIGHT }}>
-            <th style={{
-              padding: 0,
-              border: cardBorder,
-              textAlign: 'center',
-              color: palomaGreen,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              background: headerBg,
-              borderRight: cardBorder,
-              height: ROW_HEIGHT
-            }}>
+            <th style={{ border: cardBorder }}>
               <input
-                type="checkbox"
+                type='checkbox'
                 onChange={onToggleAll}
                 checked={allOnPageSelected}
                 ref={el => {
@@ -191,14 +268,13 @@ export default function AssetTable({
                 }}
               />
             </th>
-            {Object.keys(headerLabels).map((key) => (
+            {DATA_COLUMNS.map(col => (
               <th
-                key={key}
+                key={col}
+                onClick={() => onSort(col)}
                 style={{
-                  padding: 0,
                   border: cardBorder,
                   cursor: 'pointer',
-                  textAlign: 'center',
                   color: palomaGreen,
                   fontWeight: 800,
                   textTransform: 'uppercase',
@@ -207,168 +283,121 @@ export default function AssetTable({
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  borderRight: cardBorder,
-                  height: ROW_HEIGHT,
-                  lineHeight: `${ROW_HEIGHT - 6}px`
                 }}
-                onClick={() => onSort(key)}
               >
-                {headerLabels[key]}{' '}
-                {sortConfig.key === key
-                  ? sortConfig.direction === 'ascending'
-                    ? '▲'
-                    : '▼'
-                  : ''}
+                {headerLabels[col] || defaultHeaderLabel(col)}
+                {sortConfig.key === col ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : ''}
               </th>
             ))}
-            <th style={{
-              padding: 0,
-              border: cardBorder,
-              color: palomaGreen,
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              background: headerBg,
-              borderRight: cardBorder,
-              textAlign: 'center',
-              height: ROW_HEIGHT,
-              lineHeight: `${ROW_HEIGHT - 6}px`
-            }}>Actions</th>
+            <th style={{ border: cardBorder, color: palomaGreen, fontWeight: 700, textTransform: 'uppercase' }}>Actions</th>
           </tr>
         </thead>
-
         <tbody>
-          {assets.map((asset, idx) => {
-            const rowBg = idx % 2 === 0 ? zebraBg : zebraAlt;
-
-            let statusColor = asset.status_color || null;
-            if (!statusColor) {
-              if (isMissileMA(asset.status)) statusColor = missilePurple;
-              else if (isNonMissileMA(asset.status)) statusColor = maYellow;
-              else if (asset.status && asset.status.includes('In-Use')) statusColor = '#e51c1cd4';
-              else if (asset.status === 'Available') statusColor = '#1fa02ac6';
-            }
-
-            const pretty = formatStatusLabel(asset.status);
-            const route = routeForStatus(asset.status);
-
-            return (
-              <tr
-                key={asset.id}
-                style={{
-                  background: rowBg,
-                  transition: 'none',
-                  height: ROW_HEIGHT
-                }}
-              >
-                {[
-                  <input type="checkbox" checked={!!selectedSet.has(asset.id)} onChange={() => onToggle(asset.id)} />,
-                  asset.id,
-                  asset.sn,
-                  asset.name,
-                  asset.category,
-                  asset.location,
-                  route ? (
-                    <Link
-                      to={route.to}
-                      title={route.title}
-                      style={{
-                        color: statusColor || textMain,
-                        fontWeight: 800,
-                        textDecoration: 'none',
-                        cursor: 'pointer',
-                        display: 'inline-block'
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
-                      onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
-                    >
-                      {pretty}
-                    </Link>
-                  ) : (
-                    pretty
-                  )
-                ].map((cell, cellIdx) => (
-                  <td
-                    key={cellIdx}
-                    style={{
-                      padding: '0 3px',
-                      border: cardBorder,
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap',
-                      textOverflow: 'ellipsis',
-                      borderRight: cardBorder,
-                      height: ROW_HEIGHT,
-                      lineHeight: `${ROW_HEIGHT - 6}px`,
-                      verticalAlign: 'middle',
-                      ...(cellIdx === 6 && statusColor ? { color: statusColor, fontWeight: 800 } : {})
-                    }}
-                  >
-                    {cell}
-                  </td>
-                ))}
-                <td style={{
-                  padding: '0 6px',
-                  border: cardBorder,
-                  background: 'transparent',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  borderRight: cardBorder,
-                  height: ROW_HEIGHT,
-                  verticalAlign: 'middle'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                    {[{
-                      icon: EditIcon, hoverIdx: hoverEditIdx, setHover: setHoverEditIdx, action: () => onEdit(asset), title: "Edit Asset"
-                    }, {
-                      icon: TrashIcon, hoverIdx: hoverDeleteIdx, setHover: setHoverDeleteIdx, action: () => onDelete(asset), title: "Delete Asset"
-                    }, {
-                      icon: QRICon, hoverIdx: hoverQRIdx, setHover: setHoverQRIdx, action: () => onViewQR ? onViewQR(asset) : setQRAsset(asset), title: "View QR"
-                    }, {
-                      icon: HistoryIcon, hoverIdx: hoverHistoryIdx, setHover: setHoverHistoryIdx, action: () => onViewHistory && onViewHistory(asset), title: "Asset History"
-                    }].map(({ icon, hoverIdx, setHover, action, title }, btnIdx) => (
-                      <div
-                        key={btnIdx}
-                        style={{ position: 'relative', display: 'inline-block' }}
-                        onMouseEnter={() => setHover(idx)}
-                        onMouseLeave={() => setHover(null)}
-                      >
-                        <button
-                          onClick={action}
-                          title={title}
-                          style={{
-                            background: '#000',
-                            border: `1.25px solid ${palomaGreen}`,
-                            borderRadius: 6,
-                            width: iconButtonSize,
-                            height: buttonHeight,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <Lottie key={lottieKey(title, idx, hoverIdx === idx)} animationData={icon} loop={false} autoplay={hoverIdx === idx} style={{ width: 16, height: 16 }} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-
-          {assets.length === 0 && (
-            <tr>
-              <td colSpan={Object.keys(headerLabels).length + 2} style={{ textAlign: 'center', color: '#8b8d7a', padding: '14px 8px', border: cardBorder, background: bgCard }}>
-                No assets found.
-              </td>
-            </tr>
-          )}
+          {assets.map((asset, index) => (
+            <TableRow key={asset.id} asset={asset} index={index} />
+          ))}
         </tbody>
       </table>
 
-      {!onViewQR && (
-        <PalomaQRCodeModal asset={qrAsset} open={!!qrAsset} onClose={() => setQRAsset(null)} />
+      {qrAsset && (
+        <PalomaQRCodeModal asset={qrAsset} onClose={() => setQRAsset(null)} />
+      )}
+    </div>
+  );
+
+  if (!useVirtualized) {
+    return renderTable();
+  }
+
+  const listHeight = Math.min(assets.length, 18) * VIRTUAL_ROW_HEIGHT || VIRTUAL_ROW_HEIGHT;
+
+  const headerRow = (
+    <div
+      className='uppercase tracking-widest text-[0.6rem] text-[#a8b58f]'
+      style={{
+        display: 'grid',
+        gridTemplateColumns: gridTemplate,
+        background: headerBg,
+        padding: '6px 10px',
+        alignItems: 'center',
+      }}
+    >
+      <div>
+        <input type='checkbox' checked={allOnPageSelected} onChange={onToggleAll} />
+      </div>
+      {DATA_COLUMNS.map(col => (
+        <div
+          key={col}
+          role='button'
+          onClick={() => onSort(col)}
+          className='cursor-pointer'
+          style={{ textAlign: col === 'name' ? 'left' : 'center' }}
+        >
+          {headerLabels[col] || defaultHeaderLabel(col)}
+          {sortConfig.key === col ? (sortConfig.direction === 'ascending' ? ' ▲' : ' ▼') : ''}
+        </div>
+      ))}
+      <div>Actions</div>
+    </div>
+  );
+
+  const VirtualRow = ({ index, style }) => {
+    const asset = assets[index];
+    if (!asset) return null;
+    const zebra = index % 2 === 0 ? zebraBg : zebraAlt;
+
+    return (
+      <div
+        style={{
+          ...style,
+          display: 'grid',
+          gridTemplateColumns: gridTemplate,
+          alignItems: 'center',
+          padding: '6px 10px',
+          background: zebra,
+          borderBottom: '1px solid #1e1e1e',
+          fontSize: '0.72rem',
+        }}
+        key={asset.id}
+      >
+        <div>
+          <input type='checkbox' checked={selectedSet.has(asset.id)} onChange={() => onToggle(asset.id)} />
+        </div>
+        <div>{asset.id}</div>
+        <div>{asset.sn}</div>
+        <div className='text-left font-semibold truncate'>{asset.name}</div>
+        <div>{asset.category}</div>
+        <div>{asset.location}</div>
+        <div>{renderStatus(asset)}</div>
+        <RowActions asset={asset} />
+      </div>
+    );
+  };
+
+  return (
+    <div
+      style={{
+        border: cardBorder,
+        borderRadius: 0,
+        background: bgCard,
+        marginBottom: 0,
+        padding: 0,
+        boxShadow: '0 2px 12px #111a 0.15',
+        width: '100%',
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {headerRow}
+      <div style={{ flex: 1, minHeight: listHeight }}>
+        <List height={listHeight} itemCount={assets.length} itemSize={VIRTUAL_ROW_HEIGHT} width='100%'>
+          {VirtualRow}
+        </List>
+      </div>
+
+      {qrAsset && (
+        <PalomaQRCodeModal asset={qrAsset} onClose={() => setQRAsset(null)} />
       )}
     </div>
   );
