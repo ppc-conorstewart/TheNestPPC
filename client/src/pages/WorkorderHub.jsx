@@ -13,6 +13,7 @@ import { transformJobToPackage } from '../components/Workorder Components/workor
 import { useUser } from '../hooks/useUser';
 import useCustomerLogos from '../hooks/useCustomerLogos';
 import { getCustomerLogo as mapCustomerLogo } from '../utils/customerLogos';
+import useMediaQuery from '../hooks/useMediaQuery';
 
 // ==============================
 // ======= WORKORDER HUB =========
@@ -22,6 +23,8 @@ export default function WorkorderHub() {
   // ======= NAV + GLOBALS ========
   // ==============================
   const navigate = useNavigate();
+  const isCompact = useMediaQuery('(max-width: 1280px)');
+  const isMobile = useMediaQuery('(max-width: 900px)');
   const [view, setView] = useState('HUB');
   const [jobs, setJobs] = useState(null);
   const [error, setError] = useState(null);
@@ -172,7 +175,12 @@ export default function WorkorderHub() {
     return (
       <div
         className="relative min-h-screen p-6 pl-10 text-white"
-        style={{ backgroundImage: "url('/assets/dark-bg.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}
+        style={{
+          backgroundImage: "url('/assets/dark-bg.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: isMobile ? 'scroll' : 'fixed'
+        }}
       >
         <button onClick={() => navigate(-1)} className="absolute top-3 left-3 px-2 py-1 bg-[#6a7257] text-black font-bold rounded-md">← Back</button>
         <h1 className="text-3xl font-extrabold text-white text-center mb-3">WORKORDER HUB</h1>
@@ -198,25 +206,44 @@ export default function WorkorderHub() {
   // ==============================
   return (
     <div
-      className="relative w-full min-h-screen p-3 text-white"
-      style={{ backgroundImage: "url('/assets/dark-bg.jpg')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}
+      className='relative w-full min-h-screen text-white'
+      style={{
+        backgroundImage: "url('/assets/dark-bg.jpg')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: isMobile ? 'scroll' : 'fixed',
+        padding: isMobile ? '12px 12px 24px' : '12px'
+      }}
     >
-      <div className="h-full border border-[#6a7257] bg-black/60 rounded-md overflow-hidden flex flex-col">
+      <div
+        className='h-full border border-[#6a7257] bg-black/60 rounded-md overflow-hidden flex flex-col'
+        style={{ minHeight: isMobile ? 'auto' : '85vh' }}
+      >
         {/* HEADER */}
-        <div className="px-4 py-0 border-b border-[#6a7257] bg-black/80 flex items-center uppercase justify-between shrink-0" style={{ fontFamily: 'Punoer, sans-serif' }}>
-          <div className="flex items-center gap-0">
+        <div
+          className={`px-4 border-b border-[#6a7257] bg-black/80 uppercase shrink-0 flex ${isMobile ? 'flex-col gap-4 items-center text-center py-4' : 'flex-row items-center justify-between py-2'}`}
+          style={{ fontFamily: 'Punoer, sans-serif' }}
+        >
+          <div className={`flex ${isMobile ? 'flex-col items-center gap-3' : 'flex-row items-center gap-2'}`}>
             <img
               src="/assets/Paloma_Logo_White_Rounded3.png"
               alt="Paloma"
-              className="h-24 w-56 object-contain"
+              className='object-contain'
+              style={{ height: isMobile ? 56 : 96, width: isMobile ? 180 : 224 }}
               draggable={false}
             />
-            <h1 className="uppercase tracking-wide text-center text-white font-extrabold text-4xl">Workorder Hub</h1>
+            <h1
+              className='uppercase tracking-wide text-white font-extrabold'
+              style={{ fontSize: isMobile ? '1.75rem' : '2.5rem' }}
+            >
+              Workorder Hub
+            </h1>
           </div>
-          <div className="flex gap-2">
+          <div className={`flex gap-2 ${isMobile ? 'w-full justify-center' : ''}`}>
             <button
               onClick={() => setView('HUB')}
               className={`px-3 py-1.5 border rounded-md uppercase text-lg font-bold ${view === 'HUB' ? 'bg-[#6a7257] text-black border-[#6a7257]' : 'bg-black text-[#6a7257] border-[#6a7257]'}`}
+              style={{ fontSize: isMobile ? '0.95rem' : '1.125rem' }}
               title="Workorders"
             >
               Workorders
@@ -224,6 +251,7 @@ export default function WorkorderHub() {
             <button
               onClick={() => setView('GLB')}
               className={`px-3 py-1.5 border rounded-md text-lg uppercase  font-bold ${view === 'GLB' ? 'bg-[#6a7257] text-black border-[#6a7257]' : 'bg-black text-[#6a7257] border-[#6a7257]'}`}
+              style={{ fontSize: isMobile ? '0.95rem' : '1.125rem' }}
               title="GLB Asset Library"
             >
               GLB Asset Library
