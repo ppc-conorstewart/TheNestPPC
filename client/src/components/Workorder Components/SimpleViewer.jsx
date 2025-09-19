@@ -28,7 +28,8 @@ export default function SimpleViewer({
   onUrlChange = () => {},
   onLockedChange = () => {},
   onLabelsChange = () => {},
-  storageKey = 'default'
+  storageKey = 'default',
+  containerRefExternal = null
 }) {
   // ==============================
   // ======= REFS + STATE =========
@@ -45,6 +46,15 @@ export default function SimpleViewer({
   const [labels, setLabels] = useState(Array.isArray(initialLabels) ? initialLabels : []);
   const [selectedId, setSelectedId] = useState(null);
   const [showLibrary, setShowLibrary] = useState(false);
+
+  // ==============================
+  // ======== EXPOSE REF ==========
+  // ==============================
+  useEffect(() => {
+    if (containerRefExternal && typeof containerRefExternal === 'object') {
+      containerRefExternal.current = containerRef.current;
+    }
+  }, [containerRefExternal, containerRef.current]);
 
   // ==============================
   // ======== STORAGE KEYS ========
@@ -298,8 +308,6 @@ export default function SimpleViewer({
     const onUp = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
-      // (Intentionally no immediate localStorage write here;
-      // persistence is handled by the labels effect to avoid stale saves.)
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
