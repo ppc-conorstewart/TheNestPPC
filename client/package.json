@@ -13,6 +13,8 @@
     "@headlessui/react": "^2.2.7",
     "@lottiefiles/react-lottie-player": "^3.6.0",
     "@phosphor-icons/react": "^2.1.10",
+    "@react-three/drei": "^10.7.6",
+    "@react-three/fiber": "^9.3.0",
     "@remix-run/router": "^1.23.0",
     "@tanstack/router-devtools": "^1.120.18",
     "axios": "^1.10.0",
@@ -23,6 +25,7 @@
     "clone-deep": "^4.0.1",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
+    "docx-preview": "^0.3.6",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "get-user-locale": "2.0.0",
@@ -36,6 +39,7 @@
     "lodash.memoize": "^4.1.2",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.511.0",
+    "luckysheet": "^2.1.13",
     "papaparse": "^5.5.3",
     "passport": "^0.7.0",
     "passport-discord": "^0.1.4",
@@ -43,11 +47,11 @@
     "postcss-loader": "^4.3.0",
     "process": "^0.11.10",
     "qrcode.react": "^4.2.0",
-    "react": "^18.2.0",
+    "react": "18.3.1",
     "react-beautiful-dnd": "^13.1.1",
     "react-calendar": "^3.7.0",
     "react-chartjs-2": "^5.3.0",
-    "react-dom": "^18.2.0",
+    "react-dom": "18.3.1",
     "react-dropzone": "^14.3.8",
     "react-fast-marquee": "^1.6.5",
     "react-icons": "^5.5.0",
@@ -66,16 +70,15 @@
     "react-tsparticles": "^2.12.2",
     "react-window": "^1.8.11",
     "recharts": "^2.15.3",
+    "scheduler": "^0.23.0",
     "serve": "^14.2.3",
     "sqlite3": "^5.1.7",
     "swiper": "^11.2.8",
-    "three": "^0.172.0",
+    "three": "0.172.0",
     "tippy.js": "^6.3.7",
     "tsparticles": "^3.8.1",
     "use-image": "^1.1.4",
-    "xlsx": "^0.18.5",
-    "docx-preview": "^0.3.6",
-    "luckysheet": "^2.1.13"
+    "xlsx": "^0.18.5"
   },
   "scripts": {
     "start": "serve -s build -l $PORT",
@@ -86,22 +89,11 @@
     "start-all": "concurrently \"cd ../server && node index.js\" \"npm run dev\""
   },
   "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "production": [">0.2%","not dead","not op_mini all"],
+    "development": ["last 1 chrome version","last 1 firefox version","last 1 safari version"]
   },
   "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ],
+    "extends": ["react-app","react-app/jest"],
     "rules": {
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn"
@@ -123,5 +115,6 @@
     "tailwindcss": "^4.1.8",
     "typescript": "^4.9.5",
     "webpack": "^5.99.9"
-  }
+  },
+  "overrides": { "three": "0.172.0" }
 }

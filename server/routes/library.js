@@ -1,6 +1,6 @@
 // ==============================
 // FILE: server/routes/library.js — Library API (Paloma / Customer / Third Party)
-// Sections: Imports • Helpers • List • Create (Upload/Register) • Delete • Exports
+// Sections: Imports • Helpers • List • Create (Upload/Register) • Update (Rename) • Delete • Exports
 // ==============================
 
 const express = require('express');
@@ -25,10 +25,6 @@ function normStr(x) {
 function normCategory(x) {
   const v = normStr(x).toLowerCase();
   return CATEGORIES.has(v) ? v : null;
-}
-function toInt(x) {
-  const n = Number(x);
-  return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 function toUUID(x) {
   const s = normStr(x);
@@ -66,7 +62,6 @@ router.get('/', async (req, res) => {
       params.push(category);
     }
     if (category === 'customer' && customerIdRaw != null) {
-      // accept either integer or uuid depending on your DB shape
       if (/^\d+$/.test(String(customerIdRaw))) {
         where.push(`customer_id = $${p++}`);
         params.push(Number(customerIdRaw));
@@ -123,7 +118,7 @@ router.get('/', async (req, res) => {
 // ======= CREATE (UPLOAD) ======
 // ==============================
 // POST /api/library
-// multipart/form-data: file, title, category (paloma|customer|third_party), customer_id?, tags?
+// multipart/form-data: file, title, category, customer_id?, tags?
 router.post('/', generalUpload.single('file'), async (req, res) => {
   try {
     const title = normStr(req.body.title || (req.file && req.file.originalname) || 'Untitled');
@@ -133,18 +128,15 @@ router.post('/', generalUpload.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'file_required' });
     if (!category) return res.status(400).json({ error: 'invalid_category' });
 
-    // File saved to /uploads by multer
     const relPath = `/uploads/${req.file.filename}`;
     const ext = path.extname(req.file.originalname || '').toLowerCase().replace(/^\./, '') || 'png';
     const mime = req.file.mimetype || 'image/png';
     const size = Number(req.file.size) || null;
 
-    // tags (comma or array)
     let tags = [];
-    if (Array.isArray(req.body.tags)) tags = req.body.tags.map(normStr).filter(Boolean);
+    if (Array.isArray(req.body.tags)) tags = req.body.tags.map(v => String(v || '').trim()).filter(Boolean);
     else if (req.body.tags) tags = String(req.body.tags).split(',').map(s => s.trim()).filter(Boolean);
 
-    // customer id type: accept both integer and uuid (DB will validate)
     let customerId = null;
     if (category === 'customer' && rawCustomer != null) {
       if (/^\d+$/.test(String(rawCustomer))) customerId = Number(rawCustomer);
@@ -182,6 +174,32 @@ router.post('/', generalUpload.single('file'), async (req, res) => {
 });
 
 // ==============================
+// ======= UPDATE (RENAME) ======
+// ==============================
+// PATCH /api/library/:id  { title: "New Name" }
+router.patch('/:id', async (req, res) => {
+  try {
+    const id = toUUID(req.params.id);
+    if (!id) return res.status(400).json({ error: 'invalid_id' });
+    const title = normStr(req.body?.title || '');
+    if (!title) return res.status(400).json({ error: 'invalid_title' });
+
+    const { rows } = await db.query(
+      `UPDATE library_images
+       SET title = $1, updated_at = now()
+       WHERE id = $2
+       RETURNING id, title, category, customer_id, storage_path, mime_type, file_ext, tags, active, created_at, updated_at`,
+      [title, id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'not_found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('PATCH /api/library/:id error:', err);
+    res.status(500).json({ error: 'failed_to_update' });
+  }
+});
+
+// ==============================
 // ======= DELETE ===============
 // ==============================
 // DELETE /api/library/:id
@@ -190,7 +208,6 @@ router.delete('/:id', async (req, res) => {
     const id = toUUID(req.params.id);
     if (!id) return res.status(400).json({ error: 'invalid_id' });
 
-    // prevent delete if referenced on canvas
     const dep = await db.query(
       'SELECT 1 FROM workorder_canvas_items WHERE library_image_id = $1 LIMIT 1',
       [id]
