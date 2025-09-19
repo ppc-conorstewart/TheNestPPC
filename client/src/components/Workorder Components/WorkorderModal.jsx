@@ -15,6 +15,8 @@ export default function WorkorderModal({
   canNext,
   canPublish = false,
   onGenerate,
+  onExportPdf,
+  isExportingPdf = false,
   onClose,
   metadata,
   woNumber,
@@ -23,9 +25,13 @@ export default function WorkorderModal({
   children,
   dfitSelections = [],
   dfitActiveTab = 0,
+  contentRef,
 }) {
   return (
-    <div className="relative w-full h-screen flex flex-col bg-black text-white overflow-hidden">
+    <div
+      className="relative w-full h-screen flex flex-col bg-black text-white overflow-hidden"
+      ref={contentRef}
+    >
       {/* Page bullets */}
       <div className="flex justify-center items-center py-1 px-2 gap-1 bg-[#1a1a1a] border-b border-[#6a7257]">
         {pages.map((p, i) => (
@@ -71,6 +77,8 @@ export default function WorkorderModal({
         onNext={onNext}
         onGenerate={onGenerate}
         onSave={onSave}
+        onExportPdf={onExportPdf}
+        isExportingPdf={isExportingPdf}
         canNext={canNext}
         canPublish={canPublish}
       />

@@ -2,7 +2,7 @@
 // FILE: src/components/AssemblyPage.jsx
 // ==============================
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Select from 'react-select';
 import torqueSpecsData from '../../data/TorqueSpecs';
 import useAssets from '../../hooks/useAssets';
@@ -208,8 +208,9 @@ export default function AssemblyPage({
   priorSelectionsList = [],
   priorBuildQtysList = []
 }) {
-  const abbr = { 'Red Deer': 'RD', 'Grand Prairie': 'GP', Nisku: 'NIS' };
+  const viewerContainerRef = useRef(null);
 
+  const abbr = { 'Red Deer': 'RD', 'Grand Prairie': 'GP', Nisku: 'NIS' };
   const categories = ['Valves', 'Adapters', 'Weco', 'Spools', 'Instrumentation Flanges', 'Other'];
 
   const bucketed = useMemo(() => {
@@ -281,6 +282,22 @@ export default function AssemblyPage({
   const storageKey = `wo_${uniqueScope}::${title || 'Assembly'}::TAB${String(activeTab)}`;
   const currentBuildQty = Number(buildQtys?.[activeTab]) || 0;
 
+  // ==============================
+  // ======= EXPORT → PDF =========
+  // ==============================
+  const assembleTabData = (selObj, tabIndex) => {
+    const items = [];
+    for (let i = 1; i <= 10; i++) {
+      const name = selObj['location' + i];
+      const qty = Number(selObj['qty' + i]) || 0;
+      if (name && qty > 0 && !voided[i]) {
+        const cat = selObj['category' + i] || '';
+        items.push({ index: i, category: cat, asset: name, qty });
+      }
+    }
+    return { tabIndex, items, buildQty: Number(buildQtys?.[tabIndex]) || 0 };
+  };
+
   return (
     <div className='flex h-full bg-black uppercase text-[9px]'>
       <div className='flex-none mr-2 border border-[#374151] bg-black' style={{ width: '45%' }}>
@@ -294,6 +311,7 @@ export default function AssemblyPage({
           initialLabels={labels}
           onLabelsChange={setLabels}
           storageKey={storageKey}
+          containerRefExternal={viewerContainerRef}
         />
       </div>
 
@@ -315,7 +333,7 @@ export default function AssemblyPage({
                 const v = Math.max(0, Math.floor(Number(e.target.value)));
                 setBuildQtys(bqs => bqs.map((x, i) => (i === activeTab ? v : x)));
               }}
-              className='w-16 px-2 py-1 rounded bg-black text-xl text-white border border-[#374151] focus:outline-none'
+              className='w-16 px-2 py-1 rounded bg黑 text-xl text-white border border-[#374151] focus:outline-none'
             />
           </div>
           {Array.isArray(buildQtys) && buildQtys.length > 1 && (

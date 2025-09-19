@@ -1,4 +1,6 @@
-// src/components/WorkorderFooter.jsx
+// ==============================
+// FILE: src/components/WorkorderFooter.jsx
+// ==============================
 
 import React from 'react';
 import {
@@ -17,6 +19,8 @@ export default function WorkorderFooter({
   onNext,
   onGenerate,
   onSave,
+  onExportPdf,
+  isExportingPdf = false,
   canNext,
   canPublish,
 }) {
@@ -29,7 +33,7 @@ export default function WorkorderFooter({
         label={` ${prevPageLabel}`}
       />
 
-      {/* Publish / Save */}
+      {/* Publish / Save / Export */}
       <div className="absolute left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-2">
         <div className="flex gap-2 items-center">
           <PrimaryButton
@@ -42,6 +46,11 @@ export default function WorkorderFooter({
             }}
           />
           <SecondaryButton onClick={onSave} label="Save Progress" />
+          <SecondaryButton
+            onClick={onExportPdf}
+            label={isExportingPdf ? 'Generating PDF...' : 'Generate Full PDF'}
+            disabled={isExportingPdf}
+          />
           {/* Exclamation with tooltip */}
           {!canPublish && (
             <div className="relative group ml-2" style={{ width: 26, height: 26 }}>

@@ -3,7 +3,8 @@
 // ==============================
 
 import axios from 'axios';
-import { useEffect, useMemo, useState } from 'react';
+import html2canvas from 'html2canvas';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { sections as sectionConfigs } from '../../constants/workorderConfig';
 import assetSpecs from '../../data/AssetSpecifications.json';
 import torqueSpecs from '../../data/TorqueSpecs.js';
@@ -170,6 +171,8 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
   const [consumables, setConsumables] = useState([]);
   const [pageIndex, setPageIndex] = useState(0);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const pageContentRef = useRef(null);
 
   const extractJobId = data => data?.id ?? data?.jobId ?? data?.ID ?? data?.job_id ?? null;
   const toNumberOrNull = value => {
@@ -520,6 +523,97 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
     }
   };
 
+  const handleExportPdf = async () => {
+    if (isExportingPdf) return;
+
+    const containerEl = pageContentRef.current;
+    if (!containerEl) {
+      alert('Unable to access the workorder view for PDF export.');
+      return;
+    }
+
+    const waitForLayout = () => new Promise(resolve => {
+      const raf = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+        ? window.requestAnimationFrame.bind(window)
+        : (cb) => setTimeout(cb, 0);
+      raf(() => setTimeout(resolve, 100));
+    });
+
+    const previousIndex = pageIndex;
+    setIsExportingPdf(true);
+
+    try {
+      const { jsPDF } = await import('jspdf');
+      const capturedPages = [];
+
+      for (let i = 0; i < pages.length; i += 1) {
+        if (pageIndex !== i) {
+          setPageIndex(i);
+          await waitForLayout();
+        } else {
+          await waitForLayout();
+        }
+
+        const scrollableSection = containerEl.querySelector('section.flex-grow');
+        let previousOverflow;
+        if (scrollableSection) {
+          previousOverflow = scrollableSection.style.overflow;
+          scrollableSection.scrollTop = 0;
+          scrollableSection.style.overflow = 'visible';
+        }
+
+        let canvas;
+        try {
+          canvas = await html2canvas(containerEl, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            logging: false,
+          });
+        } finally {
+          if (scrollableSection) {
+            scrollableSection.style.overflow = previousOverflow || '';
+          }
+        }
+
+        if (canvas) {
+          capturedPages.push({
+            dataUrl: canvas.toDataURL('image/png'),
+            width: canvas.width,
+            height: canvas.height,
+          });
+        }
+      }
+
+      if (capturedPages.length === 0) {
+        throw new Error('no_pages_captured');
+      }
+
+      const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
+      capturedPages.forEach((page, idx) => {
+        if (idx > 0) doc.addPage();
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const pdfHeight = doc.internal.pageSize.getHeight();
+        const scale = Math.min(pdfWidth / page.width, pdfHeight / page.height);
+        const renderWidth = page.width * scale;
+        const renderHeight = page.height * scale;
+        const offsetX = (pdfWidth - renderWidth) / 2;
+        const offsetY = (pdfHeight - renderHeight) / 2;
+        doc.addImage(page.dataUrl, 'PNG', offsetX, offsetY, renderWidth, renderHeight);
+      });
+
+      const safeCustomer = (metadata.customer || 'Workorder').replace(/[^a-z0-9]+/gi, '_');
+      doc.save(`Workorder_${safeCustomer}.pdf`);
+    } catch (err) {
+      console.error('Failed to generate full workorder PDF', err);
+      alert('Failed to generate the full workorder PDF. Please try again.');
+    } finally {
+      setPageIndex(previousIndex);
+      await waitForLayout();
+      setIsExportingPdf(false);
+    }
+  };
+
   const alerts = useMemo(() => {
     const out = [];
     const base = metadata.buildingBase; if (!base) return out;
@@ -571,6 +665,8 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
         onNext={() => canNext && setPageIndex(i => i + 1)}
         onSave={handleSave}
         onGenerate={handlePublish}
+        onExportPdf={handleExportPdf}
+        isExportingPdf={isExportingPdf}
         canNext={canNext}
         canPublish={canPublish}
         onClose={onClose}
@@ -580,6 +676,7 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
         onToggleAlerts={() => setShowAlerts(v => !v)}
         dfitSelections={asArray(dfit.selections)}
         dfitActiveTab={dfit.activeTab}
+        contentRef={pageContentRef}
       >
         <PageRenderer
           index={pageIndex}
