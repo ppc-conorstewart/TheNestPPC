@@ -5,11 +5,12 @@
 const path = require('path');
 const multer = require('multer');
 const fs = require('fs');
+const { FILES_BASE_DIR } = require('../config/storagePaths');
 
 // --------------------------
 // Setup
 // --------------------------
-const uploadDir = path.join(__dirname, '..', 'uploads');
+const uploadDir = FILES_BASE_DIR;
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 // --------------------------

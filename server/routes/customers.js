@@ -8,9 +8,9 @@ const pool = require('../db');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { CUSTOMER_LOGO_DIR } = require('../config/storagePaths');
 
-const uploadDir = path.join(__dirname, '..', 'public', 'assets', 'logos');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = CUSTOMER_LOGO_DIR;
 
 function buildLogoUrl(rawLogoUrl, req) {
   if (!rawLogoUrl || typeof rawLogoUrl !== 'string') return null;

@@ -19,6 +19,7 @@ const passport = require('./auth/discordStrategy')
 const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads')
 const db = require('./db')
 const discordMembersRest = require('./services/discordMembersRest')
+const { CUSTOMER_LOGO_DIR } = require('./config/storagePaths')
 
 const app = express()
 
@@ -80,7 +81,7 @@ app.use('/uploads', express.static(uploadDir, {
   }
 }))
 app.use('/uploads/docs', express.static(path.join(uploadDir, 'docs')))
-const LOGOS_DIR = path.join(__dirname, 'public', 'assets', 'logos')
+const LOGOS_DIR = CUSTOMER_LOGO_DIR
 console.log('Serving customer logos from:', LOGOS_DIR)
 app.use('/assets/logos', express.static(LOGOS_DIR))
 
