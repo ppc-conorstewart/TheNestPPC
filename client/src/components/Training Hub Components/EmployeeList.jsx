@@ -18,42 +18,6 @@ const LEVEL_COLORS = [
   "#C7FA38", "#2CCDD3", "#FFD943", "#E8842E", "#F14D4D"
 ];
 
-const EMPLOYEE_LOCATIONS = {
-  "Daniel Swartz": "Grande Prairie",
-  "Jeff Bennett": "Red Deer",
-  "Mitch Martin": "Grande Prairie",
-  "Dillan Campbell": "Red Deer",
-  "Ryker Kelly": "Red Deer",
-  "Abe Nazari": "Red Deer",
-  "John Wells": "Red Deer",
-  "Jeremy Dutchak": "Red Deer",
-  "Dawson Howell": "Grande Prairie",
-  "Colton Peters": "Grande Prairie",
-  "Greg Hultin": "Red Deer",
-  "Dustin Luke": "Grande Prairie",
-  "Ryan Gray": "Red Deer",
-  "Cam Pannenbecker": "Red Deer",
-  "Todd Cuza": "Grande Prairie",
-  "Keegan Fiveland": "Red Deer",
-  "Jameel Emery": "Red Deer",
-  "Mike Brushett": "Red Deer",
-  "Matthew Gray": "Grande Prairie",
-  "Jesse Bird": "Red Deer",
-  "Patrick Bennett": "Red Deer",
-  "Chace Levis": "Red Deer",
-  "Landen Brown": "Red Deer",
-  "Austyn Jordan": "Red Deer",
-  "Trevor Mervyn": "Red Deer",
-  "Drew Twells": "Red Deer",
-  "Matthew McCausland": "Grande Prairie",
-  "Efraim Ebo": "Grande Prairie",
-  "Ernesto Rea Jr.": "Grande Prairie",
-  "Ruslan Karandashov": "Grande Prairie",
-  "Marco Patton": "Red Deer",
-  "Connor Krebs": "Red Deer",
-  "Daniel Roblin": "Grande Prairie"
-};
-
 export function getCurrentLevel(employeeChecklist) {
   if (!employeeChecklist) return 0;
   for (let lvl = 0; lvl < LEVELS.length; lvl++) {
@@ -72,7 +36,7 @@ export function getCurrentLevel(employeeChecklist) {
 // ==============================
 // AddEmployeeModal
 // ==============================
-function AddEmployeeModal({ open, onClose, onSubmit, form, setForm }) {
+function AddEmployeeModal({ open, onClose, onSubmit, form, setForm, submitting, errorMessage }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -88,7 +52,10 @@ function AddEmployeeModal({ open, onClose, onSubmit, form, setForm }) {
            Add New Employee
         </h2>
         <form
-          onSubmit={e => { e.preventDefault(); onSubmit(); }}
+          onSubmit={e => {
+            e.preventDefault();
+            onSubmit();
+          }}
           className="w-full flex flex-col gap-4"
           autoComplete="off"
         >
@@ -136,14 +103,25 @@ function AddEmployeeModal({ open, onClose, onSubmit, form, setForm }) {
           <div className="flex flex-row justify-center mt-4">
             <button
               type="submit"
-              className="px-10 py-0 rounded bg-[#949C7F] hover:bg-[#b3b99a] text-black text-base shadow-md transition tracking-widest font-erbaum"
+              className={`px-10 py-0 rounded text-black text-base shadow-md transition tracking-widest font-erbaum ${
+                submitting ? 'bg-[#5f6453] cursor-not-allowed text-gray-300' : 'bg-[#949C7F] hover:bg-[#b3b99a]'
+              }`}
               disabled={
-                !form.firstName || !form.lastName || !form.base || !form.assessedAs
+                submitting ||
+                !form.firstName ||
+                !form.lastName ||
+                !form.base ||
+                !form.assessedAs
               }
             >
-             Submit New Employee
+             {submitting ? 'Adding...' : 'Submit New Employee'}
             </button>
           </div>
+          {errorMessage ? (
+            <p className="text-red-400 text-xs text-center font-semibold tracking-wide">
+              {errorMessage}
+            </p>
+          ) : null}
         </form>
       </div>
     </div>
@@ -154,8 +132,8 @@ function AddEmployeeModal({ open, onClose, onSubmit, form, setForm }) {
 // EmployeeList Sidebar (main component)
 // ==============================
 export default function EmployeeList({
-  fieldEmployees,
-  selectedEmployee,
+  employees = [],
+  selectedEmployeeId,
   employeeChecklists,
   onSelectEmployee,
   onAddEmployee
@@ -167,9 +145,35 @@ export default function EmployeeList({
     base: "",
     assessedAs: ""
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   function getDisplayLevel(emp) {
-    return getCurrentLevel(employeeChecklists[emp]);
+    const presetLevel = Number.isFinite(emp?.level) ? emp.level : 0;
+    const checklistLevel = getCurrentLevel(employeeChecklists?.[emp?.id]);
+    return Math.max(presetLevel, checklistLevel);
+  }
+
+  const handleOpenModal = () => {
+    setSubmitError("");
+    setForm({ firstName: "", lastName: "", base: "", assessedAs: "" });
+    setShowModal(true);
+  };
+
+  async function handleSubmitNewEmployee() {
+    if (!onAddEmployee) return;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      await onAddEmployee(form);
+      setShowModal(false);
+      setForm({ firstName: "", lastName: "", base: "", assessedAs: "" });
+    } catch (err) {
+      console.error('Failed to add employee', err);
+      setSubmitError(err?.message || 'Failed to add employee.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -181,64 +185,70 @@ export default function EmployeeList({
         <span>Field Employees</span>
         <button
           className="ml-2 px-1 py-0 rounded bg-[#949C7F] text-black text-xs font-bold shadow hover:bg-[#b3b99a] transition"
-          onClick={() => setShowModal(true)}
+          onClick={handleOpenModal}
           style={{ minWidth: 30 }}
         >
           +New Employee
         </button>
       </div>
       <ul className="divide-y divide-[#23282b] py-1">
-        {fieldEmployees.map((emp, idx) => {
-          const empLevel = getDisplayLevel(emp);
-          const location = EMPLOYEE_LOCATIONS[emp] || "";
-          return (
-            <li
-              key={emp + idx}
-              className={`px-5 py-2 flex items-center justify-between uppercase text-white text-[0.66rem] font-semibold font-erbaum hover:bg-[#24261f] cursor-pointer transition-all ${
-                selectedEmployee === emp ? "bg-[#24261f]" : ""
-              }`}
-              style={{ letterSpacing: "0.01em", userSelect: "none" }}
-              tabIndex={0}
-              role="button"
-              onClick={() => onSelectEmployee(emp)}
-            >
-              <span
-                style={{
-                  flex: 2,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6
-                }}
+        {employees.length === 0 ? (
+          <li className="px-5 py-4 text-[#949C7F] text-xs uppercase font-erbaum tracking-wide text-center">
+            No field employees found.
+          </li>
+        ) : (
+          employees.map((emp) => {
+            const empLevel = getDisplayLevel(emp);
+            const location = emp?.base_location || "";
+            return (
+              <li
+                key={emp.id}
+                className={`px-5 py-2 flex items-center justify-between uppercase text-white text-[0.66rem] font-semibold font-erbaum hover:bg-[#24261f] cursor-pointer transition-all ${
+                  selectedEmployeeId === emp.id ? "bg-[#24261f]" : ""
+                }`}
+                style={{ letterSpacing: "0.01em", userSelect: "none" }}
+                tabIndex={0}
+                role="button"
+                onClick={() => onSelectEmployee(emp.id)}
               >
-                <span>{emp}</span>
-                <span style={{
-                  marginLeft: 8,
-                  color: "#9ED67C",
-                  fontWeight: 600,
-                  fontSize: ".65em",
-                  letterSpacing: ".01em"
-                }}>
-                  {location ? `[${location}]` : ""}
+                <span
+                  style={{
+                    flex: 2,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6
+                  }}
+                >
+                  <span>{emp.full_name}</span>
+                  <span style={{
+                    marginLeft: 8,
+                    color: "#9ED67C",
+                    fontWeight: 600,
+                    fontSize: ".65em",
+                    letterSpacing: ".01em"
+                  }}>
+                    {location ? `[${location}]` : ""}
+                  </span>
                 </span>
-              </span>
-              <span
-                className="font-erbaum font-bold text-[0.6rem] ml-2"
-                style={{
-                  minWidth: 58,
-                  textAlign: "right",
-                  color: LEVEL_COLORS[empLevel] || "#FFD943",
-                  letterSpacing: "0.01em",
-                  textShadow: empLevel === 4 ? "0 0 5px #c33" : undefined
-                }}
-              >
-                {LEVELS[empLevel]?.label || ""}
-              </span>
-            </li>
-          );
-        })}
+                <span
+                  className="font-erbaum font-bold text-[0.6rem] ml-2"
+                  style={{
+                    minWidth: 58,
+                    textAlign: "right",
+                    color: LEVEL_COLORS[empLevel] || "#FFD943",
+                    letterSpacing: "0.01em",
+                    textShadow: empLevel === 4 ? "0 0 5px #c33" : undefined
+                  }}
+                >
+                  {LEVELS[empLevel]?.label || ""}
+                </span>
+              </li>
+            );
+          })
+        )}
       </ul>
 
       {/* Modal */}
@@ -247,13 +257,9 @@ export default function EmployeeList({
         onClose={() => setShowModal(false)}
         form={form}
         setForm={setForm}
-        onSubmit={() => {
-          if (form.firstName && form.lastName && form.base && form.assessedAs) {
-            if (onAddEmployee) onAddEmployee(form);
-            setShowModal(false);
-            setForm({ firstName: "", lastName: "", base: "", assessedAs: "" });
-          }
-        }}
+        onSubmit={handleSubmitNewEmployee}
+        submitting={submitting}
+        errorMessage={submitError}
       />
     </div>
   );
