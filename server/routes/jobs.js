@@ -12,11 +12,12 @@ const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 
 const router = express.Router();
 
-// GET all jobs
+// ==============================
+// GET All Jobs
+// ==============================
 router.get('/', async (req, res) => {
   try {
     const data = await jobs.getAllJobs();
-    // Attach auditChecklistUrl if file exists
     const augmented = data.map((job) => {
       const filename = `job-${job.id}.pdf`;
       const filepath = path.join(uploadDir, filename);
@@ -32,7 +33,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Monthly totals for all metrics
+// ==============================
+// GET Monthly Totals (All Metrics, Current Year)
+// ==============================
 router.get('/monthly-totals', async (req, res) => {
   try {
     const all = await jobs.getAllJobs();
@@ -83,7 +86,9 @@ router.get('/monthly-totals', async (req, res) => {
   }
 });
 
-// Add new job
+// ==============================
+// POST Add New Job
+// ==============================
 router.post('/', async (req, res) => {
   try {
     const createdJob = await jobs.addJob(req.body);
@@ -94,7 +99,9 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update entire job
+// ==============================
+// PUT Update Entire Job
+// ==============================
 router.put('/:id', async (req, res) => {
   try {
     await jobs.updateJob(Number(req.params.id), req.body);
@@ -105,7 +112,9 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Patch/partial update (general fields)
+// ==============================
+// PATCH Partial Update (General)
+// ==============================
 router.patch('/:id', async (req, res) => {
   try {
     const jobId = Number(req.params.id);
@@ -119,7 +128,8 @@ router.patch('/:id', async (req, res) => {
 });
 
 // ==============================
-// PATCH only Discord Channel ID
+// PATCH Only Discord Channel ID
+// ==============================
 router.patch('/:id/discord-channel', async (req, res) => {
   try {
     const jobId = Number(req.params.id);
@@ -139,7 +149,46 @@ router.patch('/:id/discord-channel', async (req, res) => {
   }
 });
 
-// Delete job
+// ==============================
+// PUT Discord Member IDs (Bulk from Discord Bot)
+// ==============================
+router.put('/:id/discord_members', async (req, res) => {
+  try {
+    const jobId = Number(req.params.id);
+    const memberIdsInput = Array.isArray(req.body?.member_ids) ? req.body.member_ids : [];
+    const memberIds = memberIdsInput.filter(Boolean).map(String);
+
+    // Ensure column exists (safe if run multiple times)
+    await db.query(
+      `ALTER TABLE jobs
+       ADD COLUMN IF NOT EXISTS discord_member_ids jsonb NOT NULL DEFAULT '[]'::jsonb`
+    );
+
+    await db.query(
+      `UPDATE jobs
+       SET discord_member_ids = $1::jsonb
+       WHERE id = $2`,
+      [JSON.stringify(memberIds), jobId]
+    );
+
+    const { rows } = await db.query(
+      `SELECT id, discord_channel_id, discord_member_ids
+       FROM jobs
+       WHERE id = $1`,
+      [jobId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Job not found' });
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Failed to update discord_member_ids:', err);
+    res.status(500).json({ error: 'Failed to update discord_member_ids' });
+  }
+});
+
+// ==============================
+// DELETE Job
+// ==============================
 router.delete('/:id', async (req, res) => {
   try {
     const jobId = Number(req.params.id);
@@ -151,7 +200,9 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
-// Audit checklist upload (file)
+// ==============================
+// POST Audit Checklist (File Upload)
+// ==============================
 router.post(
   '/:id/audit-checklist',
   generalUpload.single('auditChecklist'),
@@ -164,7 +215,9 @@ router.post(
   }
 );
 
-// Audit checklist delete
+// ==============================
+// DELETE Audit Checklist
+// ==============================
 router.delete('/:id/audit-checklist', (req, res) => {
   try {
     const jobId = req.params.id.toString();
@@ -184,14 +237,15 @@ router.delete('/:id/audit-checklist', (req, res) => {
   }
 });
 
-// Job file upload (DB)
+// ==============================
+// POST Job File Upload (DB)
+// ==============================
 router.post('/:jobId/files', memoryUpload.single('file'), async (req, res) => {
   const { jobId } = req.params;
   const { tab } = req.body;
   const file = req.file;
   if (!file || !tab) return res.status(400).json({ error: 'File and tab required.' });
 
-  // determine uploader from body, header, or session user
   const uploader =
     (req.body.uploaded_by && String(req.body.uploaded_by).trim()) ||
     (req.headers['x-uploaded-by'] && String(req.headers['x-uploaded-by']).trim()) ||
@@ -219,7 +273,9 @@ router.post('/:jobId/files', memoryUpload.single('file'), async (req, res) => {
   }
 });
 
-// List job files
+// ==============================
+// GET Job Files (List)
+// ==============================
 router.get('/:jobId/files', async (req, res) => {
   const { jobId } = req.params;
   const { tab } = req.query;
@@ -239,7 +295,9 @@ router.get('/:jobId/files', async (req, res) => {
   }
 });
 
-// Download job file
+// ==============================
+// GET Job File (Download)
+// ==============================
 router.get('/:jobId/files/:fileId', async (req, res) => {
   const { jobId, fileId } = req.params;
   try {
@@ -257,7 +315,9 @@ router.get('/:jobId/files/:fileId', async (req, res) => {
   }
 });
 
-// Delete job file
+// ==============================
+// DELETE Job File
+// ==============================
 router.delete('/:jobId/files/:fileId', async (req, res) => {
   const { jobId, fileId } = req.params;
   try {
@@ -273,10 +333,11 @@ router.delete('/:jobId/files/:fileId', async (req, res) => {
 });
 
 // ==============================
-// Job update — history + snapshot for dashboard/overwatch
+// POST Job Update (History + Snapshot)
+// ==============================
 router.post('/:id/update', async (req, res) => {
   const jobId = Number(req.params.id);
-  const { update_data, updated_by } = req.body; // update_data: object, updated_by: string
+  const { update_data, updated_by } = req.body;
 
   try {
     await db.query(
@@ -297,7 +358,8 @@ router.post('/:id/update', async (req, res) => {
 });
 
 // ==============================
-// Overwatch summary payload
+// GET Overwatch Summary
+// ==============================
 router.get('/:id/overwatch', async (req, res) => {
   const jobId = Number(req.params.id);
   try {
@@ -308,11 +370,6 @@ router.get('/:id/overwatch', async (req, res) => {
     if (!jobRows[0]) return res.status(404).json({ error: 'Job not found' });
 
     const latest = jobRows[0].job_update_json || {};
-
-    // derive zone progress
-    // expected shapes accepted:
-    // - latest.totalZones: "32/109" OR number total
-    // - zone fields like aZone/bZone/... as "X/X"
     let completed = 0;
     let total = 0;
 
@@ -360,7 +417,8 @@ router.get('/:id/overwatch', async (req, res) => {
 });
 
 // ==============================
-// Required Items CRUD (minimal)
+// POST Required Item
+// ==============================
 router.post('/:id/required-items', async (req, res) => {
   const jobId = Number(req.params.id);
   const { item_text, qty, status } = req.body;
@@ -380,6 +438,9 @@ router.post('/:id/required-items', async (req, res) => {
   }
 });
 
+// ==============================
+// DELETE Required Item
+// ==============================
 router.delete('/:id/required-items/:itemId', async (req, res) => {
   const jobId = Number(req.params.id);
   const itemId = Number(req.params.itemId);
