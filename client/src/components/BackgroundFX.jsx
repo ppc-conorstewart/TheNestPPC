@@ -54,11 +54,11 @@ const RESPAWN_SPEED = 0.35;
 // ==============================
 // NEW: SUBTLE GLOW AROUND LOGO + HALO
 // ==============================
-const GLOW_RADIUS_OUT = 1.45;         // how far the soft green glow extends beyond logo radius
-const GLOW_RADIUS_IN = 0.18;          // inner hard-ish core before falloff
-const GLOW_OPACITY_BASE = 0.10;       // base alpha of the glow
+const GLOW_RADIUS_OUT = .75;         // how far the soft green glow extends beyond logo radius
+const GLOW_RADIUS_IN = 0.08;          // inner hard-ish core before falloff
+const GLOW_OPACITY_BASE = 0.01;       // base alpha of the glow
 const GLOW_OPACITY_PULSE = 0.06;      // additional pulse on top of base
-const GLOW_PULSE_SPEED = 0.0020;      // animation speed (ms-based)
+const GLOW_PULSE_SPEED = 0.0015;      // animation speed (ms-based)
 const GLOW_COMPOSITE = 'lighter';     // additive feel to keep subtle and soft
 
 const HALO_GLOW_BLUR = 26;            // soft blur on halo glow
@@ -390,7 +390,7 @@ export default function BackgroundFX() {
           logoBox.cx, logoBox.cy, logoBox.r * GLOW_RADIUS_OUT
         );
         rg.addColorStop(0.00, rgba(PALOMA_GREEN.r, PALOMA_GREEN.g, PALOMA_GREEN.b, pulse));
-        rg.addColorStop(0.50, rgba(PALOMA_GREEN.r, PALOMA_GREEN.g, PALOMA_GREEN.b, pulse * 0.55));
+        rg.addColorStop(0.50, rgba(PALOMA_GREEN.r, PALOMA_GREEN.g, PALOMA_GREEN.b, pulse * 0.25));
         rg.addColorStop(1.00, 'rgba(0,0,0,0)');
         ctx.beginPath();
         ctx.arc(logoBox.cx, logoBox.cy, logoBox.r * GLOW_RADIUS_OUT, 0, Math.PI * 2);
