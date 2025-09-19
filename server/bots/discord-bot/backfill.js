@@ -1,6 +1,6 @@
 // ==============================
-// Discord Bot - Backfill Script
-// SECTIONS: Imports • Config • Discord Client • API • Utils • Backfill: Files • Backfill: Members • Start
+// backfill.js — Discord Bot Backfill
+// SECTIONS: Imports • Config • Discord Client • API • Utils • Backfill: Files (Single) • Backfill: Files (All Jobs) • Backfill: Members • Start
 // ==============================
 
 require('dotenv').config()
@@ -18,7 +18,7 @@ const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 const API_BASE_URL = process.env.NEST_API_URL || 'http://localhost:3001/api'
 const API_BOT_KEY = process.env.NEST_BOT_KEY
 
-const MODE_OR_CHANNEL = process.argv[2] || '' // "members" OR <channelId>
+const MODE_OR_CHANNEL = process.argv[2] || '' // "members" | "files" | <channelId>
 
 // ==============================
 // Discord Client
@@ -41,6 +41,14 @@ async function apiGetJobs() {
     headers: { 'x-bot-key': API_BOT_KEY }
   })
   if (!res.ok) throw new Error(`GET /jobs failed: ${res.status}`)
+  return res.json()
+}
+
+async function apiGetJobFiles(jobId) {
+  const res = await fetch(`${API_BASE_URL}/jobs/${jobId}/files`, {
+    headers: { 'x-bot-key': API_BOT_KEY }
+  })
+  if (!res.ok) return []
   return res.json()
 }
 
@@ -96,7 +104,7 @@ async function uploadFileToJob(jobId, file, authorName) {
 // ==============================
 function shouldUpload(file) {
   const url = file.url || file.attachment
-  const name = file.name || ''
+  const name = file.name || file.filename || ''
   const ext = path.extname(name).toLowerCase()
   if (ext === '.gif') return false
   if (url && (url.includes('emojis') || url.includes('stickers'))) return false
@@ -109,56 +117,130 @@ async function downloadBuffer(url) {
   return Buffer.from(await res.arrayBuffer())
 }
 
+function makeDedupKey(name, size) {
+  return `${(name || '').toLowerCase()}::${size || 0}`
+}
+
 // ==============================
-// Backfill: Files (Per-Channel)
+// Backfill: Files (Single Channel)
 // ==============================
-async function runFileBackfill(channelId) {
+async function runFileBackfillSingle(channelId) {
   console.log(`[BOT] Starting file backfill for channel ${channelId}`)
-  const channel = await client.channels.fetch(channelId)
+  const channel = await resolveChannel(channelId)
   if (!channel) {
-    console.error(`❌ Could not find channel with ID ${channelId}`)
-    process.exit(1)
+    console.error(`[BOT] Channel ${channelId} not found or bot lacks access.`)
+    return
   }
 
   const jobId = await getJobIdByChannel(channelId)
   if (!jobId) {
-    console.error(`❌ No job found for channel ID ${channelId}`)
-    process.exit(1)
+    console.error(`[BOT] No job found for channel ID ${channelId}`)
+    return
   }
 
+  const existing = await apiGetJobFiles(jobId)
+  const seen = new Set(existing.map(f => makeDedupKey(f.filename, Number(f.size))))
+
+  let uploaded = 0
   let lastId
-  let fetchedCount = 0
   while (true) {
     const options = { limit: 100 }
     if (lastId) options.before = lastId
-
     const messages = await channel.messages.fetch(options)
     if (messages.size === 0) break
 
     for (const [, message] of messages) {
       if (!message.attachments || message.attachments.size === 0) continue
-
       for (const [, file] of message.attachments) {
         if (!shouldUpload(file)) continue
+        const key = makeDedupKey(file.name, file.size)
+        if (seen.has(key)) continue
         try {
-          await uploadFileToJob(jobId, file, message.author.username)
-          console.log(`[BOT] Uploaded "${file.name}" from ${message.author.username}`)
+          await uploadFileToJob(jobId, file, message.author?.username || 'DiscordUser')
+          seen.add(key)
+          uploaded++
+          console.log(`[BOT] Uploaded "${file.name}" for job ${jobId}`)
         } catch (err) {
-          console.error(`[BOT] Failed to upload file:`, err)
+          console.error(`[BOT] Failed upload "${file.name}" for job ${jobId}:`, err.message)
         }
       }
     }
 
-    fetchedCount += messages.size
     lastId = messages.last().id
-    console.log(`[BOT] Processed ${fetchedCount} messages so far.`)
   }
 
-  console.log(`[BOT] File backfill complete for job ${jobId}`)
+  console.log(`[BOT] File backfill complete for job ${jobId}. Uploaded ${uploaded} new file(s).`)
+}
+
+async function resolveChannel(channelId) {
+  for (const [, g] of client.guilds.cache) {
+    const ch = await g.channels.fetch(channelId).catch(() => null)
+    if (ch) return ch
+  }
+  return null
 }
 
 // ==============================
-// Backfill: Members (Bulk)
+// Backfill: Files (All Jobs)
+// ==============================
+async function runFileBackfillAllJobs() {
+  console.log('[BOT] Starting bulk file backfill for all jobs with a discord_channel_id')
+  const jobs = await apiGetJobs()
+  const target = jobs.filter(j => j.discord_channel_id)
+
+  if (target.length === 0) {
+    console.log('[BOT] No jobs with discord_channel_id found.')
+    return
+  }
+
+  let updatedJobs = 0
+  for (const job of target) {
+    const chanId = String(job.discord_channel_id)
+    const channel = await resolveChannel(chanId)
+    if (!channel) {
+      console.warn(`[BOT] Skipping job ${job.id}: channel ${chanId} not found or bot lacks access.`)
+      continue
+    }
+
+    const existing = await apiGetJobFiles(job.id)
+    const seen = new Set(existing.map(f => makeDedupKey(f.filename, Number(f.size))))
+
+    let uploaded = 0
+    let lastId
+    while (true) {
+      const options = { limit: 100 }
+      if (lastId) options.before = lastId
+      const messages = await channel.messages.fetch(options)
+      if (messages.size === 0) break
+
+      for (const [, message] of messages) {
+        if (!message.attachments || message.attachments.size === 0) continue
+        for (const [, file] of message.attachments) {
+          if (!shouldUpload(file)) continue
+          const key = makeDedupKey(file.name, file.size)
+          if (seen.has(key)) continue
+          try {
+            await uploadFileToJob(job.id, file, message.author?.username || 'DiscordUser')
+            seen.add(key)
+            uploaded++
+          } catch (err) {
+            console.error(`[BOT] Job ${job.id}: failed upload "${file.name}":`, err.message)
+          }
+        }
+      }
+
+      lastId = messages.last().id
+    }
+
+    console.log(`[BOT] Job ${job.id}: Uploaded ${uploaded} new file(s) from channel ${chanId}`)
+    if (uploaded > 0) updatedJobs++
+  }
+
+  console.log(`[BOT] Files backfill finished. Updated ${updatedJobs}/${target.length} jobs.`)
+}
+
+// ==============================
+// Backfill: Members (All Jobs)
 // ==============================
 async function runMembersBackfill() {
   console.log('[BOT] Starting bulk Discord member ID backfill for all jobs with a discord_channel_id')
@@ -235,14 +317,16 @@ client.once('ready', async () => {
 
   try {
     if (!MODE_OR_CHANNEL) {
-      console.error('❌ Usage:\n  - Bulk members backfill: node backfill.js members\n  - File backfill for a channel: node backfill.js <channelId>')
+      console.error('❌ Usage:\n  - Bulk members backfill: node backfill.js members\n  - Bulk files backfill:   node backfill.js files\n  - Single-channel files:  node backfill.js <channelId>')
       process.exit(1)
     }
 
     if (MODE_OR_CHANNEL.toLowerCase() === 'members') {
       await runMembersBackfill()
+    } else if (MODE_OR_CHANNEL.toLowerCase() === 'files') {
+      await runFileBackfillAllJobs()
     } else {
-      await runFileBackfill(MODE_OR_CHANNEL)
+      await runFileBackfillSingle(MODE_OR_CHANNEL)
     }
   } catch (e) {
     console.error('❌ Backfill error:', e)
