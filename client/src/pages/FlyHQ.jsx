@@ -486,17 +486,38 @@ export default function FlyHQ() {
   // ==============================
   // LAYOUT
   // ==============================
+  const rootStyle = useMemo(
+    () => ({
+      minHeight: '100%',
+      marginLeft: isCompactLayout ? 0 : 6,
+      width: '100%',
+      position: 'relative',
+      overflowX: 'hidden',
+      overflowY: isCompactLayout ? 'auto' : 'hidden',
+      paddingBottom: isCompactLayout ? 24 : 0
+    }),
+    [isCompactLayout]
+  );
+
+  const frameClass = isCompactLayout
+    ? 'relative flex flex-col items-stretch justify-start w-full'
+    : 'absolute top-0 left-0 right-0 bottom-0 flex items-stretch justify-center';
+  const frameStyle = useMemo(
+    () => ({
+      zIndex: 1,
+      paddingRight: isCompactLayout ? 0 : 0,
+      minHeight: isCompactLayout ? 'auto' : '100%',
+      minWidth: '100%',
+      boxSizing: 'border-box',
+      width: '100%',
+      gap: isCompactLayout ? 24 : 0,
+      paddingTop: isCompactLayout ? 12 : 0
+    }),
+    [isCompactLayout]
+  );
+
   return (
-    <div
-      className='relative font-erbaum uppercase text-sm text-white'
-      style={{
-        minHeight: '100%',
-        marginLeft: 6,
-        width: '100%',
-        position: 'relative',
-        overflow: 'hidden'
-      }}
-    >
+    <div className='relative font-erbaum uppercase text-sm text-white' style={rootStyle}>
       {/* TOASTS */}
       <ToastContainer
         position='bottom-right'
@@ -508,22 +529,19 @@ export default function FlyHQ() {
         theme='dark'
       />
 
-      <div
-        className='absolute top-0 left-0 right-0 bottom-0 flex items-stretch justify-center'
-        style={{ zIndex: 1, paddingRight: 0, minHeight: '100%', minWidth: '100%', boxSizing: 'border-box', width: '100%' }}
-      >
+      <div className={frameClass} style={frameStyle}>
         <div
           style={{
             borderRadius: '0px',
             maxWidth: 'none',
             width: '100%',
-            height: '100%',
+            height: isCompactLayout ? 'auto' : '100%',
             margin: '0 auto',
             border: '2px solid #282d25',
             boxShadow: '0 4px 36px 0 #10141177',
             display: 'flex',
             flexDirection: 'column',
-            minHeight: 0,
+            minHeight: isCompactLayout ? 'auto' : 0,
             background: 'transparent'
           }}
         >
@@ -550,9 +568,9 @@ export default function FlyHQ() {
                 borderTop: '3px solid #6a7257',
                 border: '2px solid #282d25',
                 borderRadius: '4px 4px 2px 6px',
-                height: '100%',
+                height: isCompactLayout ? 'auto' : '100%',
                 boxSizing: 'border-box',
-                minHeight: 0,
+                minHeight: isCompactLayout ? 'auto' : 0,
                 marginBottom: 20,
                 position: 'relative',
                 background: 'transparent',
@@ -567,11 +585,11 @@ export default function FlyHQ() {
                   minWidth: isCompactLayout ? '100%' : 1100,
                   borderRight: isCompactLayout ? '0' : '2px solid #282d25',
                   border: '2px solid #282d25',
-                  height: '100%',
+                  height: isCompactLayout ? 'auto' : '100%',
                   padding: '4px 4px 4px 4px',
                   boxSizing: 'border-box',
                   fontSize: '0.75rem',
-                  minHeight: 0,
+                  minHeight: isCompactLayout ? 'auto' : 0,
                   paddingBottom: 14,
                   transition: 'flex 420ms cubic-bezier(.16,1,.3,1)',
                   background: 'transparent'
@@ -595,8 +613,17 @@ export default function FlyHQ() {
                   onToggleMAAssets={handleToggleMA}
                 />
 
-                <div ref={tableScrollRef} style={{ flex: 1, overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', minHeight: 0, WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}>
-                  <div style={{ fontSize: '0.66rem', height: '100%' }}>
+                <div
+                  ref={tableScrollRef}
+                  style={{
+                    flex: 1,
+                    overflowX: 'auto',
+                    overflowY: isCompactLayout ? 'auto' : 'hidden',
+                    minHeight: isCompactLayout ? 'auto' : 0,
+                    WebkitOverflowScrolling: 'touch'
+                  }}
+                >
+                  <div style={{ fontSize: '0.66rem', height: isCompactLayout ? 'auto' : '100%' }}>
                     <AssetTable
                       assets={paginatedWithSearch}
                       selectedIds={selectedAssetIds}
@@ -624,9 +651,9 @@ export default function FlyHQ() {
                   width: isCompactLayout ? '100%' : showRightPanelAssets ? 520 : 0,
                   minWidth: isCompactLayout ? '100%' : showRightPanelAssets ? 480 : 0,
                   flex: isCompactLayout ? '1 1 100%' : `0 0 ${showRightPanelAssets ? 520 : 0}px`,
-                  overflowX: isCompactLayout ? 'auto' : 'hidden',
-                  overflowY: 'hidden',
-                  WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto',
+                  overflowX: 'auto',
+                  overflowY: 'auto',
+                  WebkitOverflowScrolling: 'touch',
                   display: 'flex',
                   opacity: showRightPanelAssets || isCompactLayout ? 1 : 0,
                   transform: isCompactLayout ? 'translateX(0)' : showRightPanelAssets ? 'translateX(0)' : 'translateX(14px)',
@@ -647,7 +674,17 @@ export default function FlyHQ() {
           {activeTab === 'assemblies' && (
             <div
               className='flex flex-row justify-center items-stretch mx-auto'
-              style={{ width: '100%', padding: 0, borderRight: '3px solid #282d25', borderTop: '2px solid #6a7257', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
+              style={{
+                width: '100%',
+                padding: 0,
+                borderRight: '3px solid #282d25',
+                borderTop: '2px solid #6a7257',
+                borderRadius: '4px 4px 2px 6px',
+                height: isCompactLayout ? 'auto' : '100%',
+                boxSizing: 'border-box',
+                minHeight: isCompactLayout ? 'auto' : 0,
+                background: 'transparent'
+              }}
             >
               <MasterAssembliesHub historyOpen={showMasterHistory} setHistoryOpen={setShowMasterHistory} initialSelection={initialSelection} />
             </div>
@@ -657,14 +694,47 @@ export default function FlyHQ() {
           {activeTab === 'ma_db' && (
             <div
               className='flex flex-row justify-center items-stretch mx-auto'
-              style={{ width: '100%', padding: 0, borderTop: '3px solid #6a7257', border: '2px solid #282d25', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
+              style={{
+                width: '100%',
+                padding: 0,
+                borderTop: '3px solid #6a7257',
+                border: '2px solid #282d25',
+                borderRadius: '4px 4px 2px 6px',
+                height: isCompactLayout ? 'auto' : '100%',
+                boxSizing: 'border-box',
+                minHeight: isCompactLayout ? 'auto' : 0,
+                background: 'transparent'
+              }}
             >
               <div
                 className='flex flex-col'
-                style={{ flex: '1 1 auto', minWidth: isCompactLayout ? '100%' : 1100, border: '2px solid #282d25', height: '100%', padding: isCompactLayout ? '12px' : '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0, background: 'transparent', overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}
+                style={{
+                  flex: '1 1 auto',
+                  minWidth: isCompactLayout ? '100%' : 1100,
+                  border: '2px solid #282d25',
+                  height: isCompactLayout ? 'auto' : '100%',
+                  padding: isCompactLayout ? '12px' : '18px 18px 10px 10px',
+                  boxSizing: 'border-box',
+                  fontSize: '0.75rem',
+                  margin: '0 auto',
+                  minHeight: isCompactLayout ? 'auto' : 0,
+                  background: 'transparent',
+                  overflowX: 'auto',
+                  overflowY: isCompactLayout ? 'auto' : 'hidden',
+                  WebkitOverflowScrolling: 'touch'
+                }}
               >
-                <div ref={tableScrollRef} style={{ flex: 1, overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', minHeight: 0, WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}>
-                  <div style={{ fontSize: '0.66rem', height: '100%' }}>
+                <div
+                  ref={tableScrollRef}
+                  style={{
+                    flex: 1,
+                    overflowX: 'auto',
+                    overflowY: isCompactLayout ? 'auto' : 'hidden',
+                    minHeight: isCompactLayout ? 'auto' : 0,
+                    WebkitOverflowScrolling: 'touch'
+                  }}
+                >
+                  <div style={{ fontSize: '0.66rem', height: isCompactLayout ? 'auto' : '100%' }}>
                     <MasterAssembliesDBTable />
                   </div>
                 </div>
@@ -676,13 +746,37 @@ export default function FlyHQ() {
           {activeTab === 'analytics' && (
             <div
               className='flex flex-row justifycenter items-stretch mx-auto'
-              style={{ width: '100%', padding: 0, borderTop: '3px solid #6a7257', border: '2px solid #282d25', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
+              style={{
+                width: '100%',
+                padding: 0,
+                borderTop: '3px solid #6a7257',
+                border: '2px solid #282d25',
+                borderRadius: '4px 4px 2px 6px',
+                height: isCompactLayout ? 'auto' : '100%',
+                boxSizing: 'border-box',
+                minHeight: isCompactLayout ? 'auto' : 0,
+                background: 'transparent'
+              }}
             >
               <div
                 className='flex flex-col'
-                style={{ flex: '1 1 auto', minWidth: isCompactLayout ? '100%' : 1100, border: '2px solid #282d25', height: '100%', padding: isCompactLayout ? '12px' : '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0, background: 'transparent', overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}
+                style={{
+                  flex: '1 1 auto',
+                  minWidth: isCompactLayout ? '100%' : 1100,
+                  border: '2px solid #282d25',
+                  height: isCompactLayout ? 'auto' : '100%',
+                  padding: isCompactLayout ? '12px' : '18px 18px 10px 10px',
+                  boxSizing: 'border-box',
+                  fontSize: '0.75rem',
+                  margin: '0 auto',
+                  minHeight: isCompactLayout ? 'auto' : 0,
+                  background: 'transparent',
+                  overflowX: 'auto',
+                  overflowY: isCompactLayout ? 'auto' : 'hidden',
+                  WebkitOverflowScrolling: 'touch'
+                }}
               >
-                <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+                <div style={{ flex: 1, overflow: 'auto', minHeight: isCompactLayout ? 'auto' : 0 }}>
                   <AssetAnalytics assets={assets} activityLogs={activityLogs} />
                 </div>
               </div>
