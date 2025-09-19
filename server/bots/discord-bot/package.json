@@ -4,7 +4,9 @@
   "description": "Paloma NEST Discord bot (file collector + control API)",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "backfill:members": "node backfill.js members",
+    "backfill:channel": "node backfill.js"
   },
   "engines": {
     "node": ">=18"
