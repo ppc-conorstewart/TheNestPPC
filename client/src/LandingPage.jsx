@@ -199,7 +199,6 @@ function SalesCrest3D({ hovered }) {
         draggable='false'
       />
       <div ref={mountRef} className='sales-3d-canvas' />
-      <div className='sales-glow' />
     </div>
   );
 }
@@ -371,8 +370,8 @@ export default function LandingPage() {
           }
           .sales-title{
             position: absolute;
-            top: clamp(-10px, -2.6vh, -22px);
-            width: clamp(160px, 18vw, 320px);
+            top: clamp(10px, 1.8vh, 22px);
+            width: clamp(80px, 9vw, 160px);
             height: auto;
             object-fit: contain;
             filter: drop-shadow(0 8px 18px rgba(0,0,0,.5));
@@ -388,21 +387,6 @@ export default function LandingPage() {
           .sales-3d-canvas > canvas{
             width: 100% !important;
             height: 100% !important;
-          }
-          .sales-glow{
-            position: absolute;
-            width: 82%;
-            height: 82%;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 1;
-            box-shadow: 0 0 0 rgba(0,0,0,0);
-            transition: box-shadow .25s ease;
-          }
-          .sales-3d-wrap.hovered .sales-glow{
-            box-shadow:
-              0 0 22px 2px rgba(153, 255, 204, 0.25),
-              0 0 46px 6px rgba(153, 255, 0, 0.15);
           }
 
           .crest-shadow{
@@ -443,8 +427,8 @@ export default function LandingPage() {
               height: clamp(130px, 46vw, 170px);
             }
             .sales-title{
-              top: clamp(-6px, -1.8vh, -12px);
-              width: clamp(140px, 44vw, 260px);
+              top: clamp(6px, 1.2vh, 12px);
+              width: clamp(70px, 32vw, 140px);
             }
             .crest-shadow{
               bottom: clamp(10px, 2.2vh, 20px);
