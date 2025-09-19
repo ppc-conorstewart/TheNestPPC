@@ -1,6 +1,7 @@
 // ==============================
 // FILE: server/index.js — Express App Entry
-// Sections: Imports • Middleware • Routers • Discord Proxy • Action Items • PDF Export • Static • Admin Import • Exports
+// Sections: Imports • Middleware • CORS • Static • Body/Logging • Session/Passport • Routers • Universal Upload • Quiz/User Endpoints • HQ Jobs • Discord Proxy • Action Items • Workorder PDF (template demo) • Workorder PDF (rich export) • Auth • Static Client • Admin Import • Exports
+// :contentReference[oaicite:0]{index=0}
 // ==============================
 
 const express = require('express')
@@ -66,6 +67,7 @@ app.use(cors({
   },
   credentials: true
 }))
+
 
 // ==============================
 // SECTION: Static
@@ -157,6 +159,7 @@ app.use('/api/glb-assets', glbAssetsRouter)
 app.use('/api/field-employees', fieldEmployeesRouter)
 app.use('/api/library', libraryRouter)
 
+
 // ==============================
 // SECTION: Universal Upload
 // ==============================
@@ -171,14 +174,20 @@ app.post('/api/upload-model', generalUpload.single('model'), (req, res) => {
   }
 })
 
+
 // ==============================
-// existing quiz and user endpoints
+// SECTION: Quiz & User Endpoints
+// ==============================
 app.get('/api/questions', (_req, res) => res.json(questions))
 app.get('/api/module2', (_req, res) => res.json(module2))
 app.get('/api/user', (req, res) => {
-  if (req.isAuthenticated && req.isAuthenticated()) res.json({ user: req.user })
-  else res.status(401).json({ error: 'Not authenticated' })
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    // Return the raw user profile so the client gets { id, ... }
+    return res.json(req.user)
+  }
+  return res.status(401).json({ error: 'Not authenticated' })
 })
+
 
 // ==============================
 // SECTION: HQ Jobs (existing helpers)
@@ -224,6 +233,7 @@ app.get('/api/hq/upcoming-jobs', async (req, res) => {
     res.status(500).json({ error: 'Failed to load upcoming jobs' })
   }
 })
+
 
 // ==============================
 // SECTION: Discord Proxy (Members/DM/Channels/Announce)
@@ -385,6 +395,7 @@ app.post('/api/discord/announce/test', async (req, res) => {
     res.status(502).json({ error: 'bot_unavailable' })
   }
 })
+
 
 // ==============================
 // SECTION: Action Items — In-Memory (no DB yet)
@@ -663,6 +674,7 @@ app.post('/api/hq/action-items/:id/ack', (req, res) => {
   })
 })
 
+
 // ==============================
 // SECTION: Workorder PDF (template demo)
 // ==============================
@@ -718,6 +730,7 @@ app.post('/api/workorder/generate', async (req, res) => {
     return res.status(500).json({ error: 'Failed to generate workorder PDF' })
   }
 })
+
 
 // ==============================
 // SECTION: Workorder PDF — Rich Export
@@ -814,10 +827,15 @@ app.post('/api/pdf/workorder', async (req, res) => {
   }
 })
 
+
+// ==============================
+// SECTION: Auth (Discord OAuth)
+// ==============================
 app.get('/auth/discord', passport.authenticate('discord'))
 app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => {
   res.redirect(`${require('./config/config').FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(req.user))}`)
 })
+
 
 // ==============================
 // SECTION: Static Client (Production)
@@ -834,12 +852,14 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
+
 // ==============================
 // SECTION: Admin Import (Seed)
 // ==============================
 if (process.env.ADMIN_IMPORT_KEY) {
   app.use('/api/admin', require('./routes/adminImport'))
 }
+
 
 // ==============================
 // SECTION: Exports
