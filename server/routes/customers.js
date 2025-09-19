@@ -12,6 +12,40 @@ const fs = require('fs');
 const uploadDir = path.join(__dirname, '..', 'public', 'assets', 'logos');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
+function buildLogoUrl(rawLogoUrl, req) {
+  if (!rawLogoUrl || typeof rawLogoUrl !== 'string') return null;
+  const cleaned = rawLogoUrl.trim();
+  if (!cleaned) return null;
+
+  const hostHeader = req.get('host') || req.headers.host;
+
+  if (/^https?:\/\//i.test(cleaned)) {
+    try {
+      const parsed = new URL(cleaned);
+      if (parsed.hostname && !/^localhost$/i.test(parsed.hostname) && parsed.hostname !== '127.0.0.1') {
+        return cleaned;
+      }
+      if (!hostHeader) return cleaned;
+      const baseUrl = `${req.protocol}://${hostHeader}`;
+      return `${baseUrl}${parsed.pathname}${parsed.search || ''}`;
+    } catch {
+      return cleaned;
+    }
+  }
+
+  const normalized = cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
+  if (!hostHeader) return normalized;
+  const baseUrl = `${req.protocol}://${hostHeader}`;
+  return `${baseUrl}${normalized}`;
+}
+
+function attachLogoUrl(rows, req) {
+  return rows.map((row) => ({
+    ...row,
+    logo_url: buildLogoUrl(row.logo_url, req),
+  }));
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     console.log('Saving logo to:', uploadDir);
@@ -35,7 +69,7 @@ const upload = multer({ storage });
 router.get('/', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM customers ORDER BY name ASC');
-    res.json(rows);
+    res.json(attachLogoUrl(rows, req));
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch customers.' });
   }
@@ -48,7 +82,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM customers WHERE id = $1', [req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: 'Customer not found.' });
-    res.json(rows[0]);
+    res.json(attachLogoUrl(rows, req)[0]);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch customer.' });
   }
@@ -67,8 +101,9 @@ router.post('/', upload.single('logo'), async (req, res) => {
       'INSERT INTO customers (name, logo_url, head_office_address, head_of_completions, head_office_phone, category) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
       [name, logo_url, head_office_address, head_of_completions, head_office_phone, category || null]
     );
-    console.log('Added new customer:', rows[0]);
-    res.status(201).json(rows[0]);
+    const [customer] = attachLogoUrl(rows, req);
+    console.log('Added new customer:', customer);
+    res.status(201).json(customer);
   } catch (err) {
     res.status(500).json({ error: 'Failed to add customer.' });
   }
@@ -103,8 +138,9 @@ router.put('/:id', upload.single('logo'), async (req, res) => {
       category || existingRows[0].category,
       req.params.id,
     ]);
-    console.log('Updated customer:', rows[0]);
-    res.json(rows[0]);
+    const [customer] = attachLogoUrl(rows, req);
+    console.log('Updated customer:', customer);
+    res.json(customer);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update customer.' });
   }
