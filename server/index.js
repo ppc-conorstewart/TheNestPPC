@@ -1,6 +1,6 @@
 // ==============================
 // FILE: server/index.js — Express App Entry
-// Sections: Imports • Middleware • Routers • Discord Proxy • Action Items (In-Memory) • Admin Import (Seed) • Exports
+// Sections: Imports • Middleware • Routers • Discord Proxy • Action Items • PDF Export • Static • Admin Import • Exports
 // ==============================
 
 const express = require('express')
@@ -85,7 +85,7 @@ app.use('/assets/logos', express.static(LOGOS_DIR))
 // ==============================
 // SECTION: Body & Logging
 // ==============================
-app.use(express.json())
+app.use(express.json({ limit: '25mb' }))
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`)
   next()
@@ -664,7 +664,7 @@ app.post('/api/hq/action-items/:id/ack', (req, res) => {
 })
 
 // ==============================
-// SECTION: Workorder PDF (legacy demo)
+// SECTION: Workorder PDF (template demo)
 // ==============================
 app.get('/api/workorders', (_req, res) => res.json([]))
 app.get('/api/workorder/test-template', async (_req, res) => {
@@ -716,6 +716,101 @@ app.post('/api/workorder/generate', async (req, res) => {
   } catch (err) {
     console.error('Error generating the populated PDF:', err)
     return res.status(500).json({ error: 'Failed to generate workorder PDF' })
+  }
+})
+
+// ==============================
+// SECTION: Workorder PDF — Rich Export
+// ==============================
+app.post('/api/pdf/workorder', async (req, res) => {
+  try {
+    const body = req.body || {}
+    const meta = body.meta || {}
+    const assemblies = Array.isArray(body.assemblies) ? body.assemblies : []
+    const snapshot = body.snapshot || null
+
+    const pdfDoc = await PDFDocument.create()
+    const helv = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+
+    const addHeader = (page, titleText) => {
+      page.drawText('PALOMA PRESSURE CONTROL — THE NEST', { x: 40, y: page.getHeight() - 40, size: 9, font: helvBold, color: rgb(0.1, 0.1, 0.1) })
+      page.drawText(`WO: ${meta.woNumber || ''}`, { x: 40, y: page.getHeight() - 55, size: 10, font: helvBold, color: rgb(0.1, 0.1, 0.1) })
+      page.drawText(`${meta.customer || ''}  |  ${meta.lsd || ''}  |  Wells: ${meta.wells || ''}  |  Rig-In: ${meta.rigInDate || ''}  |  Rev: ${meta.revision || 'A'}`, { x: 40, y: page.getHeight() - 70, size: 9, font: helv, color: rgb(0.15, 0.15, 0.15) })
+      page.drawText(titleText, { x: 40, y: page.getHeight() - 95, size: 16, font: helvBold, color: rgb(0.415, 0.447, 0.341) })
+    }
+
+    const embedPng = async (dataUrl) => {
+      if (!dataUrl) return null
+      const pngBytes = Buffer.from(dataUrl.split(',')[1], 'base64')
+      return await pdfDoc.embedPng(pngBytes)
+    }
+
+    const image = await embedPng(snapshot)
+
+    const printableAssemblies = assemblies.filter(a => Array.isArray(a.items) && a.items.length > 0)
+    const singleTab = printableAssemblies.length <= 1
+
+    for (const asm of printableAssemblies) {
+      const page = pdfDoc.addPage([612, 792]) // US Letter
+      addHeader(page, singleTab ? `${asm.name}` : `${asm.name} ${asm.tabLetter || ''}`)
+
+      if (image) {
+        const maxW = 520
+        const scale = Math.min(1, maxW / image.width)
+        const w = image.width * scale
+        const h = image.height * scale
+        const x = 46
+        const y = 792 - 120 - h
+        page.drawImage(image, { x, y, width: w, height: h, opacity: 1 })
+        page.drawText('LOCKED VIEW', { x, y: y - 12, size: 8, font: helv, color: rgb(0.4, 0.4, 0.4) })
+      }
+
+      let tableTop = 280
+      const left = 40
+      const col = (x) => left + x
+      page.drawText('ASSEMBLY ITEMS', { x: left, y: tableTop + 18, size: 11, font: helvBold, color: rgb(0.1, 0.1, 0.1) })
+      const headers = ['#', 'Category', 'Asset', 'Qty']
+      const widths = [20, 120, 320, 40]
+      headers.forEach((h, i) => page.drawText(h, { x: col([0, 24, 148, 476][i]), y: tableTop, size: 9, font: helvBold, color: rgb(0, 0, 0) }))
+      let rowY = tableTop - 14
+      asm.items.forEach((it, idx) => {
+        const safeAsset = (it.asset || '').slice(0, 80)
+        page.drawText(String(idx + 1), { x: col(0), y: rowY, size: 9, font: helv })
+        page.drawText(it.category || '', { x: col(24), y: rowY, size: 9, font: helv })
+        page.drawText(safeAsset, { x: col(148), y: rowY, size: 9, font: helv })
+        page.drawText(String(it.qty || 0), { x: col(476), y: rowY, size: 9, font: helv })
+        rowY -= 12
+      })
+
+      const specTop = rowY - 20
+      page.drawText('SPECIFICATIONS', { x: left, y: specTop, size: 11, font: helvBold, color: rgb(0.1, 0.1, 0.1) })
+      const s = asm.specs || {}
+      const torqueArr = Array.isArray(s.torque) ? s.torque : []
+      let specY = specTop - 14
+      page.drawText(`Build Qty: ${asm.buildQty || 0}`, { x: left, y: specY, size: 9, font: helv }); specY -= 12
+      page.drawText(`Overall Weight: ${s.weight || 0} lbs`, { x: left, y: specY, size: 9, font: helv }); specY -= 12
+      page.drawText(`Fill Volume: ${s.volume || 0} L`, { x: left, y: specY, size: 9, font: helv }); specY -= 12
+      page.drawText(`Assembly OAL: ${s.oal || 0} inches`, { x: left, y: specY, size: 9, font: helv }); specY -= 12
+      if (torqueArr.length) {
+        page.drawText('Torque Specs:', { x: left, y: specY, size: 9, font: helvBold }); specY -= 12
+        torqueArr.forEach(t => {
+          page.drawText(`• ${t.connection}: ${t.torque} ft-lbs`, { x: left + 12, y: specY, size: 9, font: helv }); specY -= 12
+        })
+      }
+
+      const footerY = 24
+      page.drawText(`Generated: ${new Date().toLocaleString()}`, { x: 40, y: footerY, size: 8, font: helv, color: rgb(0.35, 0.35, 0.35) })
+      page.drawText(`${meta.woNumber || ''}`, { x: 540, y: footerY, size: 8, font: helv, color: rgb(0.35, 0.35, 0.35) })
+    }
+
+    const bytes = await pdfDoc.save()
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="Workorder_${(meta.woNumber || 'WO').replace(/\s+/g,'_')}.pdf"`)
+    return res.send(Buffer.from(bytes))
+  } catch (err) {
+    console.error('PDF export error:', err)
+    return res.status(500).json({ error: 'pdf_export_failed' })
   }
 })
 
