@@ -1,6 +1,6 @@
 // ==============================
 // FILE: src/LandingPage.jsx
-// Sections: Imports • Brand Assets • Sales Crest 3D Group • Component • Styles
+// Sections: Imports • Brand Assets • Component • Styles
 // ==============================
 
 import { useEffect, useState } from 'react';
