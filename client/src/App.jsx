@@ -2,7 +2,7 @@
 // FILE: client/src/App.jsx
 // ==============================
 
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import {
   Route,
   BrowserRouter as Router,
@@ -15,30 +15,32 @@ import ProtectedRoute from './components/ProtectedRoute';
 
 import { Slide, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import LandingPage from './LandingPage';
-import CustomerHub from './pages/CustomerHub';
-import DiscordHub from './pages/DiscordHub';
-import DocumentationHub from './pages/DocumentationHub';
-import FLYBASE from './pages/FLYBASE';
-import FlyHQ from './pages/FlyHQ';
-import FlyHQTools from './pages/FlyHQTools';
-import FlyIQ from './pages/FlyIQ';
-import InteractiveTraining from './pages/InteractiveTraining';
-import JobMap from './pages/JobMap';
-import JobPlanner from './pages/JobPlanner';
-import MFVDocumentation from './pages/MFVDocumentation';
-import MFVField from './pages/MFVField';
-import MFVPage from './pages/MFVPage';
-import MFVSummary from './pages/MFVSummary';
-import OverwatchPage from './pages/OverwatchPage';
-import Projects from './pages/Projects';
-import ServiceEquipment from './pages/ServiceEquipment';
-import SourcingPage from './pages/SourcingPage';
-import TrainingHub from './pages/TrainingHub';
-import ValveReports from './pages/ValveReports';
-import WorkorderHub from './pages/WorkorderHub';
-import FlySales from './pages/FlySales';
-import QuoteLogPage from './components/Fly Sales Components/QuoteLogPage';
+
+// Lazy load all page components
+const LandingPage = lazy(() => import('./LandingPage'));
+const CustomerHub = lazy(() => import('./pages/CustomerHub'));
+const DiscordHub = lazy(() => import('./pages/DiscordHub'));
+const DocumentationHub = lazy(() => import('./pages/DocumentationHub'));
+const FLYBASE = lazy(() => import('./pages/FLYBASE'));
+const FlyHQ = lazy(() => import('./pages/FlyHQOptimized'));
+const FlyHQTools = lazy(() => import('./pages/FlyHQToolsOptimized'));
+const FlyIQ = lazy(() => import('./pages/FlyIQ'));
+const InteractiveTraining = lazy(() => import('./pages/InteractiveTraining'));
+const JobMap = lazy(() => import('./pages/JobMap'));
+const JobPlanner = lazy(() => import('./pages/JobPlanner'));
+const MFVDocumentation = lazy(() => import('./pages/MFVDocumentation'));
+const MFVField = lazy(() => import('./pages/MFVField'));
+const MFVPage = lazy(() => import('./pages/MFVPage'));
+const MFVSummary = lazy(() => import('./pages/MFVSummary'));
+const OverwatchPage = lazy(() => import('./pages/OverwatchPage'));
+const Projects = lazy(() => import('./pages/Projects'));
+const ServiceEquipment = lazy(() => import('./pages/ServiceEquipment'));
+const SourcingPage = lazy(() => import('./pages/SourcingPage'));
+const TrainingHub = lazy(() => import('./pages/TrainingHub'));
+const ValveReports = lazy(() => import('./pages/ValveReports'));
+const WorkorderHub = lazy(() => import('./pages/WorkorderHub'));
+const FlySales = lazy(() => import('./pages/FlySales'));
+const QuoteLogPage = lazy(() => import('./components/Fly Sales Components/QuoteLogPage'));
 
 // === Global Glass Styles ===
 import './styles/glass.css';
@@ -46,8 +48,11 @@ import './styles/glass.css';
 // === Context Debugging ===
 import { useJobContext } from './context/JobContext';
 
-// === Background FX ===
-import BackgroundFX from './components/BackgroundFX';
+// === Background FX === (Removed from global - only used in LandingPage for performance)
+// import BackgroundFX from './components/BackgroundFX';
+
+// === Loading Component ===
+import LoadingSpinner from './components/LoadingSpinner';
 
 // ==============================
 // AuthListener — URL User Param LocalStorage Handler
@@ -87,9 +92,10 @@ export default function App() {
         position: 'relative',
         overflowX: 'hidden'
       }}>
-        <BackgroundFX />
+        {/* BackgroundFX removed from global - only shown on LandingPage for performance */}
 
-        <Routes>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
           <Route
             path='/fly-iq'
             element={
@@ -353,7 +359,8 @@ export default function App() {
               </Layout>
             }
           />
-        </Routes>
+          </Routes>
+        </Suspense>
 
         <ToastContainer
           containerId='paloma'

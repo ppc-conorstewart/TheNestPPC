@@ -97,8 +97,8 @@ export default function DocumentationHub() {
     }
     measure();
     window.addEventListener('resize', measure);
-    const id = setInterval(measure, 500);
-    return () => { window.removeEventListener('resize', measure); clearInterval(id); };
+    // Removed 500ms interval - only measure on actual resize
+    return () => { window.removeEventListener('resize', measure); };
   }, []);
 
   const API = resolveApiUrl('/api/documents');

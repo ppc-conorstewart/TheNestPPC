@@ -79,7 +79,7 @@ export default function Layout({ children, hideSidebar }) {
         style={{
           minHeight: 0,
           marginLeft: showSidebar && !isMobile ? '56px' : '0px',
-          width: '100%',
+          width: showSidebar && !isMobile ? 'calc(100% - 56px)' : '100%',
           overflow: 'visible'
         }}
       >

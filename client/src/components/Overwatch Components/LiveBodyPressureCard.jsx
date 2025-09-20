@@ -122,14 +122,7 @@ export default function LiveBodyPressureCard({ job }) {
   );
   const baseValues = useRef(initialTransducers.map(([, , val]) => val));
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPressures(cur =>
-        cur.map(tr => ({ ...tr, value: getRandomPressure(tr.value) }))
-      );
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  // Removed fake data polling - showing static values
 
   return (
     <div style={cardStyle}>

@@ -18,7 +18,6 @@
     "@remix-run/router": "^1.23.0",
     "@tanstack/router-devtools": "^1.120.18",
     "axios": "^1.10.0",
-    "better-sqlite3": "^11.10.0",
     "body-parser": "^2.2.0",
     "chart.js": "^4.5.0",
     "chartjs-plugin-annotation": "^3.1.0",
@@ -61,6 +60,7 @@
     "react-qr-code": "^2.0.18",
     "react-qr-reader": "^3.0.0-beta-1",
     "react-resizable": "^3.0.5",
+    "react-resizable-panels": "^3.0.6",
     "react-router": "^7.6.1",
     "react-router-dom": "^6.14.1",
     "react-select": "^5.10.2",
@@ -72,7 +72,6 @@
     "recharts": "^2.15.3",
     "scheduler": "^0.23.0",
     "serve": "^14.2.3",
-    "sqlite3": "^5.1.7",
     "swiper": "^11.2.8",
     "three": "0.172.0",
     "tippy.js": "^6.3.7",
@@ -86,14 +85,25 @@
     "build": "CI=false craco build",
     "test": "craco test",
     "eject": "react-scripts eject",
-    "start-all": "concurrently \"cd ../server && node index.js\" \"npm run dev\""
+    "start-all": "concurrently \"cd ../server && node server.js\" \"npm run dev\""
   },
   "browserslist": {
-    "production": [">0.2%","not dead","not op_mini all"],
-    "development": ["last 1 chrome version","last 1 firefox version","last 1 safari version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "eslintConfig": {
-    "extends": ["react-app","react-app/jest"],
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
     "rules": {
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn"
@@ -116,5 +126,7 @@
     "typescript": "^4.9.5",
     "webpack": "^5.99.9"
   },
-  "overrides": { "three": "0.172.0" }
+  "overrides": {
+    "three": "0.172.0"
+  }
 }

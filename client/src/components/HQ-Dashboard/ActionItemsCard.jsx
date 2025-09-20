@@ -633,8 +633,7 @@ export default function ActionItemsCard() {
 
   useEffect(() => {
     load()
-    const timer = setInterval(load, 15000)
-    return () => clearInterval(timer)
+    // Removed polling - loads once on mount
   }, [load])
 
   const header = useMemo(() => (

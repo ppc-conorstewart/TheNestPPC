@@ -71,13 +71,7 @@ export default function BodyPressureChartCard({ job }) {
   );
   const [labels, setLabels] = useState([new Date().toLocaleTimeString()]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSeries(prev => prev.map(tr => ({ ...tr, data: [...tr.data.slice(-29), getRandomPressure(tr.data[tr.data.length-1]||0)] })));
-      setLabels(prev => [...prev.slice(-29), new Date().toLocaleTimeString()]);
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  // Removed fake data polling - showing static chart
 
   const data = {
     labels,

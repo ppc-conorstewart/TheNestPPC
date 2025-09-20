@@ -20,6 +20,7 @@ import { HEADER_LABELS } from '../constants/assetFields';
 import useActivityLog from '../hooks/useActivityLog';
 import useAssets from '../hooks/useAssets';
 import useFilteredPaginated from '../hooks/useFilteredPaginated';
+// Removed useLivePolling - using manual refresh instead
 import useMediaQuery from '../hooks/useMediaQuery';
 import { showPalomaToast } from '../utils/toastUtils';
 
@@ -450,23 +451,7 @@ export default function FlyHQ() {
     }
   }, [fetchAssets, fetchActivityLogs, newLocation, selectedAssetIds]);
 
-  // ==============================
-  // POLLING / UNREAD
-  // ==============================
-  const pollUpdates = useCallback(() => {
-    const g = typeof window !== 'undefined' ? window : globalThis;
-    if (g && Number(g.__palomaMenuOpenAny || 0) > 0) return;
-    fetchAssets();
-    fetchActivityLogs();
-  }, [fetchAssets, fetchActivityLogs]);
-
-  useEffect(() => {
-    pollUpdates();
-    if (typeof window === 'undefined') return;
-    const handleFocus = () => pollUpdates();
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [pollUpdates]);
+  // Data is already loaded by hooks on mount - no need to fetch again
 
   const latestActivityTs = useMemo(() => {
     if (!Array.isArray(activityLogs) || !activityLogs.length) return 0;

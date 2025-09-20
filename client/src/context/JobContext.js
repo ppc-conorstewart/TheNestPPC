@@ -63,7 +63,7 @@ export function JobProvider({ children }) {
   const [activeJob, setActiveJob] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const pollRef = useRef(null);
+  // Removed pollRef - no longer polling
   const jobsRef = useRef(jobs);
   const activeJobRef = useRef(activeJob);
 
@@ -212,26 +212,7 @@ export function JobProvider({ children }) {
     if (found) setActiveJob(found);
   }, []);
 
-  // ==============================
-  // Polling for Active Job Overwatch (dropdown-safe)
-  // ==============================
-  useEffect(() => {
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
-    if (activeJob?.id) {
-      pollRef.current = setInterval(() => {
-        if (!isVisible()) return;
-        if (isAnyMenuOpen()) return;
-        fetchOverwatch(activeJob.id).catch(() => {});
-      }, 10000);
-    }
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-      pollRef.current = null;
-    };
-  }, [activeJob?.id, fetchOverwatch]);
+  // Removed polling - fetchOverwatch is now called manually when needed
 
   // ==============================
   // Provider Value

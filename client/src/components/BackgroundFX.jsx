@@ -471,7 +471,7 @@ export default function BackgroundFX() {
   // RENDER
   // ==============================
   return (
-    <div className='bgfx-root' aria-hidden>
+    <div className='bgfx-root' aria-hidden style={{ pointerEvents: 'none' }}>
       <canvas ref={canvasRef} className='bgfx-canvas' />
     </div>
   );

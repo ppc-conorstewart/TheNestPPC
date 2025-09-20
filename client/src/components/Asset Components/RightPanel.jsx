@@ -56,9 +56,7 @@ export default function RightPanel({
   return (
     <div
       style={{
-        width: 520,
-        minWidth: 480,
-        flex: '0 0 520px',
+        width: '100%',
         background: '#000',
         margin: 0,
         height: '100%',
@@ -67,6 +65,7 @@ export default function RightPanel({
         flexDirection: 'column',
         justifyContent: 'stretch',
         minHeight: 0,
+        overflow: 'hidden',
       }}
       className="right-panel"
     >
@@ -75,7 +74,7 @@ export default function RightPanel({
           background: bgCard,
           borderRadius: 0,
           padding: '0px',
-          flex: '0.3 0.5 0%',
+          flex: '0 0 auto',
           display: 'flex',
           flexDirection: 'column',
           marginBottom: 0,
@@ -126,12 +125,13 @@ export default function RightPanel({
           borderRadius: 0,
           border: 2,
           padding: '0px 0px 0px 1px',
-          flex: '1.2 1.2 0%',
+          flex: '1 1 200px',
           display: 'flex',
           flexDirection: 'column',
           marginBottom: 0,
           boxShadow: '0 8px 36px #000c 0.12',
           minHeight: 0,
+          maxHeight: '40%',
         }}
       >
         <div style={sectionTitleStyle}>Active Transfers</div>
@@ -147,7 +147,7 @@ export default function RightPanel({
           background: bgCard,
           borderRadius: 0,
           padding: '0px 0px 0px 0px',
-          flex: isMobile && activityCollapsed ? '0 0 auto' : '1 1 0%',
+          flex: isMobile && activityCollapsed ? '0 0 auto' : '2 2 300px',
           border: 2,
           display: 'flex',
           flexDirection: 'column',
