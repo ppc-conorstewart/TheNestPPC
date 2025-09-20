@@ -113,12 +113,19 @@ export default function FlyHQ() {
     window.localStorage.setItem('showRightPanelAssets', showRightPanelAssets);
   }, [showRightPanelAssets]);
 
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  useEffect(() => {
+    if (!isCompactLayout) setMobilePanelOpen(false);
+  }, [isCompactLayout]);
+
   const [showMasterHistory, setShowMasterHistory] = useState(false);
   const [lastSeenActivityTs, setLastSeenActivityTs] = useState(() => {
     const v = window.localStorage.getItem('lastSeenActivityTs');
     return v ? parseInt(v, 10) : 0;
   });
   const [hasUnread, setHasUnread] = useState(false);
+
+  const panelVisible = isCompactLayout ? mobilePanelOpen : showRightPanelAssets;
 
   // ==============================
   // DATA HOOKS
@@ -207,11 +214,19 @@ export default function FlyHQ() {
   const tableScrollRef = useRef(null);
   useEffect(() => {
     if (activeTab !== 'assets') return;
+    if (isCompactLayout) {
+      setRowsPerPage(15);
+      return;
+    }
 
     let raf = 0;
     let t = 0;
 
     function handleResize() {
+      if (isCompactLayout) {
+        setRowsPerPage(15);
+        return;
+      }
       cancelAnimationFrame(raf);
       clearTimeout(t);
       t = setTimeout(() => {
@@ -243,19 +258,22 @@ export default function FlyHQ() {
         try { ro.disconnect(); } catch {}
       }
     };
-  }, [activeTab, showRightPanelAssets]);
+  }, [activeTab, isCompactLayout, showRightPanelAssets]);
 
   useEffect(() => {
-    if (activeTab === 'assets') {
-      requestAnimationFrame(() => {
-        if (tableScrollRef.current) {
-          const tableHeight = tableScrollRef.current.offsetHeight || 0;
-          const fitRows = Math.floor((tableHeight - HEADER_HEIGHT) / ROW_HEIGHT);
-          setRowsPerPage(fitRows > 0 ? fitRows : 1);
-        }
-      });
+    if (activeTab !== 'assets') return;
+    if (isCompactLayout) {
+      setRowsPerPage(15);
+      return;
     }
-  }, [activeTab, showRightPanelAssets]);
+    requestAnimationFrame(() => {
+      if (tableScrollRef.current) {
+        const tableHeight = tableScrollRef.current.offsetHeight || 0;
+        const fitRows = Math.floor((tableHeight - HEADER_HEIGHT) / ROW_HEIGHT);
+        setRowsPerPage(fitRows > 0 ? fitRows : 1);
+      }
+    });
+  }, [activeTab, isCompactLayout, showRightPanelAssets]);
 
   // ==============================
   // RIGHT PANEL / ACTIVITY
@@ -461,10 +479,10 @@ export default function FlyHQ() {
   }, [activityLogs]);
 
   useEffect(() => {
-    if (!showRightPanelAssets && latestActivityTs > lastSeenActivityTs) {
+    if (!panelVisible && latestActivityTs > lastSeenActivityTs) {
       setHasUnread(true);
     }
-  }, [latestActivityTs, showRightPanelAssets, lastSeenActivityTs]);
+  }, [latestActivityTs, panelVisible, lastSeenActivityTs]);
 
   const openRightPanel = useCallback(() => {
     setShowRightPanelAssets(true);
@@ -475,6 +493,19 @@ export default function FlyHQ() {
     setHasUnread(false);
   }, [latestActivityTs]);
   const closeRightPanel = useCallback(() => setShowRightPanelAssets(false), []);
+
+  const handlePanelVisibility = useCallback(
+    (val) => {
+      if (val) {
+        openRightPanel();
+        if (isCompactLayout) setMobilePanelOpen(true);
+      } else {
+        closeRightPanel();
+        if (isCompactLayout) setMobilePanelOpen(false);
+      }
+    },
+    [closeRightPanel, isCompactLayout, openRightPanel]
+  );
 
   const initialSelection = useMemo(() => {
     const tab = (searchParams.get('tab') || '').toLowerCase();
@@ -550,8 +581,8 @@ export default function FlyHQ() {
             <AssetTabsNav
               activeTab={activeTab}
               setActiveTab={setTab}
-              showRightPanelAssets={showRightPanelAssets}
-              setShowRightPanelAssets={(val) => (val ? openRightPanel() : closeRightPanel())}
+              showRightPanelAssets={panelVisible}
+              setShowRightPanelAssets={handlePanelVisibility}
               unreadBadge={hasUnread}
               masterHistoryOpen={showMasterHistory}
               onToggleMasterHistory={() => setShowMasterHistory((v) => !v)}
@@ -581,7 +612,7 @@ export default function FlyHQ() {
               <div
                 className='flex flex-col'
                 style={{
-                  flex: showRightPanelAssets ? '1 1 auto' : '1 1 100%',
+                  flex: panelVisible ? '1 1 auto' : '1 1 100%',
                   minWidth: isCompactLayout ? '100%' : 1100,
                   borderRight: isCompactLayout ? '0' : '2px solid #282d25',
                   border: '2px solid #282d25',
@@ -648,24 +679,26 @@ export default function FlyHQ() {
 
               <div
                 style={{
-                  width: isCompactLayout ? '100%' : showRightPanelAssets ? 520 : 0,
-                  minWidth: isCompactLayout ? '100%' : showRightPanelAssets ? 480 : 0,
-                  flex: isCompactLayout ? '1 1 100%' : `0 0 ${showRightPanelAssets ? 520 : 0}px`,
+                  width: isCompactLayout ? '100%' : panelVisible ? 520 : 0,
+                  minWidth: isCompactLayout ? '100%' : panelVisible ? 480 : 0,
+                  flex: isCompactLayout ? '1 1 100%' : `0 0 ${panelVisible ? 520 : 0}px`,
                   overflowX: 'auto',
                   overflowY: 'auto',
                   WebkitOverflowScrolling: 'touch',
-                  display: 'flex',
-                  opacity: showRightPanelAssets || isCompactLayout ? 1 : 0,
-                  transform: isCompactLayout ? 'translateX(0)' : showRightPanelAssets ? 'translateX(0)' : 'translateX(14px)',
+                  display: isCompactLayout ? 'none' : 'flex',
+                  opacity: panelVisible || isCompactLayout ? 1 : 0,
+                  transform: isCompactLayout ? 'translateX(0)' : panelVisible ? 'translateX(0)' : 'translateX(14px)',
                   transitionProperty: 'flex-basis, width, min-width, opacity, transform, box-shadow, filter',
                   transitionDuration: '420ms',
                   transitionTimingFunction: 'cubic-bezier(.16,1,.3,1)',
-                  boxShadow: showRightPanelAssets && !isCompactLayout ? 'inset 0 0 0 1px #23251d, -10px 0 26px #000a' : 'none',
-                  filter: showRightPanelAssets || isCompactLayout ? 'saturate(1)' : 'saturate(0.9)',
+                  boxShadow: panelVisible && !isCompactLayout ? 'inset 0 0 0 1px #23251d, -10px 0 26px #000a' : 'none',
+                  filter: panelVisible || isCompactLayout ? 'saturate(1)' : 'saturate(0.9)',
                   marginTop: isCompactLayout ? 12 : 0
                 }}
               >
-                <RightPanel filteredAssets={searched} activityLogs={activityLogs} assetNameMap={assetNameMap} activityLogHeight={350} />
+                {!isCompactLayout && (
+                  <RightPanel filteredAssets={searched} activityLogs={activityLogs} assetNameMap={assetNameMap} activityLogHeight={350} />
+                )}
               </div>
             </div>
           )}
@@ -785,6 +818,57 @@ export default function FlyHQ() {
 
           {/* TAB: DOWNED ASSETS */}
           {activeTab === 'downed' && <DownedAssetsTab allAssets={assets} activityLogs={activityLogs} />}
+
+          {activeTab === 'assets' && isCompactLayout && (
+            <>
+              <button
+                type='button'
+                onClick={() => handlePanelVisibility(!mobilePanelOpen)}
+                className='fixed bottom-6 right-6 z-30 rounded-full shadow-lg font-erbaum font-bold uppercase tracking-wide text-xs'
+                style={{
+                  background: '#6a7257',
+                  color: '#0b0d09',
+                  padding: '0.85rem 1.2rem',
+                  letterSpacing: '0.08em'
+                }}
+              >
+                {mobilePanelOpen ? 'Hide Insights' : 'Show Insights'}
+              </button>
+
+              {mobilePanelOpen && (
+                <div
+                  className='fixed inset-0 z-40 flex items-end justify-center'
+                  style={{ background: 'rgba(0,0,0,0.55)' }}
+                >
+                  <div
+                    className='w-full max-w-lg bg-[#0d0f0b] border-t-4 border-[#6a7257] rounded-t-2xl shadow-2xl flex flex-col'
+                    style={{ maxHeight: '85vh' }}
+                  >
+                    <div className='flex items-center justify-between px-4 py-3 border-b border-[#23251d]'>
+                      <h3 className='font-erbaum text-sm text-[#cfd3c3] tracking-wide uppercase'>Asset Summary & Activity</h3>
+                      <button
+                        type='button'
+                        onClick={() => handlePanelVisibility(false)}
+                        className='text-[#cfd3c3] font-bold text-lg'
+                        style={{ lineHeight: 1 }}
+                        aria-label='Close summary panel'
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className='flex-1 overflow-y-auto px-2 py-2'>
+                      <RightPanel
+                        filteredAssets={searched}
+                        activityLogs={activityLogs}
+                        assetNameMap={assetNameMap}
+                        activityLogHeight={350}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
