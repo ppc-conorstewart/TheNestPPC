@@ -60,6 +60,7 @@
     "react-qr-code": "^2.0.18",
     "react-qr-reader": "^3.0.0-beta-1",
     "react-resizable": "^3.0.5",
+    "react-resizable-panels": "^3.0.6",
     "react-router": "^7.6.1",
     "react-router-dom": "^6.14.1",
     "react-select": "^5.10.2",
@@ -87,11 +88,22 @@
     "start-all": "concurrently \"cd ../server && node server.js\" \"npm run dev\""
   },
   "browserslist": {
-    "production": [">0.2%","not dead","not op_mini all"],
-    "development": ["last 1 chrome version","last 1 firefox version","last 1 safari version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "eslintConfig": {
-    "extends": ["react-app","react-app/jest"],
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
     "rules": {
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn"
@@ -114,5 +126,7 @@
     "typescript": "^4.9.5",
     "webpack": "^5.99.9"
   },
-  "overrides": { "three": "0.172.0" }
+  "overrides": {
+    "three": "0.172.0"
+  }
 }
