@@ -175,8 +175,8 @@ export default function MFVAnalyticsPanel() {
       }
     }
     load();
-    const id = setInterval(load, 60_000);
-    return () => { alive = false; clearInterval(id); };
+    // Removed polling - loads once on mount
+    return () => { alive = false; };
   }, []);
 
   const metrics = useMemo(() => {

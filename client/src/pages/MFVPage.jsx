@@ -260,14 +260,7 @@ export default function MFVPageWrapper() {
     // eslint-disable-next-line
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      reloadPads();
-      reloadAssets();
-    }, 60000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line
-  }, []);
+  // Removed polling - data loads on mount only
 
   // ==============================
   // Section: Load CSVs + Pad Data
