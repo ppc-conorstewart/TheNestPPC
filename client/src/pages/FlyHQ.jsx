@@ -451,11 +451,7 @@ export default function FlyHQ() {
     }
   }, [fetchAssets, fetchActivityLogs, newLocation, selectedAssetIds]);
 
-  // Removed polling - data loads on mount only
-  useEffect(() => {
-    fetchAssets();
-    fetchActivityLogs();
-  }, [fetchAssets, fetchActivityLogs]);
+  // Data is already loaded by hooks on mount - no need to fetch again
 
   const latestActivityTs = useMemo(() => {
     if (!Array.isArray(activityLogs) || !activityLogs.length) return 0;

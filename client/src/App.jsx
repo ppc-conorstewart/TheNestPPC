@@ -48,8 +48,8 @@ import './styles/glass.css';
 // === Context Debugging ===
 import { useJobContext } from './context/JobContext';
 
-// === Background FX ===
-import BackgroundFX from './components/BackgroundFX';
+// === Background FX === (Removed from global - only used in LandingPage for performance)
+// import BackgroundFX from './components/BackgroundFX';
 
 // === Loading Component ===
 import LoadingSpinner from './components/LoadingSpinner';
@@ -92,7 +92,7 @@ export default function App() {
         position: 'relative',
         overflowX: 'hidden'
       }}>
-        <BackgroundFX />
+        {/* BackgroundFX removed from global - only shown on LandingPage for performance */}
 
         <Suspense fallback={<LoadingSpinner />}>
           <Routes>
