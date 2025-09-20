@@ -181,7 +181,8 @@ export default function TrainingHub() {
     saveNotes,
     saveCompetencies,
     uploadDocuments,
-    deleteDocument
+    deleteDocument,
+    deleteEmployee
   } = useFieldEmployees();
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
@@ -291,15 +292,16 @@ export default function TrainingHub() {
     const first = (form.firstName || "").trim();
     const last = (form.lastName || "").trim();
     const base = (form.base || "").trim();
-    const assessedAs = (form.assessedAs || "").trim();
+    const assessedLevel = typeof form.assessedAs === "number" ? form.assessedAs : null;
 
     if (!first || !last) throw new Error("First and last name are required.");
     if (!base) throw new Error("Base location is required.");
+    if (!Number.isInteger(assessedLevel) || assessedLevel < 0 || assessedLevel >= LEVELS.length) {
+      throw new Error("Please select a valid assessed level.");
+    }
 
     const fullName = `${first} ${last}`.replace(/\s+/g, " ").trim();
-    const normalizedAssessed = assessedAs.toLowerCase();
-    const levelIndex = LEVELS.findIndex((lvl) => lvl.label.toLowerCase() === normalizedAssessed);
-    const derivedLevel = levelIndex >= 0 ? levelIndex : 0;
+    const derivedLevel = assessedLevel;
 
     const created = await createEmployee({
       full_name: fullName,
@@ -340,9 +342,7 @@ export default function TrainingHub() {
         }
 
         const next = { ...prev, [employeeKey]: current };
-        saveCompetencies(employeeKey, current).catch((err) => {
-          console.error("Failed to save competencies", err);
-        });
+        saveCompetencies(employeeKey, current).catch(() => {});
         return next;
       });
     },
@@ -357,8 +357,8 @@ export default function TrainingHub() {
         ...prev,
         [selectedEmployee.id]: formatDocuments(docs)
       }));
-    } catch (err) {
-      console.error("Failed to upload documents", err);
+    } catch {
+      // silent
     }
   }, [selectedEmployee, uploadDocuments]);
 
@@ -370,8 +370,8 @@ export default function TrainingHub() {
         ...prev,
         [selectedEmployee.id]: (prev[selectedEmployee.id] || []).filter((doc) => doc.id !== docId)
       }));
-    } catch (err) {
-      console.error("Failed to delete document", err);
+    } catch {
+      // silent
     }
   }, [selectedEmployee, deleteDocument]);
 
@@ -391,12 +391,36 @@ export default function TrainingHub() {
     setSavingNotes(true);
     try {
       await saveNotes(selectedEmployee.id, employeeNotes[selectedEmployee.id] || "");
-    } catch (err) {
-      console.error("Failed to save notes", err);
     } finally {
       setSavingNotes(false);
     }
   }, [selectedEmployee, employeeNotes, saveNotes]);
+
+  const handleDeleteEmployee = useCallback(async (id) => {
+    try {
+      await deleteEmployee(id);
+    } finally {
+      setEmployeeNotes(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setEmployeeChecklists(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setEmployeeDocuments(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      if (selectedEmployeeId === id) {
+        const remaining = employees.filter(e => e.id !== id);
+        setSelectedEmployeeId(remaining[0]?.id ?? null);
+      }
+    }
+  }, [deleteEmployee, employees, selectedEmployeeId]);
 
   if (!Array.isArray(competencies) || !competencies[tabLevel]) {
     return (
@@ -442,6 +466,7 @@ export default function TrainingHub() {
             employeeChecklists={employeeChecklists}
             onSelectEmployee={handleSelectEmployee}
             onAddEmployee={handleAddEmployee}
+            onDeleteEmployee={handleDeleteEmployee}
           />
           {loading && (
             <div className="absolute bottom-2 left-0 right-0 text-center text-[0.6rem] uppercase tracking-wide text-[#9da48a] font-erbaum">

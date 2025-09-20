@@ -2,7 +2,7 @@
 // EmployeeList.jsx — Full-Height Employee Panel
 // ==============================
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 // LEVELS array is needed for rank label
 export const LEVELS = [
@@ -92,18 +92,22 @@ function AddEmployeeModal({ open, onClose, onSubmit, form, setForm, submitting, 
           </div>
           <div className="flex items-center gap-2">
             <label className="w-32 text-right text-[#b3b99a] text-sm font-bold pr-0">Assessed as:</label>
-            <input
-              type="text"
+            <select
               className="flex-1 px-3 py-1 rounded bg-[#18181b] border border-[#949C7F] text-[#f3f4f1] font-semibold focus:ring-2 focus:ring-[#6a7257] outline-none transition"
-              value={form.assessedAs}
-              onChange={e => setForm(f => ({ ...f, assessedAs: e.target.value }))}
+              value={form.assessedAs ?? ""}
+              onChange={e => setForm(f => ({ ...f, assessedAs: Number(e.target.value) }))}
               required
-            />
+            >
+              <option value="" disabled>Select level</option>
+              {LEVELS.map((lvl, idx) => (
+                <option key={lvl.key} value={idx}>{lvl.label}</option>
+              ))}
+            </select>
           </div>
           <div className="flex flex-row justify-center mt-4">
             <button
               type="submit"
-              className={`px-10 py-0 rounded text-black text-base shadow-md transition tracking-widest font-erbaum ${
+            className={`px-10 py-0 rounded text-black text-base shadow-md transition tracking-widest font-erbaum ${
                 submitting ? 'bg-[#5f6453] cursor-not-allowed text-gray-300' : 'bg-[#949C7F] hover:bg-[#b3b99a]'
               }`}
               disabled={
@@ -111,7 +115,8 @@ function AddEmployeeModal({ open, onClose, onSubmit, form, setForm, submitting, 
                 !form.firstName ||
                 !form.lastName ||
                 !form.base ||
-                !form.assessedAs
+                form.assessedAs === null ||
+                Number.isNaN(form.assessedAs)
               }
             >
              {submitting ? 'Adding...' : 'Submit New Employee'}
@@ -129,6 +134,75 @@ function AddEmployeeModal({ open, onClose, onSubmit, form, setForm, submitting, 
 }
 
 // ==============================
+// DeleteEmployeeModal
+// ==============================
+function DeleteEmployeeModal({ open, onClose, onConfirm, employeeName, submitting, errorMessage }) {
+  const [confirmText, setConfirmText] = useState("");
+
+  if (!open) return null;
+  const canDelete = confirmText === "DELETE";
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center">
+      <div className="bg-[#232429] border-2 border-[#F14D4D] rounded-2xl px-8 py-4 min-w-[360px] max-w-[95vw] shadow-2xl relative">
+        <button
+          className="absolute top-2 right-3 text-xl text-red-400 hover:text-red-600 font-bold focus:outline-none transition"
+          onClick={onClose}
+          aria-label="Close"
+          style={{ lineHeight: 1 }}
+        >✕</button>
+
+        <h2 className="text-lg mb-3 text-[#ffb3b3] tracking-wider font-erbaum uppercase">
+          Delete Field Employee
+        </h2>
+
+        <p className="text-sm text-[#f3f4f1] mb-3">
+          You are about to permanently remove{' '}
+          <span className="font-bold text-[#FFD943]">{employeeName || 'this employee'}</span>{' '}
+          and all associated training records and documents. This action cannot be undone.
+        </p>
+
+        <label className="block text-xs text-[#b3b99a] mb-1 font-bold">
+          Type <span className="text-red-400">DELETE</span> to confirm:
+        </label>
+        <input
+          type="text"
+          value={confirmText}
+          onChange={e => setConfirmText(e.target.value)}
+          className="w-full px-3 py-2 rounded bg-[#18181b] border border-[#949C7F] text-[#f3f4f1] font-semibold focus:ring-2 focus:ring-[#6a7257] outline-none transition"
+          placeholder="DELETE"
+          autoFocus
+        />
+
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            className="px-4 py-1 rounded text-xs font-erbaum font-bold bg-[#3a3f2e] text-gray-300 hover:bg-[#474d39] transition"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          <button
+            className={`px-4 py-1 rounded text-xs font-erbaum font-bold transition ${
+              canDelete && !submitting
+                ? 'bg-[#F14D4D] text-black hover:bg-[#ff6a6a]'
+                : 'bg-[#6a2d2d] text-[#b08787] cursor-not-allowed'
+            }`}
+            onClick={() => canDelete && !submitting ? onConfirm() : null}
+            disabled={!canDelete || submitting}
+          >
+            {submitting ? 'Deleting...' : 'Confirm Delete'}
+          </button>
+        </div>
+
+        {errorMessage ? (
+          <p className="mt-2 text-red-400 text-xs font-semibold tracking-wide">{errorMessage}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ==============================
 // EmployeeList Sidebar (main component)
 // ==============================
 export default function EmployeeList({
@@ -136,17 +210,22 @@ export default function EmployeeList({
   selectedEmployeeId,
   employeeChecklists,
   onSelectEmployee,
-  onAddEmployee
+  onAddEmployee,
+  onDeleteEmployee
 }) {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     base: "",
-    assessedAs: ""
+    assessedAs: null
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   function getDisplayLevel(emp) {
     const presetLevel = Number.isFinite(emp?.level) ? emp.level : 0;
@@ -154,9 +233,14 @@ export default function EmployeeList({
     return Math.max(presetLevel, checklistLevel);
   }
 
+  const selectedEmployee = useMemo(
+    () => employees.find(e => e.id === selectedEmployeeId) || null,
+    [employees, selectedEmployeeId]
+  );
+
   const handleOpenModal = () => {
     setSubmitError("");
-    setForm({ firstName: "", lastName: "", base: "", assessedAs: "" });
+    setForm({ firstName: "", lastName: "", base: "", assessedAs: null });
     setShowModal(true);
   };
 
@@ -167,30 +251,61 @@ export default function EmployeeList({
     try {
       await onAddEmployee(form);
       setShowModal(false);
-      setForm({ firstName: "", lastName: "", base: "", assessedAs: "" });
+      setForm({ firstName: "", lastName: "", base: "", assessedAs: null });
     } catch (err) {
-      console.error('Failed to add employee', err);
-      setSubmitError(err?.message || 'Failed to add employee.');
+      setSubmitError(err?.message || "Failed to add employee.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  function handleOpenDelete() {
+    setDeleteError("");
+    setDeleteOpen(true);
+  }
+
+  async function handleConfirmDelete() {
+    if (!onDeleteEmployee || !selectedEmployee) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await onDeleteEmployee(selectedEmployee.id);
+      setDeleteOpen(false);
+    } catch (err) {
+      setDeleteError(err?.message || "Failed to delete employee.");
+    } finally {
+      setDeleting(false);
     }
   }
 
   return (
     <div style={{ height: "100%", minHeight: 260, overflowY: "auto" }}>
       <div
-        className="px-4 py-2 border-b-2 border-[#6a7257] font-erbaum uppercase text-white text-xs bg-black tracking-wide font-bold flex items-center justify-between"
+        className="px-4 py-2 border-b-2 border-[#6a7257] font-erbaum uppercase text-white text-xs bg-black tracking-wide font-bold flex items-center justify-between gap-2"
         style={{ fontSize: ".85rem", letterSpacing: "0.02em" }}
       >
         <span>Field Employees</span>
-        <button
-          className="ml-2 px-1 py-0 rounded bg-[#949C7F] text-black text-xs font-bold shadow hover:bg-[#b3b99a] transition"
-          onClick={handleOpenModal}
-          style={{ minWidth: 30 }}
-        >
-          +New Employee
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="ml-2 px-1 py-0 rounded bg-[#949C7F] text-black text-xs font-bold shadow hover:bg-[#b3b99a] transition"
+            onClick={handleOpenModal}
+            style={{ minWidth: 30 }}
+          >
+            +New Employee
+          </button>
+          <button
+            className={`px-2 py-0 rounded text-xs font-bold shadow transition ${
+              selectedEmployee ? 'bg-[#F14D4D] text-black hover:bg-[#ff6a6a]' : 'bg-[#6a2d2d] text-[#b08787] cursor-not-allowed'
+            }`}
+            onClick={() => selectedEmployee ? handleOpenDelete() : null}
+            disabled={!selectedEmployee}
+            title={selectedEmployee ? `Delete ${selectedEmployee.full_name}` : "Select an employee to delete"}
+          >
+            Delete
+          </button>
+        </div>
       </div>
+
       <ul className="divide-y divide-[#23282b] py-1">
         {employees.length === 0 ? (
           <li className="px-5 py-4 text-[#949C7F] text-xs uppercase font-erbaum tracking-wide text-center">
@@ -251,7 +366,9 @@ export default function EmployeeList({
         )}
       </ul>
 
-      {/* Modal */}
+      {/* ============================== */}
+      {/* Modal: Add Employee */}
+      {/* ============================== */}
       <AddEmployeeModal
         open={showModal}
         onClose={() => setShowModal(false)}
@@ -260,6 +377,18 @@ export default function EmployeeList({
         onSubmit={handleSubmitNewEmployee}
         submitting={submitting}
         errorMessage={submitError}
+      />
+
+      {/* ============================== */}
+      {/* Modal: Delete Employee */}
+      {/* ============================== */}
+      <DeleteEmployeeModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleConfirmDelete}
+        employeeName={selectedEmployee?.full_name}
+        submitting={deleting}
+        errorMessage={deleteError}
       />
     </div>
   );
