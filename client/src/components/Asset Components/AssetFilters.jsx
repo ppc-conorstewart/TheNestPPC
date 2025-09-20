@@ -6,6 +6,7 @@ import ManagementIcon from '../../assets/Fly-HQ Icons/ManagementIcon.json';
 import SearchIcon from '../../assets/Fly-HQ Icons/SearchIcon.json';
 import TruckingIcon from '../../assets/Fly-HQ Icons/TruckingIcon.json';
 import PalomaLogo from '../../assets/palomaassets.png';
+import useMediaQuery from '../../hooks/useMediaQuery';
 
 // =================== Responsive Grid Constants ===================
 const CONTROL_H = 32;
@@ -47,6 +48,7 @@ export default function AssetFilters({
   const [row1Cols, setRow1Cols] = useState(4);
   const [row2Cols, setRow2Cols] = useState(3);
   const [searchFocused, setSearchFocused] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // =================== Debounced Search State ===================
   const [localSearch, setLocalSearch] = useState(searchTerm || '');
@@ -111,25 +113,34 @@ export default function AssetFilters({
   }, []);
 
   return (
-    <div className='flex items-start mb-0 gap-2' style={{ fontSize: '1.05em', width: '100%' }}>
+    <div
+      className='flex items-start mb-0 gap-2'
+      style={{
+        fontSize: '1.05em',
+        width: '100%',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? 12 : 8,
+        alignItems: isMobile ? 'stretch' : 'flex-start'
+      }}
+    >
       {/* =================== Left: Paloma Logo =================== */}
       <div
         ref={logoWrapRef}
         className='paloma-logo-wrap paloma-frosted-glass'
         style={{
-          minWidth: 280,
-          height: panelHeight,
+          minWidth: isMobile ? '100%' : 280,
+          height: isMobile ? 'auto' : panelHeight,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0 14px',
+          padding: isMobile ? '16px 14px' : '0 14px',
           position: 'relative',
           overflow: 'hidden',
           border: '2px solid #6a7257',
           borderRadius: 14,
           background: 'rgba(0,0,0,0.25)',
           backdropFilter: 'blur(6px)',
-          transform: `perspective(900px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`,
+          transform: isMobile ? 'none' : `perspective(900px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`,
           transition: hovering ? 'transform 60ms linear' : 'transform 400ms ease-out',
           boxShadow: 'inset 0 0 0 1px rgba(106,114,87,.25), 0 18px 44px rgba(0,0,0,.5)'
         }}
@@ -147,7 +158,13 @@ export default function AssetFilters({
         <img
           src={PalomaLogo}
           alt='Paloma Assets'
-          style={{ height: '100%', width: 'auto', objectFit: 'contain', display: 'block' }}
+          style={{
+            height: isMobile ? 'auto' : '100%',
+            width: isMobile ? '70%' : 'auto',
+            maxHeight: isMobile ? 120 : '100%',
+            objectFit: 'contain',
+            display: 'block'
+          }}
         />
       </div>
 
@@ -161,8 +178,8 @@ export default function AssetFilters({
           background: 'rgba(0,0,0,0.2)',
           backdropFilter: 'blur(6px)',
           padding: GAP,
-          paddingLeft: 24,
-          paddingRight: 12
+          paddingLeft: isMobile ? 12 : 24,
+          paddingRight: isMobile ? 12 : 12
         }}
       >
         <div

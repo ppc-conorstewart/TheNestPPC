@@ -1,6 +1,6 @@
 // =================== Imports and Assets ===================
 import Lottie from "lottie-react";
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EditIcon from '../../assets/Fly-HQ Icons/EditIcon.json';
 import HistoryIcon from '../../assets/Fly-HQ Icons/HistoryIcon.json';
@@ -108,6 +108,11 @@ export default function AssetTable({
 }) {
   const [qrAsset, setQRAsset] = useState(null);
   const isCompact = useMediaQuery('(max-width: 1100px)');
+  const [openMenuIdx, setOpenMenuIdx] = useState(null);
+
+  useEffect(() => {
+    if (!isCompact) setOpenMenuIdx(null);
+  }, [isCompact]);
 
   const selectedSet = new Set(selectedIds);
   const allOnPageSelected = assets.length > 0 && assets.every((a) => selectedSet.has(a.id));
@@ -316,42 +321,163 @@ export default function AssetTable({
                   height: ROW_HEIGHT,
                   verticalAlign: 'middle'
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
-                    {[{
-                      icon: EditIcon, hoverIdx: hoverEditIdx, setHover: setHoverEditIdx, action: () => onEdit(asset), title: "Edit Asset"
+                  {(() => {
+                    const actions = [{
+                      icon: EditIcon,
+                      hoverIdx: hoverEditIdx,
+                      setHover: setHoverEditIdx,
+                      action: () => onEdit(asset),
+                      title: 'Edit Asset',
+                      label: 'Edit Asset'
                     }, {
-                      icon: TrashIcon, hoverIdx: hoverDeleteIdx, setHover: setHoverDeleteIdx, action: () => onDelete(asset), title: "Delete Asset"
+                      icon: TrashIcon,
+                      hoverIdx: hoverDeleteIdx,
+                      setHover: setHoverDeleteIdx,
+                      action: () => onDelete(asset),
+                      title: 'Delete Asset',
+                      label: 'Delete Asset'
                     }, {
-                      icon: QRICon, hoverIdx: hoverQRIdx, setHover: setHoverQRIdx, action: () => onViewQR ? onViewQR(asset) : setQRAsset(asset), title: "View QR"
+                      icon: QRICon,
+                      hoverIdx: hoverQRIdx,
+                      setHover: setHoverQRIdx,
+                      action: () => (onViewQR ? onViewQR(asset) : setQRAsset(asset)),
+                      title: 'View QR',
+                      label: 'View QR Code'
                     }, {
-                      icon: HistoryIcon, hoverIdx: hoverHistoryIdx, setHover: setHoverHistoryIdx, action: () => onViewHistory && onViewHistory(asset), title: "Asset History"
-                    }].map(({ icon, hoverIdx, setHover, action, title }, btnIdx) => (
-                      <div
-                        key={btnIdx}
-                        style={{ position: 'relative', display: 'inline-block' }}
-                        onMouseEnter={() => setHover(idx)}
-                        onMouseLeave={() => setHover(null)}
-                      >
-                        <button
-                          onClick={action}
-                          title={title}
-                          style={{
-                            background: '#000',
-                            border: `1.25px solid ${palomaGreen}`,
-                            borderRadius: 6,
-                            width: iconButtonSize,
-                            height: buttonHeight,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer'
-                          }}
+                      icon: HistoryIcon,
+                      hoverIdx: hoverHistoryIdx,
+                      setHover: setHoverHistoryIdx,
+                      action: () => onViewHistory && onViewHistory(asset),
+                      title: 'Asset History',
+                      label: 'View History'
+                    }];
+
+                    if (isCompact) {
+                      const menuOpen = openMenuIdx === idx;
+                      return (
+                        <div
+                          style={{ position: 'relative', display: 'inline-flex' }}
                         >
-                          <Lottie key={lottieKey(title, idx, hoverIdx === idx)} animationData={icon} loop={false} autoplay={hoverIdx === idx} style={{ width: 16, height: 16 }} />
-                        </button>
+                          <button
+                            type='button'
+                            onClick={() => setOpenMenuIdx(menuOpen ? null : idx)}
+                            aria-haspopup='menu'
+                            aria-expanded={menuOpen}
+                            style={{
+                              background: '#000',
+                              border: `1.25px solid ${palomaGreen}`,
+                              borderRadius: 6,
+                              width: 32,
+                              height: 24,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              padding: 0
+                            }}
+                          >
+                            <span style={{
+                              display: 'inline-block',
+                              width: 16,
+                              height: 12,
+                              position: 'relative'
+                            }}>
+                              {[0, 1, 2].map((bar) => (
+                                <span
+                                  key={bar}
+                                  style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    right: 0,
+                                    height: 2,
+                                    borderRadius: 999,
+                                    background: palomaGreen,
+                                    top: `${bar * 5}px`
+                                  }}
+                                />
+                              ))}
+                            </span>
+                          </button>
+                          {menuOpen && (
+                            <div
+                              role='menu'
+                              style={{
+                                position: 'absolute',
+                                top: 'calc(100% + 6px)',
+                                right: 0,
+                                background: '#0d0d0d',
+                                border: `1px solid ${palomaGreen}`,
+                                borderRadius: 8,
+                                boxShadow: '0 12px 24px rgba(0,0,0,0.45)',
+                                minWidth: 160,
+                                zIndex: 10,
+                                padding: 6
+                              }}
+                            >
+                              {actions.map(({ label, action: run, title: menuTitle }, actionIdx) => (
+                                <button
+                                  key={menuTitle}
+                                  type='button'
+                                  onClick={() => {
+                                    run();
+                                    setOpenMenuIdx(null);
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    textAlign: 'left',
+                                    padding: '6px 10px',
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: textMain,
+                                    fontSize: '0.72rem',
+                                    letterSpacing: '0.02em',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    borderRadius: 6
+                                  }}
+                                >
+                                  <span>{label}</span>
+                                  <span style={{ color: palomaGreen, fontSize: '0.65rem', letterSpacing: '0.05em' }}>{['EDIT','DEL','QR','HIST'][actionIdx]}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                        {actions.map(({ icon, hoverIdx, setHover, action, title }, btnIdx) => (
+                          <div
+                            key={title}
+                            style={{ position: 'relative', display: 'inline-block' }}
+                            onMouseEnter={() => setHover(idx)}
+                            onMouseLeave={() => setHover(null)}
+                          >
+                            <button
+                              onClick={action}
+                              title={title}
+                              style={{
+                                background: '#000',
+                                border: `1.25px solid ${palomaGreen}`,
+                                borderRadius: 6,
+                                width: iconButtonSize,
+                                height: buttonHeight,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <Lottie key={lottieKey(title, idx, hoverIdx === idx)} animationData={icon} loop={false} autoplay={hoverIdx === idx} style={{ width: 16, height: 16 }} />
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })()}
                 </td>
               </tr>
             );
