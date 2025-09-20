@@ -147,17 +147,16 @@ export default function CompetencyChecklist({
               group.items.map((item, iIdx) => {
                 const firstOfGroup = iIdx === 0;
                 // --- If Site Supervisor, show all as checked/locked ---
-                const isChecked =
-                  isSiteSupervisor ? true :
-                  currentChecklist[tabLevel]?.[gIdx]?.[iIdx]?.checked || false;
+                const entry = currentChecklist?.[tabLevel]?.[gIdx]?.[iIdx] ?? null;
+                const isChecked = isSiteSupervisor ? true : Boolean(entry?.checked);
                 const completedDate =
                   isSiteSupervisor
                     ? new Date().toISOString().slice(0, 10)
-                    : currentChecklist[tabLevel]?.[gIdx]?.[iIdx]?.date || "";
+                    : entry?.date || "";
                 const assessor =
                   isSiteSupervisor
                     ? "—"
-                    : currentChecklist[tabLevel]?.[gIdx]?.[iIdx]?.assessor || "";
+                    : entry?.assessor || "";
                 // Only editable if not Site Supervisor and not above unlocked level
                 const isEditable = !isSiteSupervisor && tabLevel <= unlockedLevel;
 
