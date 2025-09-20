@@ -36,10 +36,13 @@ module.exports = {
 
     const placeholders = jobColumns.map((_, i) => `$${i + 1}`).join(", ");
     const values = jobColumns.map((key) => insertJob[key]);
-    await pool.query(
-      `INSERT INTO jobs (${jobColumns.join(", ")}) VALUES (${placeholders})`,
+    const { rows } = await pool.query(
+      `INSERT INTO jobs (${jobColumns.join(", ")})
+       VALUES (${placeholders})
+       RETURNING id, ${jobColumns.join(", ")}`,
       values
     );
+    return rows[0];
   },
 
   async updateJob(id, fields) {

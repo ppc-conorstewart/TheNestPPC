@@ -1,0 +1,4 @@
+id,title,category,customer_id,storage_path,thumbnail_path,mime_type,file_ext,file_size_bytes,width_px,height_px,aspect_ratio,tags,active,created_by,created_at,updated_at
+a06aa96e-1242-468d-9f36-e85f16140c2e,Pumpdown.png,third_party,,/uploads/1758240719228-5094-Pumpdown.png,,image/png,png,78110,,,,{},t,,2025-09-19 00:11:59.233661+00,2025-09-19 00:11:59.233661+00
+417ee42b-28a9-4864-84a7-8f728b966652,FracSpread.png,third_party,,/uploads/1758240723815-8076-FracSpread.png,,image/png,png,390059,,,,{},t,,2025-09-19 00:12:03.890453+00,2025-09-19 00:12:03.890453+00
+ad181e1c-151a-4392-8a15-31820a98faea,Paloma Grease Seacan.png,paloma,,/uploads/1758240740199-8593-Paloma-Grease-Seacan.png,,image/png,png,130357,,,,{},t,,2025-09-19 00:12:20.204346+00,2025-09-19 00:12:20.204346+00

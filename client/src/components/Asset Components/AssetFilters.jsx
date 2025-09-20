@@ -6,6 +6,7 @@ import ManagementIcon from '../../assets/Fly-HQ Icons/ManagementIcon.json';
 import SearchIcon from '../../assets/Fly-HQ Icons/SearchIcon.json';
 import TruckingIcon from '../../assets/Fly-HQ Icons/TruckingIcon.json';
 import PalomaLogo from '../../assets/palomaassets.png';
+import useMediaQuery from '../../hooks/useMediaQuery';
 
 // =================== Responsive Grid Constants ===================
 const CONTROL_H = 32;
@@ -47,6 +48,7 @@ export default function AssetFilters({
   const [row1Cols, setRow1Cols] = useState(4);
   const [row2Cols, setRow2Cols] = useState(3);
   const [searchFocused, setSearchFocused] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // =================== Debounced Search State ===================
   const [localSearch, setLocalSearch] = useState(searchTerm || '');
@@ -111,25 +113,34 @@ export default function AssetFilters({
   }, []);
 
   return (
-    <div className='flex items-start mb-0 gap-2' style={{ fontSize: '1.05em', width: '100%' }}>
+    <div
+      className='flex items-start mb-0 gap-2'
+      style={{
+        fontSize: '1.05em',
+        width: '100%',
+        flexDirection: isMobile ? 'column' : 'row',
+        gap: isMobile ? 12 : 8,
+        alignItems: isMobile ? 'stretch' : 'flex-start'
+      }}
+    >
       {/* =================== Left: Paloma Logo =================== */}
       <div
         ref={logoWrapRef}
         className='paloma-logo-wrap paloma-frosted-glass'
         style={{
-          minWidth: 280,
-          height: panelHeight,
+          minWidth: isMobile ? '100%' : 280,
+          height: isMobile ? 'auto' : panelHeight,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '0 14px',
+          padding: isMobile ? '16px 14px' : '0 14px',
           position: 'relative',
           overflow: 'hidden',
           border: '2px solid #6a7257',
           borderRadius: 14,
           background: 'rgba(0,0,0,0.25)',
           backdropFilter: 'blur(6px)',
-          transform: `perspective(900px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`,
+          transform: isMobile ? 'none' : `perspective(900px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`,
           transition: hovering ? 'transform 60ms linear' : 'transform 400ms ease-out',
           boxShadow: 'inset 0 0 0 1px rgba(106,114,87,.25), 0 18px 44px rgba(0,0,0,.5)'
         }}
@@ -147,7 +158,13 @@ export default function AssetFilters({
         <img
           src={PalomaLogo}
           alt='Paloma Assets'
-          style={{ height: '100%', width: 'auto', objectFit: 'contain', display: 'block' }}
+          style={{
+            height: isMobile ? 'auto' : '100%',
+            width: isMobile ? '70%' : 'auto',
+            maxHeight: isMobile ? 120 : '100%',
+            objectFit: 'contain',
+            display: 'block'
+          }}
         />
       </div>
 
@@ -161,8 +178,8 @@ export default function AssetFilters({
           background: 'rgba(0,0,0,0.2)',
           backdropFilter: 'blur(6px)',
           padding: GAP,
-          paddingLeft: 24,
-          paddingRight: 12
+          paddingLeft: isMobile ? 12 : 24,
+          paddingRight: isMobile ? 12 : 12
         }}
       >
         <div
@@ -195,6 +212,7 @@ export default function AssetFilters({
             isOn={showMAAssets}
             onToggle={onToggleMAAssets}
             rowHeight={CONTROL_H}
+            isMobile={isMobile}
           />
           <ButtonBOL onClick={onOpenPhysicalTransfer} shopRef={shopRef} rowHeight={CONTROL_H} />
           <ButtonAdmin onClick={onOpenAssetTransfer} adminRef={adminRef} rowHeight={CONTROL_H} />
@@ -272,11 +290,12 @@ function SelectCell({ label, value, setValue, options, rowHeight }) {
 }
 
 // =================== UI: MA Toggle (Stateful, remembers position; smaller size; left = red, right = green) ===================
-function MAToggle({ isOn, onToggle, rowHeight }) {
+function MAToggle({ isOn, onToggle, rowHeight, isMobile }) {
   const trackH = Math.max(18, Math.floor(rowHeight * 0.58));
   const trackW = Math.max(42, Math.floor(trackH * 2.0));
   const knob = trackH - 6;
   const knobTranslate = isOn ? trackW - knob - 3 : 3;
+  const borderColor = isMobile ? (isOn ? '#2ecc71' : '#e74c3c') : '#6a7257';
 
   return (
     <button
@@ -284,7 +303,7 @@ function MAToggle({ isOn, onToggle, rowHeight }) {
       onClick={onToggle}
       role='switch'
       aria-checked={isOn}
-      className='text-white border border-[#6a7257] rounded transition flex items-center justify-center gap-3 w-full'
+      className='text-white rounded transition flex items-center justify-center gap-3 w-full'
       style={{
         height: '100%',
         padding: '0 12px',
@@ -293,7 +312,9 @@ function MAToggle({ isOn, onToggle, rowHeight }) {
         boxSizing: 'border-box',
         background: 'rgba(0,0,0,0.25)',
         backdropFilter: 'blur(6px)',
-        alignItems: 'center'
+        alignItems: 'center',
+        border: `2px solid ${borderColor}`,
+        boxShadow: isMobile ? `0 0 12px ${borderColor}33` : 'none'
       }}
     >
       <div
@@ -347,7 +368,7 @@ function ButtonBOL({ onClick, shopRef, rowHeight }) {
       style={{
         height: '100%',
         padding: '0 10px',
-        fontSize: '1em',
+        fontSize: '.95em',
         fontWeight: 400,
         boxSizing: 'border-box',
         background: 'rgba(0,0,0,0.25)',
@@ -355,7 +376,8 @@ function ButtonBOL({ onClick, shopRef, rowHeight }) {
       }}
     >
       <Player ref={shopRef} autoplay={false} loop src={TruckingIcon} style={{ height: Math.max(22, rowHeight * 0.5), width: Math.max(22, rowHeight * 0.5) }} />
-      Initiate Shop Transfer [BOL]
+      <span style={{ whiteSpace: 'nowrap', letterSpacing: '.02em' }}>Initiate Shop Transfer</span>
+      <span style={{ whiteSpace: 'nowrap', fontSize: '.8em', opacity: 0.78 }}>[BOL]</span>
     </button>
   );
 }
@@ -407,5 +429,3 @@ function ButtonAdd({ onClick, addRef, rowHeight }) {
     </button>
   );
 }
-
-

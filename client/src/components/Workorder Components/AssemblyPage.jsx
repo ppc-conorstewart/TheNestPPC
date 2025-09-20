@@ -2,7 +2,7 @@
 // FILE: src/components/AssemblyPage.jsx
 // ==============================
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Select from 'react-select';
 import torqueSpecsData from '../../data/TorqueSpecs';
 import useAssets from '../../hooks/useAssets';
@@ -208,8 +208,9 @@ export default function AssemblyPage({
   priorSelectionsList = [],
   priorBuildQtysList = []
 }) {
-  const abbr = { 'Red Deer': 'RD', 'Grand Prairie': 'GP', Nisku: 'NIS' };
+  const viewerContainerRef = useRef(null);
 
+  const abbr = { 'Red Deer': 'RD', 'Grand Prairie': 'GP', Nisku: 'NIS' };
   const categories = ['Valves', 'Adapters', 'Weco', 'Spools', 'Instrumentation Flanges', 'Other'];
 
   const bucketed = useMemo(() => {
@@ -264,8 +265,38 @@ export default function AssemblyPage({
     return arr;
   }, [selectedAssetNames]);
 
-  const storageKey = (woNumber || 'WO') + '::' + (title || 'Assembly') + '::TAB' + String(activeTab);
+  const slug = (s = '') => s.toString().trim().toLowerCase().replace(/\s+/g, '-');
+  const customerName =
+    (selections?.customer || selections?.Customer || savedItems?.customer || savedItems?.Customer || '').toString().trim();
+  const lsdVal =
+    (selections?.lsd ||
+      selections?.surface_lsd ||
+      selections?.surfaceLSD ||
+      savedItems?.lsd ||
+      savedItems?.surface_lsd ||
+      savedItems?.surfaceLSD ||
+      '').toString().trim();
+  const jobId = Number.isFinite(Number(selections?.jobId)) ? Number(selections?.jobId) : Number(savedItems?.jobId) || null;
+  const uniqueScope = jobId ? `job${jobId}` : `${slug(customerName)}_${lsdVal || 'no-lsd'}`;
+
+  const storageKey = `wo_${uniqueScope}::${title || 'Assembly'}::TAB${String(activeTab)}`;
   const currentBuildQty = Number(buildQtys?.[activeTab]) || 0;
+
+  // ==============================
+  // ======= EXPORT → PDF =========
+  // ==============================
+  const assembleTabData = (selObj, tabIndex) => {
+    const items = [];
+    for (let i = 1; i <= 10; i++) {
+      const name = selObj['location' + i];
+      const qty = Number(selObj['qty' + i]) || 0;
+      if (name && qty > 0 && !voided[i]) {
+        const cat = selObj['category' + i] || '';
+        items.push({ index: i, category: cat, asset: name, qty });
+      }
+    }
+    return { tabIndex, items, buildQty: Number(buildQtys?.[tabIndex]) || 0 };
+  };
 
   return (
     <div className='flex h-full bg-black uppercase text-[9px]'>
@@ -280,6 +311,7 @@ export default function AssemblyPage({
           initialLabels={labels}
           onLabelsChange={setLabels}
           storageKey={storageKey}
+          containerRefExternal={viewerContainerRef}
         />
       </div>
 
@@ -301,7 +333,7 @@ export default function AssemblyPage({
                 const v = Math.max(0, Math.floor(Number(e.target.value)));
                 setBuildQtys(bqs => bqs.map((x, i) => (i === activeTab ? v : x)));
               }}
-              className='w-16 px-2 py-1 rounded bg-black text-xl text-white border border-[#374151] focus:outline-none'
+              className='w-16 px-2 py-1 rounded bg黑 text-xl text-white border border-[#374151] focus:outline-none'
             />
           </div>
           {Array.isArray(buildQtys) && buildQtys.length > 1 && (
@@ -319,7 +351,7 @@ export default function AssemblyPage({
           )}
         </div>
 
-        <div className='flex gap-4 mb-24 overflow-auto'>
+        <div className='flex gap-4 mb-4 overflow-auto'>
           <div className='flex-1'>
             <h4 className='text-[#6a7257] uppercase font-bold text-[14px] mb-2 text-center'>SELECT ASSET (1–5)</h4>
             {Array.from({ length: 5 }, (_, i) => (

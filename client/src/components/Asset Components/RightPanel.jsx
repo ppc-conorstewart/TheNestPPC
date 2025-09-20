@@ -1,6 +1,8 @@
 // =================== Imports and Dependencies ===================
+import { useEffect, useState } from 'react';
 import ActiveTransfers from './ActiveTransfers';
 import ActivityLogTable from './ActivityLogTable';
+import useMediaQuery from '../../hooks/useMediaQuery';
 
 // =================== Style Constants ===================
 const bgCard = '#000';
@@ -14,6 +16,13 @@ export default function RightPanel({
   assetNameMap,
   activityLogHeight,
 }) {
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [activityCollapsed, setActivityCollapsed] = useState(false);
+
+  useEffect(() => {
+    setActivityCollapsed(isMobile);
+  }, [isMobile]);
+
   const sectionTitleStyle = {
     color: '#fff',
     fontWeight: 700,
@@ -138,7 +147,7 @@ export default function RightPanel({
           background: bgCard,
           borderRadius: 0,
           padding: '0px 0px 0px 0px',
-          flex: '1 1 0%',
+          flex: isMobile && activityCollapsed ? '0 0 auto' : '1 1 0%',
           border: 2,
           display: 'flex',
           flexDirection: 'column',
@@ -146,20 +155,54 @@ export default function RightPanel({
           boxShadow: '0 8px 36px #000c 0.12',
         }}
       >
-        <div style={sectionTitleStyle}>Activity Log</div>
-        <div
+        <button
+          type='button'
+          onClick={() => {
+            if (isMobile) setActivityCollapsed(prev => !prev);
+          }}
           style={{
-            background: bgAccent,
-            borderRadius: 0,
-            border: 2,
-            padding: 6,
-            flex: 1,
-            minHeight: 0,
-            overflowY: 'auto',
+            ...sectionTitleStyle,
+            background: 'transparent',
+            border: 'none',
+            cursor: isMobile ? 'pointer' : 'default',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 10,
+            padding: '8px 0',
+            opacity: isMobile ? 0.96 : 1,
           }}
         >
-          <ActivityLogTable logs={activityLogs} assetNameMap={assetNameMap} compact />
-        </div>
+          Activity Log
+          {isMobile && (
+            <span
+              style={{
+                display: 'inline-block',
+                transform: activityCollapsed ? 'rotate(180deg)' : 'none',
+                transition: 'transform 180ms ease',
+                fontSize: '0.9em',
+              }}
+              aria-hidden='true'
+            >
+              {'v'}
+            </span>
+          )}
+        </button>
+        {(!isMobile || !activityCollapsed) && (
+          <div
+            style={{
+              background: bgAccent,
+              borderRadius: 0,
+              border: 2,
+              padding: 6,
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+            }}
+          >
+            <ActivityLogTable logs={activityLogs} assetNameMap={assetNameMap} compact />
+          </div>
+        )}
       </div>
     </div>
   );

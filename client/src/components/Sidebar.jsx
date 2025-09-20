@@ -7,7 +7,7 @@
 // ==============================
 import Lottie from 'lottie-react';
 import { useEffect, useRef, useState } from 'react';
-import { FaArrowLeft } from 'react-icons/fa';
+import { FaArrowLeft, FaSignOutAlt } from 'react-icons/fa';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import AssetManagementIcon from '../assets/Fly-HQ Icons/AssetManagementIcon.json';
 import CustomersIcon from '../assets/Fly-HQ Icons/CustomersIcon.json';
@@ -91,11 +91,39 @@ function SidebarImageIcon({ src, alt = '' }) {
 // ==============================
 function useDiscordUser() {
   const [user, setUser] = useState(null);
+
   useEffect(() => {
     const stored = localStorage.getItem('flyiq_user');
-    if (stored) { try { setUser(JSON.parse(stored)); } catch { localStorage.removeItem('flyiq_user'); } }
+    if (stored) {
+      try { setUser(JSON.parse(stored)); }
+      catch { localStorage.removeItem('flyiq_user'); setUser(null); }
+    } else {
+      setUser(null);
+    }
   }, []);
-  return user;
+
+  useEffect(() => {
+    const handleStorage = event => {
+      if (event.key !== 'flyiq_user') return;
+      if (event.newValue) {
+        try { setUser(JSON.parse(event.newValue)); }
+        catch { setUser(null); }
+      } else {
+        setUser(null);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const logout = () => {
+    localStorage.removeItem('flyiq_user');
+    setUser(null);
+    window.location.href = '/';
+  };
+
+  return { user, logout };
 }
 function getAvatarUrl(user) {
   if (!user) return 'https://cdn.discordapp.com/embed/avatars/0.png';
@@ -167,13 +195,14 @@ export default function Sidebar({ open = false }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [hoveredIndex, setHoveredIndex] = useState(null);
-  const user = useDiscordUser();
+  const { user, logout } = useDiscordUser();
 
   const sortedSidebarItems = [...baseItems].sort((a, b) => a.label.localeCompare(b.label));
   const ROW = 'flex items-center h-11 px-0 w-full transition leading-none';
   const labelBase = 'ml-0 text-white text-sm border-b border-[#6a7257] uppercase font-bold whitespace-nowrap transition-opacity duration-300 w-full text-left';
   const labelWhenClosed = 'opacity-0 group-hover:opacity-100';
   const labelClass = `${labelBase} ${open ? 'opacity-100' : labelWhenClosed}`;
+  const actionLabelClass = `${open ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} ml-0 text-white text-xs uppercase font-bold whitespace-nowrap transition-opacity duration-300 text-left`;
 
   return (
     <aside
@@ -265,6 +294,18 @@ export default function Sidebar({ open = false }) {
             {user?.username || ''}
           </span>
         </div>
+        {user ? (
+          <button
+            type='button'
+            onClick={logout}
+            className={`${ROW} mt-3 rounded-md border border-[#6a7257]/60 bg-black/30 hover:bg-[#6a7257]/20 transition-colors duration-200`}
+          >
+            <SidebarIconContainer>
+              <FaSignOutAlt size={20} className='text-[#6a7257]' />
+            </SidebarIconContainer>
+            <span className={actionLabelClass}>Log Out</span>
+          </button>
+        ) : null}
       </div>
     </aside>
   );

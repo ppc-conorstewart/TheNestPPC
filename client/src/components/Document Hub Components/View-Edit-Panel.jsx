@@ -17,7 +17,15 @@ const THEME = {
   paper: 'rgba(255,255,255,0.06)'
 };
 
-const API_BASE = process.env.REACT_APP_API_URL;
+const API_BASE = process.env.REACT_APP_API_URL || '';
+
+const buildAbsoluteUrl = (input = '') => {
+  if (!input) return '';
+  const str = String(input);
+  if (/^https?:/i.test(str)) return str;
+  const rel = str.startsWith('/') ? str : `/${str}`;
+  return API_BASE ? `${API_BASE.replace(/\/$/, '')}${rel}` : rel;
+};
 
 // =====================================================
 // LIGHT MODE CSS CONSTANTS
@@ -145,15 +153,15 @@ function downloadLabel(kind) {
 }
 function chooseInlineUrl(doc) {
   if (!doc) return '';
-  if (doc.file && doc.file.url) return `${API_BASE}${doc.file.url}`;
-  if (doc.fileUrl) return `${API_BASE}${doc.fileUrl}`;
-  if (doc.id) return `${API_BASE}/api/documents/${doc.id}/file`;
+  if (doc.file && doc.file.url) return buildAbsoluteUrl(doc.file.url);
+  if (doc.fileUrl) return buildAbsoluteUrl(doc.fileUrl);
+  if (doc.id) return buildAbsoluteUrl(`/api/documents/${doc.id}/file`);
   return '';
 }
 function chooseDownloadUrl(doc) {
   if (!doc) return '';
-  if (doc.downloadUrl) return `${API_BASE}${doc.downloadUrl}`;
-  if (doc.id) return `${API_BASE}/api/documents/${doc.id}/download`;
+  if (doc.downloadUrl) return buildAbsoluteUrl(doc.downloadUrl);
+  if (doc.id) return buildAbsoluteUrl(`/api/documents/${doc.id}/download`);
   const u = chooseInlineUrl(doc);
   return u || '';
 }

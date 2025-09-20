@@ -42,7 +42,7 @@ function toPublicUrl(storagePath) {
   const norm = String(storagePath).replace(/\\/g, '/');
   const idx = norm.lastIndexOf('/uploads/');
   const rel = idx >= 0 ? norm.slice(idx) : `/uploads/docs/${norm.split('/').pop()}`;
-  return API_BASE ? `${API_BASE}${rel}` : rel;
+  return rel.startsWith('/') ? rel : `/${rel}`;
 }
 function mapDoc(row) {
   const storage = row.latest_storage_path || row.storage_path;

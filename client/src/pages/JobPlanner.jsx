@@ -16,8 +16,10 @@ import TableView from '../components/JobPlannerComponents/TableView';
 import { showPalomaToast } from '../utils/toastUtils';
 import useCustomerLogos from '../hooks/useCustomerLogos';
 import { getCustomerLogo as mapCustomerLogo } from '../utils/customerLogos';
+import useMediaQuery from '../hooks/useMediaQuery';
 
 export default function JobPlanner() {
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   const [jobs, setJobs] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -323,15 +325,15 @@ export default function JobPlanner() {
   });
 
   const renderMonthTabs = () => (
-    <div className="flex items-center justify-between overflow-x-auto space-x-1 scrollbar-hide w-full">
+    <div className='flex items-center justify-between overflow-x-auto space-x-1 scrollbar-hide w-full pr-2'>
       {/* Left: Month tabs */}
-      <div className="flex items-center space-x-1">
+      <div className='flex items-center space-x-1'>
         <button
           key="full-year"
           className={`px-4 py-1.5 rounded-t-lg font-semibold transition-all text-xs whitespace-nowrap
             ${selectedMonthKey === "Full Year" ? 'border-b-4 border-[#6a7257] text-[#6a7257] bg-black' : 'text-white bg-zinc-900 hover:bg-zinc-800'}`}
           onClick={() => setSelectedMonthKey("Full Year")}
-          style={{ minWidth: 120, outline: 'none' }}
+          style={{ minWidth: isMobile ? 96 : 120, outline: 'none' }}
         >
           Full Year
         </button>
@@ -341,7 +343,7 @@ export default function JobPlanner() {
             className={`px-4 py-1.5 rounded-t-lg font-semibold transition-all text-xs whitespace-nowrap
               ${key === selectedMonthKey ? 'border-b-4 border-[#6a7257] text-[#6a7257] bg-black' : 'text-white bg-zinc-900 hover:bg-zinc-800'}`}
             onClick={() => setSelectedMonthKey(key)}
-            style={{ minWidth: 120, outline: 'none' }}
+            style={{ minWidth: isMobile ? 96 : 120, outline: 'none' }}
           >
             {key}
           </button>
@@ -371,39 +373,40 @@ export default function JobPlanner() {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
+        backgroundAttachment: isMobile ? 'scroll' : 'fixed',
         minHeight: '100%',
-        height: '100%',
+        height: isMobile ? 'auto' : '100%',
         width: '100%',
-        overflow: 'hidden',
-        marginLeft: 10,
-        padding: 0,
-        boxSizing: "border-box"
+        overflowX: 'hidden',
+        overflowY: isMobile ? 'auto' : 'hidden',
+        marginLeft: isMobile ? 0 : 10,
+        padding: isMobile ? '0 0 32px' : 0,
+        boxSizing: 'border-box'
       }}
     >
       <ToastContainer position="bottom-right" autoClose={3400} newestOnTop={true} closeOnClick />
       {/* OUTER WRAPPER */}
       <div
-        className="w-full h-full flex  justify-center items-top"
+        className={`w-full ${isMobile ? 'flex flex-col items-stretch' : 'h-full flex justify-center items-start'}`}
         style={{
-          height: 1032, 
-          minHeight: 1032,
-          width: "100%",
-          minWidth: "100%",
+          height: isMobile ? 'auto' : 1032,
+          minHeight: isMobile ? 'auto' : 1032,
+          width: '100%',
+          minWidth: '100%',
           margin: 0,
-          padding: 0,
-          boxSizing: "border-box",
+          padding: isMobile ? '12px 0' : 0,
+          boxSizing: 'border-box'
         }}
       >
         {/* Main job planner container */}
         <div
-          className="main-content-block  h-full mt-0 shadow-xl flex flex-row"
+          className={`main-content-block h-full mt-0 shadow-xl flex ${isMobile ? 'flex-col' : 'flex-row'}`}
           style={{
             width: "100%",
             maxWidth: "100%",
             minWidth: "100%",
-            height: "100%", 
-            minHeight: "0",
+            height: isMobile ? 'auto' : '100%',
+            minHeight: isMobile ? 'auto' : 0,
             marginTop: "0",
             background: 'rgba(0,0,0,0.86)',
             boxShadow: '0 4px 42px 0 #2229',
@@ -416,15 +419,17 @@ export default function JobPlanner() {
           <div
             className="flex-1 flex flex-col min-w-0"
             style={{
-              height: '100%',
-              overflowY: 'auto',
-              minHeight: 0,
-              maxHeight: '100%',
+              height: isMobile ? 'auto' : '100%',
+              overflowY: isMobile ? 'visible' : 'auto',
+              overflowX: 'hidden',
+              minHeight: isMobile ? 'auto' : 0,
+              maxHeight: isMobile ? 'none' : '100%',
+              paddingBottom: isMobile ? 16 : 0
             }}
           >
             {/* Month Tabs + Add button */}
             <div
-              className="flex justify-between items-center px-6 py- bg-black bg-opacity-90 border-b-4 border-[#6a7257] shadow-xl  mb-0"
+              className={`flex justify-between items-center bg-black bg-opacity-90 border-b-4 border-[#6a7257] shadow-xl mb-0 ${isMobile ? 'px-3 py-3' : 'px-6 py-4'}`}
               style={{
                 width: '100%',
                 margin: 0,
@@ -434,7 +439,7 @@ export default function JobPlanner() {
               {renderMonthTabs()}
             </div>
 
-            <div className="w-full" style={{ margin: 0, padding: 0 }}>
+            <div className='w-full' style={{ margin: 0, padding: isMobile ? '0 12px' : 0 }}>
               <TableView
                 monthGroups={monthGroups}
                 isVisible={(job) => {
@@ -466,7 +471,14 @@ export default function JobPlanner() {
               />
             </div>
 
-            <div className="w-full" style={{ margin: 0, padding: 0 }}>
+            <div
+              className='w-full'
+              style={{
+                margin: 0,
+                padding: isMobile ? '12px' : 0,
+                overflowX: 'auto'
+              }}
+            >
               <CalendarView
                 months={months}
                 currentYear={currentYear}

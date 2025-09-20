@@ -1,55 +1,73 @@
 import { API_BASE_URL } from '../api';
 
-const API_BASE = (API_BASE_URL || '').replace(/\/+$/, '');
+const RAW_API_BASE = (API_BASE_URL || '').trim();
+const API_BASE = RAW_API_BASE.replace(/\/+$/, '');
 const WINDOW_ORIGIN = typeof window !== 'undefined' ? window.location.origin : '';
-const IMG_BASE = (API_BASE || WINDOW_ORIGIN || '').replace(/\/+$/, '');
 const LOGO_PATH_PREFIX = '/assets/logos/';
+
+let API_ORIGIN = '';
+try {
+  API_ORIGIN = API_BASE ? new URL(API_BASE).origin : '';
+} catch {
+  API_ORIGIN = '';
+}
+
+const FALLBACK_BASE = (API_BASE || WINDOW_ORIGIN || '').replace(/\/+$/, '');
+const IMG_BASE = (API_ORIGIN || FALLBACK_BASE || '').replace(/\/+$/, '');
 
 function withBase(path) {
   if (!path) return '';
   if (/^https?:\/\//i.test(path)) return path;
   const normalized = path.startsWith('/') ? path : `/${path}`;
-  return IMG_BASE ? `${IMG_BASE}${normalized}` : normalized;
+  if (normalized.startsWith(LOGO_PATH_PREFIX)) {
+    return IMG_BASE ? `${IMG_BASE}${normalized}` : normalized;
+  }
+  return FALLBACK_BASE ? `${FALLBACK_BASE}${normalized}` : normalized;
 }
 
 export function resolveCustomerLogo(value) {
   if (!value || typeof value !== 'string') return null;
-  if (value.startsWith('blob:')) return value;
+
+  const cleaned = value.trim();
+  if (!cleaned) return null;
+  if (cleaned.startsWith('blob:')) return cleaned;
 
   const base = IMG_BASE;
-  if (base && value.startsWith(base)) return value;
+  if (base && cleaned.startsWith(base)) return cleaned;
 
-  if (/^https?:\/\//i.test(value)) {
+  if (/^https?:\/\//i.test(cleaned)) {
     try {
-      const parsed = new URL(value);
+      const parsed = new URL(cleaned);
       const path = parsed.pathname || '';
       if (path.startsWith(LOGO_PATH_PREFIX)) {
         return withBase(path);
       }
-      return value;
+      return cleaned;
     } catch {
-      return value;
+      return cleaned;
     }
   }
 
-  const normalized = value.startsWith('/') ? value : `/${value}`;
+  const normalized = cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
   return withBase(normalized);
 }
 
 export function prepareCustomerLogoForSubmit(value) {
   if (!value || typeof value !== 'string') return '';
-  if (value.startsWith('blob:')) return '';
-  if (/^https?:\/\//i.test(value)) {
+  const cleaned = value.trim();
+  if (!cleaned) return '';
+  if (cleaned.startsWith('blob:')) return '';
+  if (/^https?:\/\//i.test(cleaned)) {
     try {
-      const parsed = new URL(value);
+      const parsed = new URL(cleaned);
       const path = parsed.pathname || '';
       if (path.startsWith(LOGO_PATH_PREFIX)) return path;
-      return value;
+      return cleaned;
     } catch {
-      return value;
+      return cleaned;
     }
   }
-  return value.startsWith('/') ? value : `/${value}`;
+  return cleaned.startsWith('/') ? cleaned : `/${cleaned}`;
 }
 
 export function buildCustomerLogoMap(customers = []) {

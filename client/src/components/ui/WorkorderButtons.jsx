@@ -42,9 +42,9 @@ export function PrimaryButton({ onClick, label }) {
   );
 }
 
-export function SecondaryButton({ onClick, label }) {
+export function SecondaryButton({ onClick, label, disabled }) {
   return (
-    <button onClick={onClick} className="btn-6">
+    <button onClick={onClick} disabled={disabled} className="btn-6 disabled:opacity-50">
       {label}
     </button>
   );

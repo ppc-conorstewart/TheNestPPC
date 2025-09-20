@@ -1,7 +1,7 @@
 // ==============================
 // FLYHQ — IMPORTS
 // ==============================
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useDeferredValue } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { API_BASE_URL } from '../api';
@@ -79,6 +79,7 @@ export default function FlyHQ() {
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'ascending' });
   const [rowsPerPage, setRowsPerPage] = useState(15);
   const [searchTerm, setSearchTerm] = useState('');
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showTransferSuccess, setShowTransferSuccess] = useState(false);
@@ -113,12 +114,19 @@ export default function FlyHQ() {
     window.localStorage.setItem('showRightPanelAssets', showRightPanelAssets);
   }, [showRightPanelAssets]);
 
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false);
+  useEffect(() => {
+    if (!isCompactLayout) setMobilePanelOpen(false);
+  }, [isCompactLayout]);
+
   const [showMasterHistory, setShowMasterHistory] = useState(false);
   const [lastSeenActivityTs, setLastSeenActivityTs] = useState(() => {
     const v = window.localStorage.getItem('lastSeenActivityTs');
     return v ? parseInt(v, 10) : 0;
   });
   const [hasUnread, setHasUnread] = useState(false);
+
+  const panelVisible = isCompactLayout ? mobilePanelOpen : showRightPanelAssets;
 
   // ==============================
   // DATA HOOKS
@@ -139,8 +147,8 @@ export default function FlyHQ() {
   );
 
   const searched = useMemo(() => {
-    if (!searchTerm) return filtered;
-    const t = searchTerm.toLowerCase();
+    if (!deferredSearchTerm) return filtered;
+    const t = deferredSearchTerm.toLowerCase();
     return filtered.filter(
       (a) =>
         (a?.id ? String(a.id) : '').toLowerCase().includes(t) ||
@@ -150,11 +158,11 @@ export default function FlyHQ() {
         (a?.location || '').toLowerCase().includes(t) ||
         (a?.status || '').toLowerCase().includes(t)
     );
-  }, [filtered, searchTerm]);
+  }, [filtered, deferredSearchTerm]);
 
   useEffect(() => {
     setPage(1);
-  }, [searchTerm, filters, showMAAssets]);
+  }, [deferredSearchTerm, filters, showMAAssets]);
 
   const paginatedWithSearch = useMemo(() => {
     const sorted = [...searched].sort((a, b) => {
@@ -207,11 +215,19 @@ export default function FlyHQ() {
   const tableScrollRef = useRef(null);
   useEffect(() => {
     if (activeTab !== 'assets') return;
+    if (isCompactLayout) {
+      setRowsPerPage(15);
+      return;
+    }
 
     let raf = 0;
     let t = 0;
 
     function handleResize() {
+      if (isCompactLayout) {
+        setRowsPerPage(15);
+        return;
+      }
       cancelAnimationFrame(raf);
       clearTimeout(t);
       t = setTimeout(() => {
@@ -243,19 +259,22 @@ export default function FlyHQ() {
         try { ro.disconnect(); } catch {}
       }
     };
-  }, [activeTab, showRightPanelAssets]);
+  }, [activeTab, isCompactLayout, showRightPanelAssets]);
 
   useEffect(() => {
-    if (activeTab === 'assets') {
-      requestAnimationFrame(() => {
-        if (tableScrollRef.current) {
-          const tableHeight = tableScrollRef.current.offsetHeight || 0;
-          const fitRows = Math.floor((tableHeight - HEADER_HEIGHT) / ROW_HEIGHT);
-          setRowsPerPage(fitRows > 0 ? fitRows : 1);
-        }
-      });
+    if (activeTab !== 'assets') return;
+    if (isCompactLayout) {
+      setRowsPerPage(15);
+      return;
     }
-  }, [activeTab, showRightPanelAssets]);
+    requestAnimationFrame(() => {
+      if (tableScrollRef.current) {
+        const tableHeight = tableScrollRef.current.offsetHeight || 0;
+        const fitRows = Math.floor((tableHeight - HEADER_HEIGHT) / ROW_HEIGHT);
+        setRowsPerPage(fitRows > 0 ? fitRows : 1);
+      }
+    });
+  }, [activeTab, isCompactLayout, showRightPanelAssets]);
 
   // ==============================
   // RIGHT PANEL / ACTIVITY
@@ -433,6 +452,10 @@ export default function FlyHQ() {
   }, [fetchAssets, fetchActivityLogs, newLocation, selectedAssetIds]);
 
   // Removed polling - data loads on mount only
+  useEffect(() => {
+    fetchAssets();
+    fetchActivityLogs();
+  }, [fetchAssets, fetchActivityLogs]);
 
   const latestActivityTs = useMemo(() => {
     if (!Array.isArray(activityLogs) || !activityLogs.length) return 0;
@@ -445,10 +468,10 @@ export default function FlyHQ() {
   }, [activityLogs]);
 
   useEffect(() => {
-    if (!showRightPanelAssets && latestActivityTs > lastSeenActivityTs) {
+    if (!panelVisible && latestActivityTs > lastSeenActivityTs) {
       setHasUnread(true);
     }
-  }, [latestActivityTs, showRightPanelAssets, lastSeenActivityTs]);
+  }, [latestActivityTs, panelVisible, lastSeenActivityTs]);
 
   const openRightPanel = useCallback(() => {
     setShowRightPanelAssets(true);
@@ -460,6 +483,19 @@ export default function FlyHQ() {
   }, [latestActivityTs]);
   const closeRightPanel = useCallback(() => setShowRightPanelAssets(false), []);
 
+  const handlePanelVisibility = useCallback(
+    (val) => {
+      if (val) {
+        openRightPanel();
+        if (isCompactLayout) setMobilePanelOpen(true);
+      } else {
+        closeRightPanel();
+        if (isCompactLayout) setMobilePanelOpen(false);
+      }
+    },
+    [closeRightPanel, isCompactLayout, openRightPanel]
+  );
+
   const initialSelection = useMemo(() => {
     const tab = (searchParams.get('tab') || '').toLowerCase();
     const assembly = searchParams.get('assembly') || '';
@@ -470,17 +506,38 @@ export default function FlyHQ() {
   // ==============================
   // LAYOUT
   // ==============================
+  const rootStyle = useMemo(
+    () => ({
+      minHeight: '100%',
+      marginLeft: isCompactLayout ? 0 : 6,
+      width: '100%',
+      position: 'relative',
+      overflowX: 'hidden',
+      overflowY: isCompactLayout ? 'auto' : 'hidden',
+      paddingBottom: isCompactLayout ? 24 : 0
+    }),
+    [isCompactLayout]
+  );
+
+  const frameClass = isCompactLayout
+    ? 'relative flex flex-col items-stretch justify-start w-full'
+    : 'absolute top-0 left-0 right-0 bottom-0 flex items-stretch justify-center';
+  const frameStyle = useMemo(
+    () => ({
+      zIndex: 1,
+      paddingRight: isCompactLayout ? 0 : 0,
+      minHeight: isCompactLayout ? 'auto' : '100%',
+      minWidth: '100%',
+      boxSizing: 'border-box',
+      width: '100%',
+      gap: isCompactLayout ? 24 : 0,
+      paddingTop: isCompactLayout ? 12 : 0
+    }),
+    [isCompactLayout]
+  );
+
   return (
-    <div
-      className='relative font-erbaum uppercase text-sm text-white'
-      style={{
-        minHeight: '100%',
-        marginLeft: 6,
-        width: '100%',
-        position: 'relative',
-        overflow: 'hidden'
-      }}
-    >
+    <div className='relative font-erbaum uppercase text-sm text-white' style={rootStyle}>
       {/* TOASTS */}
       <ToastContainer
         position='bottom-right'
@@ -492,22 +549,19 @@ export default function FlyHQ() {
         theme='dark'
       />
 
-      <div
-        className='absolute top-0 left-0 right-0 bottom-0 flex items-stretch justify-center'
-        style={{ zIndex: 1, paddingRight: 0, minHeight: '100%', minWidth: '100%', boxSizing: 'border-box', width: '100%' }}
-      >
+      <div className={frameClass} style={frameStyle}>
         <div
           style={{
             borderRadius: '0px',
             maxWidth: 'none',
             width: '100%',
-            height: '100%',
+            height: isCompactLayout ? 'auto' : '100%',
             margin: '0 auto',
             border: '2px solid #282d25',
             boxShadow: '0 4px 36px 0 #10141177',
             display: 'flex',
             flexDirection: 'column',
-            minHeight: 0,
+            minHeight: isCompactLayout ? 'auto' : 0,
             background: 'transparent'
           }}
         >
@@ -516,8 +570,8 @@ export default function FlyHQ() {
             <AssetTabsNav
               activeTab={activeTab}
               setActiveTab={setTab}
-              showRightPanelAssets={showRightPanelAssets}
-              setShowRightPanelAssets={(val) => (val ? openRightPanel() : closeRightPanel())}
+              showRightPanelAssets={panelVisible}
+              setShowRightPanelAssets={handlePanelVisibility}
               unreadBadge={hasUnread}
               masterHistoryOpen={showMasterHistory}
               onToggleMasterHistory={() => setShowMasterHistory((v) => !v)}
@@ -534,9 +588,9 @@ export default function FlyHQ() {
                 borderTop: '3px solid #6a7257',
                 border: '2px solid #282d25',
                 borderRadius: '4px 4px 2px 6px',
-                height: '100%',
+                height: isCompactLayout ? 'auto' : '100%',
                 boxSizing: 'border-box',
-                minHeight: 0,
+                minHeight: isCompactLayout ? 'auto' : 0,
                 marginBottom: 20,
                 position: 'relative',
                 background: 'transparent',
@@ -547,15 +601,15 @@ export default function FlyHQ() {
               <div
                 className='flex flex-col'
                 style={{
-                  flex: showRightPanelAssets ? '1 1 auto' : '1 1 100%',
+                  flex: panelVisible ? '1 1 auto' : '1 1 100%',
                   minWidth: isCompactLayout ? '100%' : 1100,
                   borderRight: isCompactLayout ? '0' : '2px solid #282d25',
                   border: '2px solid #282d25',
-                  height: '100%',
+                  height: isCompactLayout ? 'auto' : '100%',
                   padding: '4px 4px 4px 4px',
                   boxSizing: 'border-box',
                   fontSize: '0.75rem',
-                  minHeight: 0,
+                  minHeight: isCompactLayout ? 'auto' : 0,
                   paddingBottom: 14,
                   transition: 'flex 420ms cubic-bezier(.16,1,.3,1)',
                   background: 'transparent'
@@ -579,8 +633,17 @@ export default function FlyHQ() {
                   onToggleMAAssets={handleToggleMA}
                 />
 
-                <div ref={tableScrollRef} style={{ flex: 1, overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', minHeight: 0, WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}>
-                  <div style={{ fontSize: '0.66rem', height: '100%' }}>
+                <div
+                  ref={tableScrollRef}
+                  style={{
+                    flex: 1,
+                    overflowX: 'auto',
+                    overflowY: isCompactLayout ? 'auto' : 'hidden',
+                    minHeight: isCompactLayout ? 'auto' : 0,
+                    WebkitOverflowScrolling: 'touch'
+                  }}
+                >
+                  <div style={{ fontSize: '0.66rem', height: isCompactLayout ? 'auto' : '100%' }}>
                     <AssetTable
                       assets={paginatedWithSearch}
                       selectedIds={selectedAssetIds}
@@ -605,24 +668,26 @@ export default function FlyHQ() {
 
               <div
                 style={{
-                  width: isCompactLayout ? '100%' : showRightPanelAssets ? 520 : 0,
-                  minWidth: isCompactLayout ? '100%' : showRightPanelAssets ? 480 : 0,
-                  flex: isCompactLayout ? '1 1 100%' : `0 0 ${showRightPanelAssets ? 520 : 0}px`,
-                  overflowX: isCompactLayout ? 'auto' : 'hidden',
-                  overflowY: 'hidden',
-                  WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto',
-                  display: 'flex',
-                  opacity: showRightPanelAssets || isCompactLayout ? 1 : 0,
-                  transform: isCompactLayout ? 'translateX(0)' : showRightPanelAssets ? 'translateX(0)' : 'translateX(14px)',
+                  width: isCompactLayout ? '100%' : panelVisible ? 520 : 0,
+                  minWidth: isCompactLayout ? '100%' : panelVisible ? 480 : 0,
+                  flex: isCompactLayout ? '1 1 100%' : `0 0 ${panelVisible ? 520 : 0}px`,
+                  overflowX: 'auto',
+                  overflowY: 'auto',
+                  WebkitOverflowScrolling: 'touch',
+                  display: isCompactLayout ? 'none' : 'flex',
+                  opacity: panelVisible || isCompactLayout ? 1 : 0,
+                  transform: isCompactLayout ? 'translateX(0)' : panelVisible ? 'translateX(0)' : 'translateX(14px)',
                   transitionProperty: 'flex-basis, width, min-width, opacity, transform, box-shadow, filter',
                   transitionDuration: '420ms',
                   transitionTimingFunction: 'cubic-bezier(.16,1,.3,1)',
-                  boxShadow: showRightPanelAssets && !isCompactLayout ? 'inset 0 0 0 1px #23251d, -10px 0 26px #000a' : 'none',
-                  filter: showRightPanelAssets || isCompactLayout ? 'saturate(1)' : 'saturate(0.9)',
+                  boxShadow: panelVisible && !isCompactLayout ? 'inset 0 0 0 1px #23251d, -10px 0 26px #000a' : 'none',
+                  filter: panelVisible || isCompactLayout ? 'saturate(1)' : 'saturate(0.9)',
                   marginTop: isCompactLayout ? 12 : 0
                 }}
               >
-                <RightPanel filteredAssets={searched} activityLogs={activityLogs} assetNameMap={assetNameMap} activityLogHeight={350} />
+                {!isCompactLayout && (
+                  <RightPanel filteredAssets={searched} activityLogs={activityLogs} assetNameMap={assetNameMap} activityLogHeight={350} />
+                )}
               </div>
             </div>
           )}
@@ -631,7 +696,17 @@ export default function FlyHQ() {
           {activeTab === 'assemblies' && (
             <div
               className='flex flex-row justify-center items-stretch mx-auto'
-              style={{ width: '100%', padding: 0, borderRight: '3px solid #282d25', borderTop: '2px solid #6a7257', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
+              style={{
+                width: '100%',
+                padding: 0,
+                borderRight: '3px solid #282d25',
+                borderTop: '2px solid #6a7257',
+                borderRadius: '4px 4px 2px 6px',
+                height: isCompactLayout ? 'auto' : '100%',
+                boxSizing: 'border-box',
+                minHeight: isCompactLayout ? 'auto' : 0,
+                background: 'transparent'
+              }}
             >
               <MasterAssembliesHub historyOpen={showMasterHistory} setHistoryOpen={setShowMasterHistory} initialSelection={initialSelection} />
             </div>
@@ -641,14 +716,47 @@ export default function FlyHQ() {
           {activeTab === 'ma_db' && (
             <div
               className='flex flex-row justify-center items-stretch mx-auto'
-              style={{ width: '100%', padding: 0, borderTop: '3px solid #6a7257', border: '2px solid #282d25', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
+              style={{
+                width: '100%',
+                padding: 0,
+                borderTop: '3px solid #6a7257',
+                border: '2px solid #282d25',
+                borderRadius: '4px 4px 2px 6px',
+                height: isCompactLayout ? 'auto' : '100%',
+                boxSizing: 'border-box',
+                minHeight: isCompactLayout ? 'auto' : 0,
+                background: 'transparent'
+              }}
             >
               <div
                 className='flex flex-col'
-                style={{ flex: '1 1 auto', minWidth: isCompactLayout ? '100%' : 1100, border: '2px solid #282d25', height: '100%', padding: isCompactLayout ? '12px' : '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0, background: 'transparent', overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}
+                style={{
+                  flex: '1 1 auto',
+                  minWidth: isCompactLayout ? '100%' : 1100,
+                  border: '2px solid #282d25',
+                  height: isCompactLayout ? 'auto' : '100%',
+                  padding: isCompactLayout ? '12px' : '18px 18px 10px 10px',
+                  boxSizing: 'border-box',
+                  fontSize: '0.75rem',
+                  margin: '0 auto',
+                  minHeight: isCompactLayout ? 'auto' : 0,
+                  background: 'transparent',
+                  overflowX: 'auto',
+                  overflowY: isCompactLayout ? 'auto' : 'hidden',
+                  WebkitOverflowScrolling: 'touch'
+                }}
               >
-                <div ref={tableScrollRef} style={{ flex: 1, overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', minHeight: 0, WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}>
-                  <div style={{ fontSize: '0.66rem', height: '100%' }}>
+                <div
+                  ref={tableScrollRef}
+                  style={{
+                    flex: 1,
+                    overflowX: 'auto',
+                    overflowY: isCompactLayout ? 'auto' : 'hidden',
+                    minHeight: isCompactLayout ? 'auto' : 0,
+                    WebkitOverflowScrolling: 'touch'
+                  }}
+                >
+                  <div style={{ fontSize: '0.66rem', height: isCompactLayout ? 'auto' : '100%' }}>
                     <MasterAssembliesDBTable />
                   </div>
                 </div>
@@ -660,13 +768,37 @@ export default function FlyHQ() {
           {activeTab === 'analytics' && (
             <div
               className='flex flex-row justifycenter items-stretch mx-auto'
-              style={{ width: '100%', padding: 0, borderTop: '3px solid #6a7257', border: '2px solid #282d25', borderRadius: '4px 4px 2px 6px', height: '100%', boxSizing: 'border-box', minHeight: 0, background: 'transparent' }}
+              style={{
+                width: '100%',
+                padding: 0,
+                borderTop: '3px solid #6a7257',
+                border: '2px solid #282d25',
+                borderRadius: '4px 4px 2px 6px',
+                height: isCompactLayout ? 'auto' : '100%',
+                boxSizing: 'border-box',
+                minHeight: isCompactLayout ? 'auto' : 0,
+                background: 'transparent'
+              }}
             >
               <div
                 className='flex flex-col'
-                style={{ flex: '1 1 auto', minWidth: isCompactLayout ? '100%' : 1100, border: '2px solid #282d25', height: '100%', padding: isCompactLayout ? '12px' : '18px 18px 10px 10px', boxSizing: 'border-box', fontSize: '0.75rem', margin: '0 auto', minHeight: 0, background: 'transparent', overflowX: isCompactLayout ? 'auto' : 'hidden', overflowY: 'hidden', WebkitOverflowScrolling: isCompactLayout ? 'touch' : 'auto' }}
+                style={{
+                  flex: '1 1 auto',
+                  minWidth: isCompactLayout ? '100%' : 1100,
+                  border: '2px solid #282d25',
+                  height: isCompactLayout ? 'auto' : '100%',
+                  padding: isCompactLayout ? '12px' : '18px 18px 10px 10px',
+                  boxSizing: 'border-box',
+                  fontSize: '0.75rem',
+                  margin: '0 auto',
+                  minHeight: isCompactLayout ? 'auto' : 0,
+                  background: 'transparent',
+                  overflowX: 'auto',
+                  overflowY: isCompactLayout ? 'auto' : 'hidden',
+                  WebkitOverflowScrolling: 'touch'
+                }}
               >
-                <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+                <div style={{ flex: 1, overflow: 'auto', minHeight: isCompactLayout ? 'auto' : 0 }}>
                   <AssetAnalytics assets={assets} activityLogs={activityLogs} />
                 </div>
               </div>
@@ -675,6 +807,57 @@ export default function FlyHQ() {
 
           {/* TAB: DOWNED ASSETS */}
           {activeTab === 'downed' && <DownedAssetsTab allAssets={assets} activityLogs={activityLogs} />}
+
+          {activeTab === 'assets' && isCompactLayout && (
+            <>
+              <button
+                type='button'
+                onClick={() => handlePanelVisibility(!mobilePanelOpen)}
+                className='fixed bottom-6 right-6 z-30 rounded-full shadow-lg font-erbaum font-bold uppercase tracking-wide text-xs'
+                style={{
+                  background: '#6a7257',
+                  color: '#0b0d09',
+                  padding: '0.85rem 1.2rem',
+                  letterSpacing: '0.08em'
+                }}
+              >
+                {mobilePanelOpen ? 'Hide Insights' : 'Show Insights'}
+              </button>
+
+              {mobilePanelOpen && (
+                <div
+                  className='fixed inset-0 z-40 flex items-end justify-center'
+                  style={{ background: 'rgba(0,0,0,0.55)' }}
+                >
+                  <div
+                    className='w-full max-w-lg bg-[#0d0f0b] border-t-4 border-[#6a7257] rounded-t-2xl shadow-2xl flex flex-col'
+                    style={{ maxHeight: '85vh' }}
+                  >
+                    <div className='flex items-center justify-between px-4 py-3 border-b border-[#23251d]'>
+                      <h3 className='font-erbaum text-sm text-[#cfd3c3] tracking-wide uppercase'>Asset Summary & Activity</h3>
+                      <button
+                        type='button'
+                        onClick={() => handlePanelVisibility(false)}
+                        className='text-[#cfd3c3] font-bold text-lg'
+                        style={{ lineHeight: 1 }}
+                        aria-label='Close summary panel'
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className='flex-1 overflow-y-auto px-2 py-2'>
+                      <RightPanel
+                        filteredAssets={searched}
+                        activityLogs={activityLogs}
+                        assetNameMap={assetNameMap}
+                        activityLogHeight={350}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 

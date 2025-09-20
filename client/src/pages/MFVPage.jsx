@@ -14,6 +14,7 @@ import MFVTableView from '../components/MFV Page Components/MFVTableView';
 // --- ADD: PDF Report Generation ---
 import generateMfvReport from '../utils/generateMfvReport';
 import { API_BASE_URL } from '../api';
+import useMediaQuery from '../hooks/useMediaQuery';
 
 const API_BASE = API_BASE_URL || '';
 
@@ -160,6 +161,10 @@ function normalizePpcId(input) {
 // ==============================
 export default function MFVPageWrapper() {
   const navigate = useNavigate();
+
+  const isTablet = useMediaQuery('(max-width: 1280px)');
+  const isMobile = useMediaQuery('(max-width: 960px)');
+  const isPhone = useMediaQuery('(max-width: 640px)');
 
   const [allSheets, setAllSheets] = useState({});
   const [loading, setLoading] = useState(true);
@@ -436,6 +441,79 @@ export default function MFVPageWrapper() {
   };
 
   // ==============================
+  // Section: Summary-level MFV Analytics (fed into panel)
+  // ==============================
+  const summaryMfvMetrics = useMemo(() => {
+    const summarySheetData = allSheets.summary || {};
+    const headers = Array.isArray(summarySheetData.headers) ? summarySheetData.headers : [];
+    const rows = Array.isArray(summarySheetData.rows) ? summarySheetData.rows : [];
+    if (!headers.length || !rows.length) return null;
+
+    const normalize = (value) => String(value ?? '').toUpperCase().replace(/[‐–—]/g, '-');
+    const findIdx = (matcher) => headers.findIndex(h => matcher(normalize(h)));
+
+    const idxSize = findIdx(text => text.includes('VALVE SIZE'));
+    const idxQual = findIdx(text => text.includes('VALVE IS QUALIFIED'));
+
+    if (idxSize === -1 || idxQual === -1) return null;
+
+    const keyVariants = (value, fallback) => {
+      const base = String(value ?? '').replace(/\s+/g, ' ').trim();
+      const list = [base];
+      if (base.endsWith(':')) list.push(base.slice(0, -1));
+      if (fallback) list.push(fallback);
+      return list.filter(Boolean);
+    };
+
+    const sizeKeys = keyVariants(headers[idxSize], 'VALVE SIZE');
+    const qualKeys = keyVariants(headers[idxQual], 'VALVE IS QUALIFIED AS AN');
+
+    const readCell = (row, index, keys) => {
+      if (Array.isArray(row)) return row[index];
+      if (row && typeof row === 'object') {
+        for (const key of keys) {
+          if (Object.prototype.hasOwnProperty.call(row, key)) return row[key];
+        }
+      }
+      return undefined;
+    };
+
+    const classifySize = (value) => {
+      const text = normalize(value);
+      if (!text) return 'OTHER';
+      if (/(5\s*[-\/]?\s*1\/8)/.test(text)) return '5-1/8';
+      if (/(7\s*[-\/]?\s*1\/16)/.test(text)) return '7-1/16';
+      return 'OTHER';
+    };
+
+    let denom518 = 0;
+    let denom716 = 0;
+    let mfv518 = 0;
+    let mfv716 = 0;
+
+    rows.forEach((row) => {
+      const sizeRaw = readCell(row, idxSize, sizeKeys);
+      const qualRaw = readCell(row, idxQual, qualKeys);
+
+      const sizeKey = classifySize(sizeRaw);
+      const isMfv = normalize(qualRaw).includes('MFV');
+
+      if (sizeKey === '5-1/8') {
+        denom518 += 1;
+        if (isMfv) mfv518 += 1;
+      } else if (sizeKey === '7-1/16') {
+        denom716 += 1;
+        if (isMfv) mfv716 += 1;
+      }
+    });
+
+    const share518 = denom518 > 0 ? (mfv518 / denom518) * 100 : 0;
+    const share716 = denom716 > 0 ? (mfv716 / denom716) * 100 : 0;
+
+    return { share518, share716, denom518, denom716, mfv518, mfv716 };
+  }, [allSheets.summary]);
+
+  // ==============================
   // Section: Analytics Panel Props (Top Submitters passthrough unchanged)
   // ==============================
   function getTop5Submitters(headers, rows) {
@@ -612,32 +690,43 @@ export default function MFVPageWrapper() {
     </div>
   );
 
+  const containerWidth = isTablet ? '100%' : '80vw';
+
   return (
     <div
-      className="min-h-8xl min-w-full flex items-center justify-center bg-fixed bg-cover bg-no-repeat p-0 m-0 pt-0"
+      className='min-h-8xl min-w-full flex items-center justify-center bg-cover bg-no-repeat p-0 m-0'
       style={{
         backgroundImage: 'url("/assets/dark-bg.jpg")',
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed'
+        backgroundAttachment: isMobile ? 'scroll' : 'fixed'
       }}
     >
       <div
-        className="w-full h-full max-w-8xl mx-auto  flex flex-col justify-start items-center shadow-2xl border-2 border-[#6a7257] bg-[#181b17e8] backdrop-blur-lg mt-0"
+        className='w-full h-full mx-auto flex flex-col justify-start items-center shadow-2xl border-2 border-[#6a7257] bg-[#181b17e8] backdrop-blur-lg mt-0'
         style={{
-          minHeight: '90vh',
-          minWidth: '80vw',
-          padding: '0 0 0px 0',
+          minHeight: isMobile ? 'auto' : '90vh',
+          minWidth: containerWidth,
+          maxWidth: containerWidth,
+          width: '100%',
+          padding: isMobile ? '16px 12px 32px' : '0 0 0px 0',
           margin: '0 auto',
           boxShadow: '0 10px 60px 6px #23281c99'
         }}
       >
         <div
-          className="w-full flex flex-row items-stretch pt-2 pb-2"
-          style={{ borderBottom: '2px solid #6a7257', background: 'rgba(0, 0, 0, 1)', borderTopLeftRadius: '0px', borderTopRightRadius: '0px' }}
+          className={`w-full flex ${isMobile ? 'flex-col gap-6' : 'flex-row'} items-stretch pt-2 pb-2`}
+          style={{ borderBottom: '2px solid #6a7257', background: 'rgba(0, 0, 0, 1)', borderTopLeftRadius: '0px', borderTopRightRadius: '0px', paddingLeft: isMobile ? 12 : 0, paddingRight: isMobile ? 12 : 0 }}
         >
-          <div className="flex flex-col items-center  w-[1100px] max-w-[1100px] pl-3">
+          <div
+            className={`flex flex-col ${isMobile ? 'items-start' : 'items-center'} gap-3 pl-3 pr-3`}
+            style={{
+              width: '100%',
+              maxWidth: isMobile ? '100%' : 1100,
+              flex: isMobile ? '1 1 auto' : '0 0 60%'
+            }}
+          >
             <div className="flex flex-row items-center mb-0 gap-0">
               <img
                 src="/assets/mfv-icon.png"
@@ -649,10 +738,10 @@ export default function MFVPageWrapper() {
                 MFV Information Hub
               </h1>
             </div>
-            <p className="mt-4 text-sm font-medium text-white font-erbaum tracking-wide uppercase">
+            <p className='mt-4 text-sm font-medium text-white font-erbaum tracking-wide uppercase text-center md:text-left w-full'>
               Valve Test Results, Build Reports, & OEM Data
             </p>
-            <div className="w-full flex justify-center mt-1 mb-2">
+            <div className='w-full flex justify-center md:justify-center mt-1 mb-2'>
               <input
                 type="text"
                 placeholder=" Search by PPC# or Valve Name"
@@ -664,7 +753,8 @@ export default function MFVPageWrapper() {
                   boxShadow: '0 3px 12px 0 #23281c80',
                   fontWeight: 400,
                   letterSpacing: '0.05em',
-                  minWidth: 700
+                  minWidth: isMobile ? '100%' : 700,
+                  width: '100%'
                 }}
               />
             </div>
@@ -677,20 +767,31 @@ export default function MFVPageWrapper() {
                   ${activeTab === tab.key
                     ? 'border-[#6a7257] bg-[#23281c] text-white shadow'
                     : 'border-[#35392E] bg-black text-[#b0b79f] hover:bg-[#23281c] hover:text-white'}`}
-                  style={{ minWidth: 100, letterSpacing: '0.05em' }}
+                  style={{ minWidth: isPhone ? 84 : isMobile ? 92 : 100, letterSpacing: '0.05em' }}
                 >
                   {tab.label}
                 </button>
               ))}
             </div>
           </div>
-          <div className="flex-1 flex items-center justify-center pl-0 pr-6">
-            <div className="rounded-lg bg-black border border-[#6a7257] h-full w-full shadow-xl flex justify-center p-1" style={{ minHeight: 160, maxHeight: 40 }}>
+          <div
+            className='flex-1 flex items-center justify-center pl-0 pr-6'
+            style={{
+              paddingLeft: isMobile ? 0 : undefined,
+              paddingRight: isMobile ? 0 : 24,
+              marginTop: isMobile ? 16 : 0
+            }}
+          >
+            <div
+              className='rounded-lg bg-black border border-[#6a7257] h-full w-full shadow-xl flex justify-center p-1'
+              style={{ minHeight: isMobile ? 'auto' : 160, padding: isMobile ? 12 : 4 }}
+            >
               <MFVAnalyticsPanel
                 headers={analyticsPanelProps.headers}
                 rows={analyticsPanelProps.rows}
                 tabLabel={analyticsPanelProps.tabLabel}
                 qualificationStats={qualificationStats}
+                metrics={summaryMfvMetrics}
               />
             </div>
           </div>
@@ -711,39 +812,40 @@ export default function MFVPageWrapper() {
 
         {searchTerm.trim() === '' && (
           <div
-            className="w-full flex-1 flex flex-col justify-start items-center py-0 px-0"
+            className='w-full flex-1 flex flex-col justify-start items-center py-0 px-0'
             style={{
-              minHeight: 850,
+              minHeight: isMobile ? 'auto' : 850,
               minWidth: '100%',
-              overflowY: 'auto',
-              overflowX: 'hidden'
+              overflowY: isMobile ? 'visible' : 'auto',
+              overflowX: 'hidden',
+              padding: isMobile ? '0 12px 12px' : '0'
             }}
           >
             {activeTab === 'body' ? (
               <div
-                className="w-full flex justify-center items-stretch"
+                className={`w-full flex ${isMobile ? 'flex-col gap-6' : 'justify-center items-stretch'}`}
                 style={{
-                  minHeight: '100%',
-                  height: '100%',
-                  alignItems: 'stretch',
+                  minHeight: isMobile ? 'auto' : '100%',
+                  height: isMobile ? 'auto' : '100%',
+                  alignItems: 'stretch'
                 }}
               >
                 <div
-                  className="flex flex-row gap-6 w-full max-w-full bg-black rounded-lg border-2 border-[#6a7257] shadow-lg py-3 px-3"
+                  className={`flex ${isMobile ? 'flex-col' : 'flex-row'} gap-6 w-full max-w-full bg-black rounded-lg border-2 border-[#6a7257] shadow-lg py-3 px-3`}
                   style={{
-                    height: '100%',
-                    minHeight: 850,
+                    height: isMobile ? 'auto' : '100%',
+                    minHeight: isMobile ? 'auto' : 850,
                     alignItems: 'stretch'
                   }}
                 >
                   <div
                     className="bg-[#111211] border border-[#b0b79f] rounded-xl flex flex-col justify-start"
                     style={{
-                      flex: "0 0 280px",
-                      minWidth: 370,
-                      maxWidth: 370,
-                      width: "30vw",
-                      height: 800,
+                      flex: isMobile ? '1 1 auto' : '0 0 280px',
+                      minWidth: isMobile ? '100%' : 370,
+                      maxWidth: isMobile ? '100%' : 370,
+                      width: isMobile ? '100%' : '30vw',
+                      height: isMobile ? 'auto' : 800,
                       boxShadow: '0 2px 16px 4px #23281c'
                     }}
                   >
@@ -774,25 +876,25 @@ export default function MFVPageWrapper() {
                   <div
                     className="bg-black border border-[#b0b79f] rounded-xl flex flex-col justify-start"
                     style={{
-                      flex: "1 1 0%",
+                      flex: '1 1 0% ',
                       minWidth: 0,
-                      width: "58vw",
+                      width: isMobile ? '100%' : '58vw',
                       height: '100%',
                       boxShadow: '0 2px 24px 4px #23281c',
-                      padding: "16px",
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "flex-start",
-                      minHeight: 800,
+                      padding: isMobile ? '12px' : '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'flex-start',
+                      minHeight: isMobile ? 'auto' : 800,
                       maxHeight: '100%',
-                      overflow: "hidden"
+                      overflow: 'hidden'
                     }}
                   >
-                    <div className="flex flex-row items-center min-h-xl  justify-between mb-4">
+                    <div className={`flex ${isMobile ? 'flex-col gap-3 items-start' : 'flex-row items-center justify-between'} mb-4`}>
                       <h2 className="text-base font-semibold tracking-wide font-erbaum text-white drop-shadow-lg">
                         Daily Body Pressure{selectedPadLabel ? ` – ${selectedPadLabel}` : ""}
                       </h2>
-                      <div className="flex gap-2 items-center">
+                      <div className={`flex gap-2 items-center ${isMobile ? 'flex-wrap' : ''}`}>
                         <button
                           className={`px-3 py-1 rounded-l font-bold border border-[#b0b79f] transition-all
                           ${viewMode === "chart"
@@ -810,7 +912,7 @@ export default function MFVPageWrapper() {
                         <button
                           className={`px-3 py-1 rounded-r font-bold border border-[#b0b79f] transition-all
                           ${viewMode === "table"
-                            ? "bg黑 text-[#e6e8df] shadow"
+                            ? "bg-black text-[#e6e8df] shadow"
                             : "bg-[#23281c70] text-[#b0b79f] hover:bg-[#23281c]"}`}
                           style={{
                             borderLeft: "none",
@@ -825,8 +927,8 @@ export default function MFVPageWrapper() {
                           className="ml-3 px-4 py-1 rounded font-bold border border-[#6a7257] bg-[#24281a] text-[#ffdf66] hover:bg-[#32391e] hover:text-yellow-200 shadow transition-all"
                           style={{
                             fontSize: 13,
-                            minWidth: 170,
-                            marginLeft: 12,
+                            minWidth: isPhone ? 140 : 170,
+                            marginLeft: isMobile ? 0 : 12,
                             letterSpacing: '0.04em',
                             display: 'flex',
                             alignItems: 'center'
@@ -858,8 +960,8 @@ export default function MFVPageWrapper() {
                         id="mfv-body-pressure-chart"
                         style={{
                           display: viewMode === "chart" ? "block" : "none",
-                          width: "100%",
-                          height: 700,
+                          width: '100%',
+                          height: isMobile ? 420 : 700,
                           position: "relative"
                         }}
                       >
@@ -876,8 +978,8 @@ export default function MFVPageWrapper() {
                         id="mfv-body-pressure-table"
                         style={{
                           display: viewMode === "table" ? "block" : "none",
-                          width: "100%",
-                          height: 800,
+                          width: '100%',
+                          height: isMobile ? 460 : 800,
                           position: "relative"
                         }}
                       >
@@ -897,7 +999,10 @@ export default function MFVPageWrapper() {
                 </div>
               </div>
             ) : (
-              <div className="w-full h-full min-h-xl flex flex-col items-center bg-black justify-center px-2 py-2">
+              <div
+                className="w-full h-full flex flex-col items-center bg-black justify-center px-2 py-2"
+                style={{ minHeight: isMobile ? 'auto' : '24rem', padding: isMobile ? '12px' : '0.5rem 0.5rem' }}
+              >
                 <MFVTableView
                   displayHeaders={displayHeaders}
                   paginatedRows={paginatedRows}

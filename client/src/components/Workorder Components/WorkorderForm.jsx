@@ -3,7 +3,8 @@
 // ==============================
 
 import axios from 'axios';
-import { useEffect, useMemo, useState } from 'react';
+import html2canvas from 'html2canvas';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { sections as sectionConfigs } from '../../constants/workorderConfig';
 import assetSpecs from '../../data/AssetSpecifications.json';
 import torqueSpecs from '../../data/TorqueSpecs.js';
@@ -52,15 +53,10 @@ function extractSizePressure(name) {
   return [];
 }
 
-function computeSpecs(selectedAssets, assets, assetSpecs) {
+function computeSpecs(selectedAssets, resolveSpec) {
   let totalWeight = 0, totalVolume = 0, totalOAL = 0, torqueSpecsArr = [];
   selectedAssets.forEach(name => {
-    let spec = assetSpecs[name];
-    if (!spec) {
-      const normalizedRaw = normalizeUniversal(name);
-      const matchKey = Object.keys(assetSpecs).find(k => normalizeUniversal(k) === normalizedRaw);
-      spec = matchKey && assetSpecs[matchKey];
-    }
+    const spec = resolveSpec(name);
     if (spec) {
       totalWeight += Number(spec.weight) || 0;
       totalVolume += Number(spec.fillVolume) || 0;
@@ -106,6 +102,28 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
   } = initialData;
 
   const { assets } = useAssets();
+  const resolveAssetSpec = useMemo(() => {
+    const normalizedMap = new Map();
+    Object.keys(assetSpecs).forEach(key => {
+      normalizedMap.set(normalizeUniversal(key), assetSpecs[key]);
+    });
+    const cache = new Map();
+    return (rawName) => {
+      if (!rawName) return null;
+      if (cache.has(rawName)) return cache.get(rawName);
+      let spec = assetSpecs[rawName];
+      if (!spec) {
+        const normalizedRaw = normalizeUniversal(rawName);
+        spec = normalizedMap.get(normalizedRaw) || null;
+      }
+      if (!spec) {
+        const decimalName = rawName.replace(/(\d+-\d+\/\d+)/g, m => fractionToDecimal(m));
+        spec = assetSpecs[decimalName] || normalizedMap.get(normalizeUniversal(decimalName)) || null;
+      }
+      cache.set(rawName, spec);
+      return spec;
+    };
+  }, [assets]);
   const storageKey = `workorder_${customer.replace(/\s+/g, '-')}_${surfaceLSD}`;
   const { user } = useUser();
   const userId = user?.id || 'GUEST';
@@ -153,49 +171,70 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
   const [consumables, setConsumables] = useState([]);
   const [pageIndex, setPageIndex] = useState(0);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const pageContentRef = useRef(null);
+
+  const extractJobId = data => data?.id ?? data?.jobId ?? data?.ID ?? data?.job_id ?? null;
+  const toNumberOrNull = value => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  const fetchLatestWorkorder = async jobId => {
+    const numericJobId = toNumberOrNull(jobId);
+    if (!numericJobId) return null;
+    try {
+      const res = await axios.get(resolveApiUrl(`/api/workorders/by-job/${numericJobId}/latest`));
+      return res?.data || null;
+    } catch (err) {
+      if (err?.response?.status === 404) return null;
+      console.error('Failed to fetch latest workorder', err);
+      return null;
+    }
+  };
 
   const dfitPanelSpecs = useMemo(() => asArray(dfit.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [dfit.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [dfit.selections, resolveAssetSpec]);
   const umaPanelSpecs = useMemo(() => asArray(uma.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [uma.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [uma.selections, resolveAssetSpec]);
   const fcaPanelSpecs = useMemo(() => asArray(fca.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [fca.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [fca.selections, resolveAssetSpec]);
   const svaPanelSpecs = useMemo(() => asArray(sva.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [sva.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [sva.selections, resolveAssetSpec]);
   const dogbonesPanelSpecs = useMemo(() => asArray(dogbones.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [dogbones.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [dogbones.selections, resolveAssetSpec]);
   const zippersPanelSpecs = useMemo(() => asArray(zippers.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [zippers.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [zippers.selections, resolveAssetSpec]);
   const pplPanelSpecs = useMemo(() => asArray(ppl.selections).map(selObj => {
     const assetNames = Object.entries(selObj)
       .filter(([k, v]) => k.startsWith('location') && typeof v === 'string' && v)
       .map(([, v]) => v);
-    return computeSpecs(assetNames, assets, assetSpecs);
-  }), [ppl.selections, assets]);
+    return computeSpecs(assetNames, resolveAssetSpec);
+  }), [ppl.selections, resolveAssetSpec]);
 
   useEffect(() => {
     async function loadDraft() {
@@ -235,6 +274,17 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
     loadDraft();
     // eslint-disable-next-line
   }, [storageKey]);
+
+  useEffect(() => {
+    (async () => {
+      if (!workorderId) return;
+      const latest = await fetchLatestWorkorder(workorderId);
+      if (latest?.id) {
+        setWorkorderRecordId(latest.id);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workorderId]);
 
   useEffect(() => {
     const items = [];
@@ -329,6 +379,16 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
   const [workorderRecordId, setWorkorderRecordId] = useState(null);
 
   const handleSave = async () => {
+    const jobPayload = {
+      customer: metadata.customer || customer,
+      surface_lsd: metadata.surfaceLSD || surfaceLSD,
+      num_wells: metadata.numberOfWells ?? numberOfWells,
+      rig_in_date: metadata.rigInDate || rigInDate,
+      well_bank_type: metadata.wellBankType,
+      workbook_revision: metadata.workbookRevision,
+      notes: (metadata.notes ?? notes) || '',
+    };
+
     const payloadSections = Object.fromEntries(
       ['dfit', 'uma', 'fca', 'sva', 'dogbones', 'zippers', 'ppl'].map(key => {
         const sec = { dfit, uma, fca, sva, dogbones, zippers, ppl }[key];
@@ -357,28 +417,55 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
     try {
       let savedJobId = workorderId;
       if (!savedJobId) {
-        const jobCreatePayload = {
-          customer, surface_lsd: surfaceLSD, num_wells: numberOfWells, rig_in_date: rigInDate,
-          well_bank_type: wellBankType, workbook_revision: workbookRevision, notes: notes || ''
-        };
-        const jobRes = await axios.post(resolveApiUrl('/api/jobs'), jobCreatePayload);
-        savedJobId = jobRes.data?.id || jobRes.data?.jobId || jobRes.data?.ID;
+        const jobRes = await axios.post(resolveApiUrl('/api/jobs'), jobPayload);
+        savedJobId = extractJobId(jobRes?.data);
+        if (!savedJobId) {
+          const jobsRes = await axios.get(resolveApiUrl('/api/jobs'));
+          const normalizedCustomer = (jobPayload.customer || '').trim().toUpperCase();
+          const normalizedSurface = (jobPayload.surface_lsd || '').trim().toLowerCase();
+          const normalizedRig = (jobPayload.rig_in_date || '').slice(0, 10);
+          const matchedJob = asArray(jobsRes.data).find(job => {
+            const jobCustomer = (job.customer || '').trim().toUpperCase();
+            const jobSurface = (job.surface_lsd || '').trim().toLowerCase();
+            const jobRig = (job.rig_in_date || '').slice(0, 10);
+            return jobCustomer === normalizedCustomer && jobSurface === normalizedSurface && (!normalizedRig || jobRig === normalizedRig);
+          });
+          savedJobId = extractJobId(matchedJob);
+        }
         if (!savedJobId) throw new Error('Server did not return a job id!');
         alert('New Job created! Saving full workorder...');
       } else {
-        await axios.patch(resolveApiUrl(`/api/jobs/${savedJobId}`), {
-          customer, surface_lsd: surfaceLSD, num_wells: numberOfWells, rig_in_date: rigInDate,
-          well_bank_type: wellBankType, workbook_revision: workbookRevision, notes: notes || ''
-        });
+        await axios.patch(resolveApiUrl(`/api/jobs/${savedJobId}`), jobPayload);
       }
 
-      await axios.post(resolveApiUrl('/api/drafts'), { user_id: userId, workorder_id: savedJobId, page_key: storageKey, payload: draftBody });
+      const numericJobId = toNumberOrNull(savedJobId);
+      if (!numericJobId) throw new Error('Invalid job id received from server');
 
-      const createPayload = { job_id: Number(savedJobId), revision: 'A', payload: draftBody };
-      const woRes = await axios.post(resolveApiUrl('/api/workorders'), createPayload);
-      if (woRes?.data?.id) setWorkorderRecordId(woRes.data.id);
+      await axios.post(resolveApiUrl('/api/drafts'), { user_id: userId, workorder_id: numericJobId, page_key: storageKey, payload: draftBody });
 
-      if (!workorderId && savedJobId) { setLocalWorkorderId(savedJobId); initialData.id = savedJobId; }
+      const revision = 'A';
+      const workorderPayload = { revision, payload: draftBody };
+      let recordId = workorderRecordId;
+      try {
+        if (recordId) {
+          await axios.put(resolveApiUrl(`/api/workorders/${recordId}`), workorderPayload);
+        } else {
+          const woRes = await axios.post(resolveApiUrl('/api/workorders'), { job_id: numericJobId, revision, payload: draftBody });
+          recordId = woRes?.data?.id || null;
+          if (recordId) setWorkorderRecordId(recordId);
+        }
+      } catch (woErr) {
+        const latest = await fetchLatestWorkorder(numericJobId);
+        if (latest?.id) {
+          recordId = latest.id;
+          setWorkorderRecordId(recordId);
+          await axios.put(resolveApiUrl(`/api/workorders/${recordId}`), workorderPayload);
+        } else {
+          throw woErr;
+        }
+      }
+
+      if (!workorderId && numericJobId) { setLocalWorkorderId(numericJobId); initialData.id = numericJobId; }
 
       alert('Progress saved to server!');
     } catch (err) {
@@ -388,7 +475,23 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
   };
 
   const handlePublish = async () => {
+    if (!workorderId) {
+      alert('Please save the workorder before publishing a revision.');
+      return;
+    }
+
     try {
+      const numericJobId = toNumberOrNull(workorderId);
+      if (!numericJobId) throw new Error('Invalid job id');
+      if (!workorderRecordId) {
+        const latest = await fetchLatestWorkorder(numericJobId);
+        if (latest?.id) {
+          setWorkorderRecordId(latest.id);
+        } else {
+          throw new Error('No workorder record found to publish. Please save first.');
+        }
+      }
+
       const bomPayload = {
         dfitSelections: asArray(dfit.selections), dfitBuildQtys: asArray(dfit.buildQtys),
         umaSelections:  asArray(uma.selections),  umaBuildQtys:  asArray(uma.buildQtys),
@@ -406,15 +509,108 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
       if (workorderRecordId) {
         await axios.put(resolveApiUrl(`/api/workorders/${workorderRecordId}`), { revision, payload: workOrdersData });
       } else {
-        const createPayload = { job_id: Number(workorderId), revision, payload: workOrdersData };
+        const createPayload = { job_id: numericJobId, revision, payload: workOrdersData };
         const woRes = await axios.post(resolveApiUrl('/api/workorders'), createPayload);
         if (woRes?.data?.id) setWorkorderRecordId(woRes.data.id);
       }
+
+      await axios.patch(resolveApiUrl(`/api/jobs/${numericJobId}`), { work_orders: JSON.stringify(workOrdersData) });
 
       alert(`Published revision REV-${revision} for this job!`);
     } catch (err) {
       console.error('Unable to publish BOM revision', err);
       alert('Error publishing BOM. Try again?');
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (isExportingPdf) return;
+
+    const containerEl = pageContentRef.current;
+    if (!containerEl) {
+      alert('Unable to access the workorder view for PDF export.');
+      return;
+    }
+
+    const waitForLayout = () => new Promise(resolve => {
+      const raf = (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function')
+        ? window.requestAnimationFrame.bind(window)
+        : (cb) => setTimeout(cb, 0);
+      raf(() => setTimeout(resolve, 100));
+    });
+
+    const previousIndex = pageIndex;
+    setIsExportingPdf(true);
+
+    try {
+      const { jsPDF } = await import('jspdf');
+      const capturedPages = [];
+
+      for (let i = 0; i < pages.length; i += 1) {
+        if (pageIndex !== i) {
+          setPageIndex(i);
+          await waitForLayout();
+        } else {
+          await waitForLayout();
+        }
+
+        const scrollableSection = containerEl.querySelector('section.flex-grow');
+        let previousOverflow;
+        if (scrollableSection) {
+          previousOverflow = scrollableSection.style.overflow;
+          scrollableSection.scrollTop = 0;
+          scrollableSection.style.overflow = 'visible';
+        }
+
+        let canvas;
+        try {
+          canvas = await html2canvas(containerEl, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            logging: false,
+          });
+        } finally {
+          if (scrollableSection) {
+            scrollableSection.style.overflow = previousOverflow || '';
+          }
+        }
+
+        if (canvas) {
+          capturedPages.push({
+            dataUrl: canvas.toDataURL('image/png'),
+            width: canvas.width,
+            height: canvas.height,
+          });
+        }
+      }
+
+      if (capturedPages.length === 0) {
+        throw new Error('no_pages_captured');
+      }
+
+      const doc = new jsPDF({ unit: 'pt', format: 'letter', orientation: 'portrait' });
+      capturedPages.forEach((page, idx) => {
+        if (idx > 0) doc.addPage();
+        const pdfWidth = doc.internal.pageSize.getWidth();
+        const pdfHeight = doc.internal.pageSize.getHeight();
+        const scale = Math.min(pdfWidth / page.width, pdfHeight / page.height);
+        const renderWidth = page.width * scale;
+        const renderHeight = page.height * scale;
+        const offsetX = (pdfWidth - renderWidth) / 2;
+        const offsetY = (pdfHeight - renderHeight) / 2;
+        doc.addImage(page.dataUrl, 'PNG', offsetX, offsetY, renderWidth, renderHeight);
+      });
+
+      const safeCustomer = (metadata.customer || 'Workorder').replace(/[^a-z0-9]+/gi, '_');
+      doc.save(`Workorder_${safeCustomer}.pdf`);
+    } catch (err) {
+      console.error('Failed to generate full workorder PDF', err);
+      alert('Failed to generate the full workorder PDF. Please try again.');
+    } finally {
+      setPageIndex(previousIndex);
+      await waitForLayout();
+      setIsExportingPdf(false);
     }
   };
 
@@ -455,6 +651,7 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
     : null;
   const resolvedLogo = getCustomerLogo ? getCustomerLogo(customer) : null;
   const logoSrc = logoUrl || resolvedLogo || fallbackLogo || '';
+  const canPublish = Boolean(workorderId);
 
   return (
     <>
@@ -468,7 +665,10 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
         onNext={() => canNext && setPageIndex(i => i + 1)}
         onSave={handleSave}
         onGenerate={handlePublish}
+        onExportPdf={handleExportPdf}
+        isExportingPdf={isExportingPdf}
         canNext={canNext}
+        canPublish={canPublish}
         onClose={onClose}
         metadata={metadata}
         woNumber={woNumber}
@@ -476,6 +676,7 @@ export default function WorkorderForm({ initialData, onClose, getCustomerLogo })
         onToggleAlerts={() => setShowAlerts(v => !v)}
         dfitSelections={asArray(dfit.selections)}
         dfitActiveTab={dfit.activeTab}
+        contentRef={pageContentRef}
       >
         <PageRenderer
           index={pageIndex}

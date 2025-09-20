@@ -1,6 +1,7 @@
 // ==============================
 // FILE: server/index.js — Express App Entry
-// Sections: Imports • Middleware • Routers • Discord Proxy • Action Items (In-Memory) • Admin Import (Seed) • Exports
+// Sections: Imports • Middleware • CORS • Static • Body/Logging • Session/Passport • Routers • Universal Upload • Quiz/User Endpoints • HQ Jobs • Discord Proxy • Action Items • Workorder PDF (template demo) • Workorder PDF (rich export) • Auth • Static Client • Admin Import • Exports
+// :contentReference[oaicite:0]{index=0}
 // ==============================
 
 const express = require('express')
@@ -18,6 +19,7 @@ const passport = require('./auth/discordStrategy')
 const { generalUpload, memoryUpload, uploadDir } = require('./utils/uploads')
 const db = require('./db')
 const discordMembersRest = require('./services/discordMembersRest')
+const { CUSTOMER_LOGO_DIR } = require('./config/storagePaths')
 
 const app = express()
 
@@ -67,6 +69,7 @@ app.use(cors({
   credentials: true
 }))
 
+
 // ==============================
 // SECTION: Static
 // ==============================
@@ -78,14 +81,14 @@ app.use('/uploads', express.static(uploadDir, {
   }
 }))
 app.use('/uploads/docs', express.static(path.join(uploadDir, 'docs')))
-const LOGOS_DIR = path.join(__dirname, 'public', 'assets', 'logos')
+const LOGOS_DIR = CUSTOMER_LOGO_DIR
 console.log('Serving customer logos from:', LOGOS_DIR)
 app.use('/assets/logos', express.static(LOGOS_DIR))
 
 // ==============================
 // SECTION: Body & Logging
 // ==============================
-app.use(express.json())
+app.use(express.json({ limit: '25mb' }))
 app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`)
   next()
@@ -133,6 +136,8 @@ const documentsRouter = require('./routes/documents')
 const serviceEquipmentRouter = require('./routes/serviceEquipment')
 const workordersRouter = require('./routes/workorders')
 const glbAssetsRouter = require('./routes/glbAssets')
+const fieldEmployeesRouter = require('./routes/fieldEmployees')
+const libraryRouter = require('./routes/library')
 
 app.use('/api/mfv', mfvPadsRouter)
 app.use('/api', draftsRouter)
@@ -152,6 +157,9 @@ app.use('/api/documents', documentsRouter)
 app.use('/api/service-equipment', serviceEquipmentRouter)
 app.use('/api/workorders', workordersRouter)
 app.use('/api/glb-assets', glbAssetsRouter)
+app.use('/api/field-employees', fieldEmployeesRouter)
+app.use('/api/library', libraryRouter)
+
 
 // ==============================
 // SECTION: Universal Upload
@@ -167,14 +175,20 @@ app.post('/api/upload-model', generalUpload.single('model'), (req, res) => {
   }
 })
 
+
 // ==============================
-// existing quiz and user endpoints
+// SECTION: Quiz & User Endpoints
+// ==============================
 app.get('/api/questions', (_req, res) => res.json(questions))
 app.get('/api/module2', (_req, res) => res.json(module2))
 app.get('/api/user', (req, res) => {
-  if (req.isAuthenticated && req.isAuthenticated()) res.json({ user: req.user })
-  else res.status(401).json({ error: 'Not authenticated' })
+  if (req.isAuthenticated && req.isAuthenticated()) {
+    // Return the raw user profile so the client gets { id, ... }
+    return res.json(req.user)
+  }
+  return res.status(401).json({ error: 'Not authenticated' })
 })
+
 
 // ==============================
 // SECTION: HQ Jobs (existing helpers)
@@ -220,6 +234,7 @@ app.get('/api/hq/upcoming-jobs', async (req, res) => {
     res.status(500).json({ error: 'Failed to load upcoming jobs' })
   }
 })
+
 
 // ==============================
 // SECTION: Discord Proxy (Members/DM/Channels/Announce)
@@ -382,6 +397,7 @@ app.post('/api/discord/announce/test', async (req, res) => {
   }
 })
 
+
 // ==============================
 // SECTION: Action Items — In-Memory (no DB yet)
 // ==============================
@@ -449,8 +465,7 @@ app.post('/api/hq/action-items', async (req, res) => {
     })
 
     rawStakeholderNames.forEach(name => {
-      if (!name) return
-      registerDetail(null, name)
+      if (name) registerDetail(null, name)
     })
 
     const stakeholderNames = stakeholderDetails.map(detail => detail.name).filter(Boolean)
@@ -534,7 +549,7 @@ app.post('/api/hq/action-items', async (req, res) => {
             await fetch(`${BOT_SERVICE_URL}/dm`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'x-bot-key': BOT_KEY },
-              body: JSON.stringify({ userId: detail.id, message, attachments, components: buttonComponents })
+              body: JSON.stringify({ userId: detail.id, message, attachments })
             })
           } catch (err) {
             console.error(`Failed to dispatch action item DM to ${detail.id}:`, err)
@@ -660,8 +675,9 @@ app.post('/api/hq/action-items/:id/ack', (req, res) => {
   })
 })
 
+
 // ==============================
-// SECTION: Workorder PDF (legacy demo)
+// SECTION: Workorder PDF (template demo)
 // ==============================
 app.get('/api/workorders', (_req, res) => res.json([]))
 app.get('/api/workorder/test-template', async (_req, res) => {
@@ -716,10 +732,111 @@ app.post('/api/workorder/generate', async (req, res) => {
   }
 })
 
+
+// ==============================
+// SECTION: Workorder PDF — Rich Export
+// ==============================
+app.post('/api/pdf/workorder', async (req, res) => {
+  try {
+    const body = req.body || {}
+    const meta = body.meta || {}
+    const assemblies = Array.isArray(body.assemblies) ? body.assemblies : []
+    const snapshot = body.snapshot || null
+
+    const pdfDoc = await PDFDocument.create()
+    const helv = await pdfDoc.embedFont(StandardFonts.Helvetica)
+    const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
+
+    const addHeader = (page, titleText) => {
+      page.drawText('PALOMA PRESSURE CONTROL — THE NEST', { x: 40, y: page.getHeight() - 40, size: 9, font: helvBold, color: rgb(0.1, 0.1, 0.1) })
+      page.drawText(`WO: ${meta.woNumber || ''}`, { x: 40, y: page.getHeight() - 55, size: 10, font: helvBold, color: rgb(0.1, 0.1, 0.1) })
+      page.drawText(`${meta.customer || ''}  |  ${meta.lsd || ''}  |  Wells: ${meta.wells || ''}  |  Rig-In: ${meta.rigInDate || ''}  |  Rev: ${meta.revision || 'A'}`, { x: 40, y: page.getHeight() - 70, size: 9, font: helv, color: rgb(0.15, 0.15, 0.15) })
+      page.drawText(titleText, { x: 40, y: page.getHeight() - 95, size: 16, font: helvBold, color: rgb(0.415, 0.447, 0.341) })
+    }
+
+    const embedPng = async (dataUrl) => {
+      if (!dataUrl) return null
+      const pngBytes = Buffer.from(dataUrl.split(',')[1], 'base64')
+      return await pdfDoc.embedPng(pngBytes)
+    }
+
+    const image = await embedPng(snapshot)
+
+    const printableAssemblies = assemblies.filter(a => Array.isArray(a.items) && a.items.length > 0)
+    const singleTab = printableAssemblies.length <= 1
+
+    for (const asm of printableAssemblies) {
+      const page = pdfDoc.addPage([612, 792]) // US Letter
+      addHeader(page, singleTab ? `${asm.name}` : `${asm.name} ${asm.tabLetter || ''}`)
+
+      if (image) {
+        const maxW = 520
+        const scale = Math.min(1, maxW / image.width)
+        const w = image.width * scale
+        const h = image.height * scale
+        const x = 46
+        const y = 792 - 120 - h
+        page.drawImage(image, { x, y, width: w, height: h, opacity: 1 })
+        page.drawText('LOCKED VIEW', { x, y: y - 12, size: 8, font: helv, color: rgb(0.4, 0.4, 0.4) })
+      }
+
+      let tableTop = 280
+      const left = 40
+      const col = (x) => left + x
+      page.drawText('ASSEMBLY ITEMS', { x: left, y: tableTop + 18, size: 11, font: helvBold, color: rgb(0.1, 0.1, 0.1) })
+      const headers = ['#', 'Category', 'Asset', 'Qty']
+      const widths = [20, 120, 320, 40]
+      headers.forEach((h, i) => page.drawText(h, { x: col([0, 24, 148, 476][i]), y: tableTop, size: 9, font: helvBold, color: rgb(0, 0, 0) }))
+      let rowY = tableTop - 14
+      asm.items.forEach((it, idx) => {
+        const safeAsset = (it.asset || '').slice(0, 80)
+        page.drawText(String(idx + 1), { x: col(0), y: rowY, size: 9, font: helv })
+        page.drawText(it.category || '', { x: col(24), y: rowY, size: 9, font: helv })
+        page.drawText(safeAsset, { x: col(148), y: rowY, size: 9, font: helv })
+        page.drawText(String(it.qty || 0), { x: col(476), y: rowY, size: 9, font: helv })
+        rowY -= 12
+      })
+
+      const specTop = rowY - 20
+      page.drawText('SPECIFICATIONS', { x: left, y: specTop, size: 11, font: helvBold, color: rgb(0.1, 0.1, 0.1) })
+      const s = asm.specs || {}
+      const torqueArr = Array.isArray(s.torque) ? s.torque : []
+      let specY = specTop - 14
+      page.drawText(`Build Qty: ${asm.buildQty || 0}`, { x: left, y: specY, size: 9, font: helv }); specY -= 12
+      page.drawText(`Overall Weight: ${s.weight || 0} lbs`, { x: left, y: specY, size: 9, font: helv }); specY -= 12
+      page.drawText(`Fill Volume: ${s.volume || 0} L`, { x: left, y: specY, size: 9, font: helv }); specY -= 12
+      page.drawText(`Assembly OAL: ${s.oal || 0} inches`, { x: left, y: specY, size: 9, font: helv }); specY -= 12
+      if (torqueArr.length) {
+        page.drawText('Torque Specs:', { x: left, y: specY, size: 9, font: helvBold }); specY -= 12
+        torqueArr.forEach(t => {
+          page.drawText(`• ${t.connection}: ${t.torque} ft-lbs`, { x: left + 12, y: specY, size: 9, font: helv }); specY -= 12
+        })
+      }
+
+      const footerY = 24
+      page.drawText(`Generated: ${new Date().toLocaleString()}`, { x: 40, y: footerY, size: 8, font: helv, color: rgb(0.35, 0.35, 0.35) })
+      page.drawText(`${meta.woNumber || ''}`, { x: 540, y: footerY, size: 8, font: helv, color: rgb(0.35, 0.35, 0.35) })
+    }
+
+    const bytes = await pdfDoc.save()
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="Workorder_${(meta.woNumber || 'WO').replace(/\s+/g,'_')}.pdf"`)
+    return res.send(Buffer.from(bytes))
+  } catch (err) {
+    console.error('PDF export error:', err)
+    return res.status(500).json({ error: 'pdf_export_failed' })
+  }
+})
+
+
+// ==============================
+// SECTION: Auth (Discord OAuth)
+// ==============================
 app.get('/auth/discord', passport.authenticate('discord'))
 app.get('/auth/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => {
   res.redirect(`${require('./config/config').FRONTEND_URL}/?user=${encodeURIComponent(JSON.stringify(req.user))}`)
 })
+
 
 // ==============================
 // SECTION: Static Client (Production)
@@ -736,12 +853,14 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
+
 // ==============================
 // SECTION: Admin Import (Seed)
 // ==============================
 if (process.env.ADMIN_IMPORT_KEY) {
   app.use('/api/admin', require('./routes/adminImport'))
 }
+
 
 // ==============================
 // SECTION: Exports

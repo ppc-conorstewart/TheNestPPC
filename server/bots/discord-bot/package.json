@@ -1,10 +1,13 @@
 {
   "name": "paloma-discord-bot",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Paloma NEST Discord bot (file collector + control API)",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "backfill:members": "node backfill.js members",
+    "backfill:files": "node backfill.js files",
+    "backfill:channel": "node backfill.js"
   },
   "engines": {
     "node": ">=18"

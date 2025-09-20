@@ -2,7 +2,7 @@
 // TrainingHub.jsx — Left Panel = Employees Only; Right Panel = Tabbed Content
 // ==============================
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import CompetencyChecklist from "../components/Training Hub Components/CompetencyChecklist";
 import competencies from "../components/Training Hub Components/CompetencyMatrix.js";
@@ -10,82 +10,101 @@ import CompetencyTabs from "../components/Training Hub Components/CompetencyTabs
 import DocumentHub from "../components/Training Hub Components/DocumentHub";
 import EmployeeList, { LEVELS } from "../components/Training Hub Components/EmployeeList";
 import VisitsTable from "../components/Training Hub Components/VisitsTable";
+import useFieldEmployees from "../hooks/useFieldEmployees";
+import { resolveApiUrl } from "../api";
 
 // ==============================
-// SECTION: Field Employees & Ranks
+// Helpers — Competency scaffolding
 // ==============================
-const fieldEmployees = [
-  "Daniel Swartz", "Jeff Bennett", "Mitch Martin", "Dillan Campbell", "Ryker Kelly",
-  "Abe Nazari", "John Wells", "Jeremy Dutchak", "Dawson Howell", "Colton Peters",
-  "Greg Hultin", "Dustin Luke", "Ryan Gray", "Cam Pannenbecker", "Todd Cuza",
-  "Keegan Fiveland", "Jameel Emery", "Mike Brushett", "Matthew Gray", "Jesse Bird",
-  "Patrick Bennett", "Chace Levis", "Landen Brown", "Austyn Jordan", "Trevor Mervyn",
-  "Drew Twells", "Matthew McCausland", "Efraim Ebo", "Ernesto Rea Jr.", "Ruslan Karandashov",
-  "Marco Patton", "Connor Krebs"
-];
+const TODAY = () => new Date().toISOString().slice(0, 10);
 
-const fieldEmployeeRanks = {
-  "Daniel Swartz": 4, "Jeff Bennett": 3, "Mitch Martin": 3, "Dillan Campbell": 3, "Ryker Kelly": 3,
-  "Abe Nazari": 3, "John Wells": 3, "Jeremy Dutchak": 3, "Dawson Howell": 3, "Colton Peters": 3,
-  "Greg Hultin": 3, "Dustin Luke": 3, "Ryan Gray": 3, "Cam Pannenbecker": 2, "Todd Cuza": 2,
-  "Keegan Fiveland": 2, "Jameel Emery": 2, "Mike Brushett": 2, "Matthew Gray": 2, "Jesse Bird": 2,
-  "Patrick Bennett": 1, "Chace Levis": 1, "Landen Brown": 1, "Austyn Jordan": 1, "Trevor Mervyn": 1,
-  "Drew Twells": 1, "Matthew McCausland": 1, "Efraim Ebo": 1, "Ernesto Rea Jr.": 1, "Ruslan Karandashov": 0,
-  "Marco Patton": 0, "Connor Krebs": 0
-};
+function deepClone(value) {
+  try {
+    return typeof structuredClone === "function" ? structuredClone(value) : JSON.parse(JSON.stringify(value));
+  } catch (err) {
+    return JSON.parse(JSON.stringify(value));
+  }
+}
 
-// ==============================
-// SECTION: Utils
-// ==============================
-function getInitialChecklist(empName) {
-  const checklist = {};
-  if (!Array.isArray(LEVELS) || !Array.isArray(competencies)) return checklist;
-  const presetRank = fieldEmployeeRanks[empName] ?? 0;
-  const today = new Date().toISOString().slice(0, 10);
+function buildChecklistTemplate(presetLevel = 0) {
+  const template = {};
+  const preset = Number.isFinite(presetLevel) ? presetLevel : 0;
+  const today = TODAY();
 
   LEVELS.forEach((_, lvl) => {
-    checklist[lvl] = {};
-    if (competencies[lvl] && Array.isArray(competencies[lvl].groups)) {
-      competencies[lvl].groups.forEach((g, gIdx) => {
-        checklist[lvl][gIdx] = {};
-        if (Array.isArray(g.items)) {
-          g.items.forEach((item, iIdx) => {
-            if (lvl < presetRank) {
-              checklist[lvl][gIdx][iIdx] = { checked: true, date: today, assessor: "" };
-            } else {
-              checklist[lvl][gIdx][iIdx] = { checked: false, date: "", assessor: "" };
-            }
-          });
-        }
+    template[lvl] = {};
+    const levelCompetencies = competencies?.[lvl];
+    const groups = Array.isArray(levelCompetencies?.groups) ? levelCompetencies.groups : [];
+    groups.forEach((group, gIdx) => {
+      template[lvl][gIdx] = {};
+      const items = Array.isArray(group?.items) ? group.items : [];
+      items.forEach((_, iIdx) => {
+        const isPreset = lvl < preset;
+        template[lvl][gIdx][iIdx] = {
+          checked: isPreset,
+          date: isPreset ? today : "",
+          assessor: ""
+        };
       });
-    }
+    });
   });
-  return checklist;
+
+  return template;
 }
 
-function getAllInitialChecklists() {
-  const obj = {};
-  fieldEmployees.forEach(emp => { obj[emp] = getInitialChecklist(emp); });
-  return obj;
+function normalizeChecklist(source, presetLevel = 0) {
+  const base = buildChecklistTemplate(presetLevel);
+  if (!source || typeof source !== "object") return base;
+
+  const result = deepClone(base);
+  Object.keys(result).forEach((levelKey) => {
+    const levelIndex = Number(levelKey);
+    const levelData = Array.isArray(source)
+      ? source[levelIndex]
+      : source[levelKey] ?? source[levelIndex];
+    if (!levelData) return;
+
+    Object.keys(result[levelKey] || {}).forEach((groupKey) => {
+      const groupIndex = Number(groupKey);
+      const groupData = Array.isArray(levelData)
+        ? levelData[groupIndex]
+        : levelData[groupKey] ?? levelData[groupIndex];
+      if (!groupData) return;
+
+      Object.keys(result[levelKey][groupKey] || {}).forEach((itemKey) => {
+        const itemIndex = Number(itemKey);
+        const itemData = Array.isArray(groupData)
+          ? groupData[itemIndex]
+          : groupData[itemKey] ?? groupData[itemIndex];
+        if (!itemData) return;
+
+        result[levelKey][groupKey][itemKey] = {
+          checked: Boolean(itemData.checked),
+          date: itemData.date || "",
+          assessor: itemData.assessor || ""
+        };
+      });
+    });
+  });
+
+  return result;
 }
 
-function getAllInitialDocuments() {
-  const obj = {};
-  fieldEmployees.forEach(emp => { obj[emp] = []; });
-  return obj;
-}
-
-function getAllInitialNotes() {
-  const obj = {};
-  fieldEmployees.forEach(emp => { obj[emp] = ""; });
-  return obj;
+function formatDocuments(docs = []) {
+  return docs.map((doc) => ({
+    id: doc?.id,
+    name: doc?.name || doc?.original_filename || "Document",
+    uploaded: doc?.uploaded_at ? new Date(doc.uploaded_at).toLocaleString() : "",
+    downloadUrl: doc?.downloadUrl || doc?.download_url || null
+  }));
 }
 
 function getLevelProgress(employeeChecklist, level) {
   if (!employeeChecklist || employeeChecklist[level] == null) return { checked: 0, total: 0, percent: 0 };
-  let checked = 0, total = 0;
-  Object.values(employeeChecklist[level]).forEach(group =>
-    Object.values(group).forEach(item => {
+  let checked = 0;
+  let total = 0;
+  Object.values(employeeChecklist[level]).forEach((group) =>
+    Object.values(group).forEach((item) => {
       total++;
       if (item.checked) checked++;
     })
@@ -93,12 +112,15 @@ function getLevelProgress(employeeChecklist, level) {
   return { checked, total, percent: total ? Math.round((checked / total) * 100) : 0 };
 }
 
-function getPresetOrProgressLevel(employeeChecklist, empName) {
-  const preset = fieldEmployeeRanks[empName] ?? 0;
+function getPresetOrProgressLevel(employeeChecklist, presetLevel = 0) {
+  const preset = Number.isFinite(presetLevel) ? presetLevel : 0;
   let progress = 0;
   for (let lvl = 0; lvl < LEVELS.length; lvl++) {
     const { percent } = getLevelProgress(employeeChecklist, lvl);
-    if (percent < 100) { progress = lvl; break; }
+    if (percent < 100) {
+      progress = lvl;
+      break;
+    }
     if (lvl === LEVELS.length - 1) progress = lvl;
   }
   return Math.max(preset, progress);
@@ -117,7 +139,7 @@ const RIGHT_TABS = [
 // ==============================
 // SECTION: Notes Panel
 // ==============================
-function NotesPanel({ value, onChange, onSave }) {
+function NotesPanel({ value, onChange, onSave, saving }) {
   return (
     <div className="flex flex-col gap-2 px-3 py-3" style={{ height: "100%" }}>
       <div className="flex items-center justify-between">
@@ -126,10 +148,15 @@ function NotesPanel({ value, onChange, onSave }) {
         </h3>
         <button
           onClick={onSave}
-          className="px-3 py-1 rounded bg-[#6a7257] text-black font-erbaum font-bold text-xs hover:bg-[#7fa173] transition"
+          disabled={saving}
+          className={`px-3 py-1 rounded font-erbaum font-bold text-xs transition ${
+            saving
+              ? "bg-[#3a3f2e] text-gray-500 cursor-not-allowed"
+              : "bg-[#6a7257] text-black hover:bg-[#7fa173]"
+          }`}
           style={{ boxShadow: "0 1px 5px #0003" }}
         >
-          Save
+          {saving ? "Saving..." : "Save"}
         </button>
       </div>
       <textarea
@@ -147,13 +174,25 @@ function NotesPanel({ value, onChange, onSave }) {
 // SECTION: Main Component
 // ==============================
 export default function TrainingHub() {
-  const [selectedEmployee, setSelectedEmployee] = useState(fieldEmployees[0]);
-  const [employeeChecklists, setEmployeeChecklists] = useState(getAllInitialChecklists());
-  const [employeeDocuments, setEmployeeDocuments] = useState(getAllInitialDocuments());
-  const [employeeNotes, setEmployeeNotes] = useState(getAllInitialNotes());
-  const [tabLevel, setTabLevel] = useState(fieldEmployeeRanks[fieldEmployees[0]] ?? 0);
+  const {
+    employees,
+    loading,
+    createEmployee,
+    saveNotes,
+    saveCompetencies,
+    uploadDocuments,
+    deleteDocument,
+    deleteEmployee
+  } = useFieldEmployees();
 
-  // Visits
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [employeeChecklists, setEmployeeChecklists] = useState({});
+  const [employeeDocuments, setEmployeeDocuments] = useState({});
+  const [employeeNotes, setEmployeeNotes] = useState({});
+  const [tabLevel, setTabLevel] = useState(0);
+  const [rightTab, setRightTab] = useState(RIGHT_TABS[0].key);
+  const [savingNotes, setSavingNotes] = useState(false);
+
   const [visits, setVisits] = useState([
     {
       date: "2025-08-01",
@@ -165,95 +204,223 @@ export default function TrainingHub() {
       objectives: "Proper valve greasing, pad safety"
     }
   ]);
-  const handleAddVisit = (newVisit) => setVisits(prev => [...prev, newVisit]);
+  const handleAddVisit = (newVisit) => setVisits((prev) => [...prev, newVisit]);
 
-  // Employee selector
-  function handleSelectEmployee(emp) {
-    setSelectedEmployee(emp);
-    setTabLevel(fieldEmployeeRanks[emp] ?? 0);
-  }
+  // Ensure selected employee stays valid as list changes
+  useEffect(() => {
+    if (!employees.length) {
+      setSelectedEmployeeId(null);
+      return;
+    }
+    setSelectedEmployeeId((prev) => {
+      if (prev && employees.some((emp) => emp.id === prev)) return prev;
+      return employees[0]?.id ?? null;
+    });
+  }, [employees]);
 
-  // Checklist toggles
-  function handleChecklistChange(level, groupIdx, itemIdx, emp, updateObj) {
+  // Sync notes state with server payload
+  useEffect(() => {
+    setEmployeeNotes((prev) => {
+      const next = {};
+      employees.forEach((emp) => {
+        next[emp.id] = Object.prototype.hasOwnProperty.call(prev, emp.id)
+          ? prev[emp.id]
+          : emp.notes || "";
+      });
+      return next;
+    });
+  }, [employees]);
+
+  // Sync competency checklists
+  useEffect(() => {
     setEmployeeChecklists((prev) => {
-      const current = prev[emp];
-      const itemObj = current[level][groupIdx][itemIdx];
-      let newChecked = itemObj.checked;
-      let newDate = itemObj.date;
-      let newAssessor = itemObj.assessor;
+      const next = {};
+      employees.forEach((emp) => {
+        const preset = Number.isFinite(emp?.level) ? emp.level : 0;
+        const base = Object.prototype.hasOwnProperty.call(prev, emp.id)
+          ? prev[emp.id]
+          : emp.competencies;
+        next[emp.id] = normalizeChecklist(base, preset);
+      });
+      return next;
+    });
+  }, [employees]);
 
-      if (updateObj && Object.prototype.hasOwnProperty.call(updateObj, "assessor")) {
-        newAssessor = updateObj.assessor;
-      } else {
-        newChecked = !itemObj.checked;
-        newDate = !itemObj.checked ? new Date().toISOString().slice(0, 10) : "";
-        if (!newChecked) newAssessor = "";
+  // Sync documents state
+  useEffect(() => {
+    setEmployeeDocuments(() => {
+      const next = {};
+      employees.forEach((emp) => {
+        next[emp.id] = formatDocuments(emp.documents || []);
+      });
+      return next;
+    });
+  }, [employees]);
+
+  const selectedEmployee = employees.find((emp) => emp.id === selectedEmployeeId) || null;
+  const currentChecklist = selectedEmployee ? employeeChecklists[selectedEmployee.id] : null;
+  const currentDocuments = selectedEmployee ? employeeDocuments[selectedEmployee.id] || [] : [];
+  const currentNotes = selectedEmployee ? employeeNotes[selectedEmployee.id] || "" : "";
+  const presetLevel = Number.isFinite(selectedEmployee?.level) ? selectedEmployee.level : 0;
+  const unlockedLevel = getPresetOrProgressLevel(currentChecklist, presetLevel);
+
+  useEffect(() => {
+    if (!selectedEmployee) return;
+    const safeLevel = Math.min(unlockedLevel, LEVELS.length - 1);
+    setTabLevel((prev) => {
+      if (Number.isFinite(prev) && prev <= LEVELS.length - 1) {
+        return prev > safeLevel ? safeLevel : prev;
       }
-
-      return {
-        ...prev,
-        [emp]: {
-          ...current,
-          [level]: {
-            ...current[level],
-            [groupIdx]: {
-              ...current[level][groupIdx],
-              [itemIdx]: {
-                ...itemObj,
-                checked: newChecked,
-                date: newDate,
-                assessor: newAssessor
-              }
-            }
-          }
-        }
-      };
+      return safeLevel;
     });
-  }
+  }, [selectedEmployee, unlockedLevel]);
 
-  // Documents
-  function handleAddDocuments(files) {
-    setEmployeeDocuments(prev => {
-      const empDocs = prev[selectedEmployee] || [];
-      const newDocs = files.map((file) => ({
-        id: Math.random().toString(36).slice(2),
-        name: file.name,
-        uploaded: new Date().toLocaleString(),
-        file
-      }));
-      return { ...prev, [selectedEmployee]: [...empDocs, ...newDocs] };
-    });
-  }
-  function handleDeleteDocument(id) {
-    setEmployeeDocuments(prev => {
-      const empDocs = prev[selectedEmployee] || [];
-      return { ...prev, [selectedEmployee]: empDocs.filter((d) => d.id !== id) };
-    });
-  }
-  function handleDownloadDocument(doc) {
-    const url = URL.createObjectURL(doc.file);
-    const a = document.createElement("a");
-    a.href = url; a.download = doc.name; a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  // Notes
-  const currentNotes = employeeNotes[selectedEmployee] || "";
-  function handleChangeNotes(text) {
-    setEmployeeNotes(prev => ({ ...prev, [selectedEmployee]: text }));
-  }
-  function handleSaveNotes() {}
-
-  // Progress
-  const currentChecklist = employeeChecklists[selectedEmployee];
-  const currentDocuments = employeeDocuments[selectedEmployee] || [];
-  const unlockedLevel = getPresetOrProgressLevel(currentChecklist, selectedEmployee);
   const progress = getLevelProgress(currentChecklist, tabLevel);
-  const progressByLevel = {};
-  LEVELS.forEach((_, lvl) => { progressByLevel[lvl] = getLevelProgress(currentChecklist, lvl); });
+  const progressByLevel = useMemo(() => {
+    const result = {};
+    LEVELS.forEach((_, lvl) => {
+      result[lvl] = getLevelProgress(currentChecklist, lvl);
+    });
+    return result;
+  }, [currentChecklist]);
 
-  // Right content tab
-  const [rightTab, setRightTab] = useState(RIGHT_TABS[0].key);
+  const handleSelectEmployee = useCallback((empId) => {
+    setSelectedEmployeeId(empId);
+  }, []);
+
+  const handleAddEmployee = useCallback(async (form) => {
+    const first = (form.firstName || "").trim();
+    const last = (form.lastName || "").trim();
+    const base = (form.base || "").trim();
+    const assessedLevel = typeof form.assessedAs === "number" ? form.assessedAs : null;
+
+    if (!first || !last) throw new Error("First and last name are required.");
+    if (!base) throw new Error("Base location is required.");
+    if (!Number.isInteger(assessedLevel) || assessedLevel < 0 || assessedLevel >= LEVELS.length) {
+      throw new Error("Please select a valid assessed level.");
+    }
+
+    const fullName = `${first} ${last}`.replace(/\s+/g, " ").trim();
+    const derivedLevel = assessedLevel;
+
+    const created = await createEmployee({
+      full_name: fullName,
+      base_location: base,
+      rank: derivedLevel,
+      level: derivedLevel
+    });
+
+    const checklist = normalizeChecklist(created.competencies, created.level);
+    setEmployeeNotes((prev) => ({ ...prev, [created.id]: created.notes || "" }));
+    setEmployeeChecklists((prev) => ({ ...prev, [created.id]: checklist }));
+    setEmployeeDocuments((prev) => ({ ...prev, [created.id]: formatDocuments(created.documents) }));
+    setSelectedEmployeeId(created.id);
+    const safeLevel = Math.min(getPresetOrProgressLevel(checklist, created.level), LEVELS.length - 1);
+    setTabLevel(safeLevel);
+  }, [createEmployee]);
+
+  const handleChecklistChange = useCallback(
+    (level, groupIdx, itemIdx, employeeKey, updateObj) => {
+      if (!employeeKey) return;
+      const employee = employees.find((emp) => emp.id === employeeKey);
+      if (!employee) return;
+
+      setEmployeeChecklists((prev) => {
+        const current = prev[employeeKey]
+          ? deepClone(prev[employeeKey])
+          : normalizeChecklist(employee.competencies, employee.level);
+        const targetGroup = current?.[level]?.[groupIdx];
+        if (!targetGroup || !targetGroup[itemIdx]) return prev;
+
+        const item = targetGroup[itemIdx];
+        if (updateObj && Object.prototype.hasOwnProperty.call(updateObj, "assessor")) {
+          item.assessor = updateObj.assessor;
+        } else {
+          item.checked = !item.checked;
+          item.date = item.checked ? TODAY() : "";
+          if (!item.checked) item.assessor = "";
+        }
+
+        const next = { ...prev, [employeeKey]: current };
+        saveCompetencies(employeeKey, current).catch(() => {});
+        return next;
+      });
+    },
+    [employees, saveCompetencies]
+  );
+
+  const handleAddDocuments = useCallback(async (files) => {
+    if (!selectedEmployee || !files?.length) return;
+    try {
+      const docs = await uploadDocuments(selectedEmployee.id, files);
+      setEmployeeDocuments((prev) => ({
+        ...prev,
+        [selectedEmployee.id]: formatDocuments(docs)
+      }));
+    } catch {
+      // silent
+    }
+  }, [selectedEmployee, uploadDocuments]);
+
+  const handleDeleteDocument = useCallback(async (docId) => {
+    if (!selectedEmployee || !docId) return;
+    try {
+      await deleteDocument(selectedEmployee.id, docId);
+      setEmployeeDocuments((prev) => ({
+        ...prev,
+        [selectedEmployee.id]: (prev[selectedEmployee.id] || []).filter((doc) => doc.id !== docId)
+      }));
+    } catch {
+      // silent
+    }
+  }, [selectedEmployee, deleteDocument]);
+
+  const handleDownloadDocument = useCallback((doc) => {
+    if (!doc?.downloadUrl) return;
+    const url = resolveApiUrl(doc.downloadUrl);
+    window.open(url, "_blank", "noopener");
+  }, []);
+
+  const handleChangeNotes = useCallback((value) => {
+    if (!selectedEmployee) return;
+    setEmployeeNotes((prev) => ({ ...prev, [selectedEmployee.id]: value }));
+  }, [selectedEmployee]);
+
+  const handleSaveNotes = useCallback(async () => {
+    if (!selectedEmployee) return;
+    setSavingNotes(true);
+    try {
+      await saveNotes(selectedEmployee.id, employeeNotes[selectedEmployee.id] || "");
+    } finally {
+      setSavingNotes(false);
+    }
+  }, [selectedEmployee, employeeNotes, saveNotes]);
+
+  const handleDeleteEmployee = useCallback(async (id) => {
+    try {
+      await deleteEmployee(id);
+    } finally {
+      setEmployeeNotes(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setEmployeeChecklists(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      setEmployeeDocuments(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+      if (selectedEmployeeId === id) {
+        const remaining = employees.filter(e => e.id !== id);
+        setSelectedEmployeeId(remaining[0]?.id ?? null);
+      }
+    }
+  }, [deleteEmployee, employees, selectedEmployeeId]);
 
   if (!Array.isArray(competencies) || !competencies[tabLevel]) {
     return (
@@ -294,11 +461,18 @@ export default function TrainingHub() {
           }}
         >
           <EmployeeList
-            fieldEmployees={fieldEmployees}
-            selectedEmployee={selectedEmployee}
+            employees={employees}
+            selectedEmployeeId={selectedEmployeeId}
             employeeChecklists={employeeChecklists}
             onSelectEmployee={handleSelectEmployee}
+            onAddEmployee={handleAddEmployee}
+            onDeleteEmployee={handleDeleteEmployee}
           />
+          {loading && (
+            <div className="absolute bottom-2 left-0 right-0 text-center text-[0.6rem] uppercase tracking-wide text-[#9da48a] font-erbaum">
+              Loading field employees...
+            </div>
+          )}
         </div>
 
         {/* RIGHT: Tabbed Area */}
@@ -312,7 +486,7 @@ export default function TrainingHub() {
               background: "#000"
             }}
           >
-            {RIGHT_TABS.map(t => {
+            {RIGHT_TABS.map((t) => {
               const active = rightTab === t.key;
               return (
                 <button
@@ -333,7 +507,6 @@ export default function TrainingHub() {
             })}
           </div>
 
-          {/* Panel Bodies */}
           {rightTab === "VISITS" && (
             <div className="flex-none">
               <VisitsTable visits={visits} onAddVisit={handleAddVisit} />
@@ -355,7 +528,7 @@ export default function TrainingHub() {
                 onAddDocuments={handleAddDocuments}
                 onDeleteDocument={handleDeleteDocument}
                 onDownloadDocument={handleDownloadDocument}
-                employeeName={selectedEmployee}
+                employeeName={selectedEmployee?.full_name || ""}
               />
             </div>
           )}
@@ -370,7 +543,7 @@ export default function TrainingHub() {
                 overflow: "hidden"
               }}
             >
-              <NotesPanel value={currentNotes} onChange={handleChangeNotes} onSave={handleSaveNotes} />
+              <NotesPanel value={currentNotes} onChange={handleChangeNotes} onSave={handleSaveNotes} saving={savingNotes} />
             </div>
           )}
 
@@ -398,7 +571,8 @@ export default function TrainingHub() {
                 currentChecklist={currentChecklist}
                 unlockedLevel={unlockedLevel}
                 progress={progress}
-                selectedEmployee={selectedEmployee}
+                selectedEmployee={selectedEmployee?.full_name || ""}
+                selectedEmployeeId={selectedEmployee?.id}
                 onChecklistChange={handleChecklistChange}
               />
             </div>
