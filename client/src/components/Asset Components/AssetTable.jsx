@@ -315,11 +315,12 @@ export default function AssetTable({
                   border: cardBorder,
                   background: 'transparent',
                   whiteSpace: 'nowrap',
-                  overflow: 'hidden',
+                  overflow: isCompact && openMenuIdx === idx ? 'visible' : 'hidden',
                   textOverflow: 'ellipsis',
                   borderRight: cardBorder,
                   height: ROW_HEIGHT,
-                  verticalAlign: 'middle'
+                  verticalAlign: 'middle',
+                  position: 'relative'
                 }}>
                   {(() => {
                     const actions = [{
